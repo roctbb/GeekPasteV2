@@ -59,9 +59,9 @@
             class="btn btn-secondary btn-sm">
                 Чистый
         </a>
-        <a style="text-align:right;float:right;margin-right: 10px;margin-top:2px;color:#646464">Views: {{ record[5] }} Upload date: {{ record[4] }}</a>
+        <a style="text-align:right;float:right;margin-right: 10px;margin-top:2px;color:#646464">Views: {{ record.views }} Upload date: {{ record.date }}</a>
             
-            <pre><code id='code' style="padding:10px;" class="{{record[1]}}">{{ record[2] }}</code></pre>
+            <pre><code id='code' style="padding:10px;" class="{{record.lang}}">{{ record.code }}</code></pre>
         </div>
     </div>  
 </div>
