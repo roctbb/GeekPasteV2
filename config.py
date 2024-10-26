@@ -1,15 +1,12 @@
-MAXSIMILARCODES = 8
-CONNHOST = "localhost"
-CONNPORT = 5432
-CONNDBNAME = "postgres"
-CONNUSER = "postgres"
-CONNPASSWORD = "1234"
-CELERYBROKER = 'redis://localhost:6379/0' # DOWNLOAD AND RUN REDIS OR CHOOSE ANOTHER BROKER
-PASSWORDFORCOPYCHECK = '134' # set password for copy check usage
-USERFORCOPYCHECK = 'John' # set username for copy check usage
+import os
+from dotenv import load_dotenv
 
-###########################################
-# PLEASE PUT YOUR SQL BASE FILE IN HERE   #
-# IF YOU WANT TO CONVERT IT INTO POSTGRES #
-###########################################
+load_dotenv()
 
+SIMILARITY_LEVEL = int(os.getenv('SIMILARITY_LEVEL', 75))
+MAX_SIMILAR_CODES = int(os.getenv('MAX_SIMILAR_CODES', 8))
+CONNECTION_STRING = os.getenv('CONNECTION_STRING','postgresql+psycopg2://username:password@localhost:5432/mydatabase')
+CELERY_BROKER = os.getenv('CELERY_BROKER', 'redis://localhost:6379/0')
+PASSWORD = os.getenv('PASSWORD', '134')
+LOGIN = os.getenv('LOGIN', 'John')
+DEBUG = bool(os.getenv('DEBUG', False))

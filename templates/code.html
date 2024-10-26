@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="card flat-card">
+        <div class="card-body" style="padding: 0;">
+            <button
+                    class="btn btn-flat btn-success btn-sm ms-1 my-1" id="copy-code" data-clipboard-target="#code"
+                    data-toggle="popover" data-placement="right" data-content="Скопировано">
+                Копировать код
+            </button>
+            <a href="/raw/{{ code.id }}"
+               class="btn btn-flat btn-light btn-sm mt-0">
+                Чистый
+            </a>
+            <span class="m-1 text-muted flat-span" style="float:right;">
+                <i class="fa fa-eye ms-1" aria-hidden="true"></i> {{ code.views }}
+                <i class="fa fa-calendar ms-1" aria-hidden="true"></i> {{ code.created_at.strftime('%d.%m.%Y') }}
+            </span>
+            <pre class="m-0 flat-pre"><code id='code' class="{{ code.lang }} p-2 py-3">{{ code.code }}</code></pre>
+        </div>
+        <script>
+            new ClipboardJS('#copy-code')
+            $(function () {
+                $('[data-toggle="popover"]').popover()
+            });
+        </script>
+    </div>
+{% endblock %}

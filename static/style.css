@@ -1,0 +1,28 @@
+/* Remove any inherent card box shadows */
+.flat-card {
+    box-shadow: none;
+    border: 1px solid #eee;
+}
+
+
+/* Adjust the pre tag for flat design */
+.flat-pre {
+    background-color: #fafafa;
+    padding: 10px;
+}
+
+/* Adjust the span for flat design */
+.flat-span {
+    display: inline-block;
+    padding: 0 5px;
+}
+
+/* Optional: Adjust the form elements */
+input, select, textarea {
+    box-shadow: none;
+}
+
+/* Remove box shadows from the entire body and main container */
+body, .main-container {
+    box-shadow: none;
+}

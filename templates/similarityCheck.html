@@ -9,9 +9,9 @@
     <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
     <script src="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.js"></script>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css"
-        integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
+          integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
     <link rel="stylesheet"
-        href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.12.0/build/styles/atom-one-light.min.css">
+          href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.12.0/build/styles/atom-one-light.min.css">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.0/clipboard.min.js"></script>
@@ -32,17 +32,20 @@
             display: none; /* Скрываем по умолчанию */
             padding: 10px;
         }
+
         .flex-container {
             display: flex; /* Используем flexbox для выравнивания */
             align-items: center; /* Выравнивание по вертикали */
             justify-content: space-between; /* Пространство между элементами */
             margin: 5px 0; /* Вертикальные отступы между блоками */
         }
+
         .text-link {
             color: #646464; /* Цвет текста */
             text-align: left; /* Выравнивание текста слева */
             margin-right: 10px; /* Отступ справа от текста */
         }
+
         .btn {
             margin-left: auto; /* Оттолкнуть кнопку от текста в flex-контейнере */
             margin-right: 5px; /* Отступ справа от кнопки */
@@ -69,19 +72,22 @@
             <div class="flex-container">
                 <a class="text-link">ID: {{ record.id }} Upload date: {{ record.date }}</a>
             </div>
-            <pre><code class="{{record.lang}}">{{ record.code }}</code></pre>
-            
+            <pre><code class="{{ record.lang }}">{{ record.code }}</code></pre>
+
             {% for similarity in similars %}
                 <div class="flex-container">
-                    <a class="text-link">ID: {{similarity[0].id}} Similarity: {{ similarity[1] }}% Upload date: {{ similarity[0].date }}</a>
-                    <button class="btn btn-primary btn-sm" onclick="toggleCode('code{{ similarity[2] }}', this)">Open code</button>
+                    <a class="text-link">ID: {{ similarity[0].id }} Similarity: {{ similarity[1] }}% Upload
+                        date: {{ similarity[0].date }}</a>
+                    <button class="btn btn-primary btn-sm" onclick="toggleCode('code{{ similarity[2] }}', this)">Open
+                        code
+                    </button>
                 </div>
-                <div id="code{{similarity[2]}}" class="code-container">
+                <div id="code{{ similarity[2] }}" class="code-container">
                     <pre><code class='code{{ similarity[2] }}'>{{ similarity[0].code }}</code></pre>
                 </div>
             {% endfor %}
         </div>
-    </div>  
+    </div>
 </div>
 
 <script>
