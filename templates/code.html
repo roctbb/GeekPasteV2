@@ -2,26 +2,46 @@
 {% block content %}
     <div class="card flat-card">
         <div class="card-body" style="padding: 0;">
-            <button
-                    class="btn btn-flat btn-success btn-sm ms-1 my-1" id="copy-code" data-clipboard-target="#code"
-                    data-toggle="popover" data-placement="right" data-content="Скопировано">
+            <button class="btn btn-flat btn-success btn-sm ms-1 my-1" id="copy-code" data-clipboard-target="#code"
+                    data-bs-toggle="popover" data-bs-placement="right" data-bs-content="Скопировано">
                 Копировать код
             </button>
-            <a href="/raw/{{ code.id }}"
+            <a href="/raw?id={{ code.id }}"
                class="btn btn-flat btn-light btn-sm mt-0">
                 Чистый
             </a>
-            <span class="m-1 text-muted flat-span" style="float:right;">
+            <span class="m-1 flat-span flat-stats" style="float:right;">
                 <i class="fa fa-eye ms-1" aria-hidden="true"></i> {{ code.views }}
                 <i class="fa fa-calendar ms-1" aria-hidden="true"></i> {{ code.created_at.strftime('%d.%m.%Y') }}
+                {% if code.similar_codes | length %}
+                    <a href="/check?id={{ code.id }}"><i class="fa fa-circle ms-1" style="color: red; opacity: 0.3;"
+                                                         aria-hidden="true"></i></a>
+                {% else %}
+                    <i class="fa fa-circle ms-1" style="color: green; opacity: 0.3;"
+                                                         aria-hidden="true"></i>
+                {% endif %}
+                {% if not code.checked %}
+                    <a href="/check?id={{ code.id }}"><i class="fa fa-hourglass ms-1" style="color: sandybrown; opacity: 0.3;"
+                                                         aria-hidden="true"></i></a>
+                {% endif %}
             </span>
             <pre class="m-0 flat-pre"><code id='code' class="{{ code.lang }} p-2 py-3">{{ code.code }}</code></pre>
         </div>
         <script>
             new ClipboardJS('#copy-code')
-            $(function () {
-                $('[data-toggle="popover"]').popover()
+            document.addEventListener('DOMContentLoaded', function () {
+                var popoverTriggerEl = document.querySelector('#copy-code');
+                var popover = new bootstrap.Popover(popoverTriggerEl);
+
+                popoverTriggerEl.addEventListener('shown.bs.popover', function () {
+                    setTimeout(function () {
+                        popover.hide();
+                    }, 1000); // Время в миллисекундах (2000 ms = 2 секунды)
+                });
             });
         </script>
     </div>
+
+    {% block similar_codes %}
+    {% endblock %}
 {% endblock %}

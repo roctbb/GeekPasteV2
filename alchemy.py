@@ -4,8 +4,10 @@ from sqlalchemy import *
 db = SQLAlchemy()
 
 similarities_table = db.Table('similarities',
-                              db.Column('code_id', db.String, db.ForeignKey('codes.id'), primary_key=True),
-                              db.Column('code_id2', db.String, db.ForeignKey('codes.id'), primary_key=True),
+                              db.Column('code_id', db.String, db.ForeignKey('codes.id', ondelete='CASCADE'),
+                                        primary_key=True),
+                              db.Column('code_id2', db.String, db.ForeignKey('codes.id', ondelete='CASCADE'),
+                                        primary_key=True),
                               db.Column('percent', db.Integer)
                               )
 
@@ -28,8 +30,10 @@ class Codes(db.Model):
                                     backref='related_codes')
 
     def get_similar_codes_sorted(self):
-        return (db.session.query(Codes, similarities_table.c.percent)
-                .join(similarities_table, Codes.id == similarities_table.c.code_id2)
-                .filter(similarities_table.c.code_id == self.id)
-                .order_by(similarities_table.c.percent.desc())
-                .all())
+        results = (db.session.query(Codes, similarities_table.c.percent)
+                   .join(similarities_table, Codes.id == similarities_table.c.code_id2)
+                   .filter(similarities_table.c.code_id == self.id)
+                   .order_by(similarities_table.c.percent.desc())
+                   .all())
+
+        return [{'code': result[0], 'percent': result[1]} for result in results]

@@ -23,5 +23,5 @@ with app.app_context():
     codes = get_sqlite_codes()
     codes_length = len(codes)
     for i in tqdm(range(codes_length)):
-        if codes[i][2]:
-            save_code(codes[i][2], codes[i][1], codes[i][0])
+        if codes[i][2] and codes[i][0] in LANGS and len(str(codes[i][1])) > 30:
+            save_code(codes[i][1], codes[i][0], None, id=codes[i][2])

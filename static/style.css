@@ -26,3 +26,10 @@ input, select, textarea {
 body, .main-container {
     box-shadow: none;
 }
+
+.flat-stats {
+    color: #aaa !important;
+    font-size: 0.9rem;
+    line-height: 30px;
+}
+

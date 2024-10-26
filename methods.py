@@ -14,12 +14,13 @@ def get_code(id):
     return Codes.query.filter_by(id=id).first()
 
 
-def save_code(code, lang, client_ip):
-    while True:
-        id = create_id()
+def save_code(code, lang, client_ip, id=None):
+    if not id:
+        while True:
+            id = create_id()
 
-        if not get_code(id):
-            break
+            if not get_code(id):
+                break
 
     code = Codes(id=id, code=code, lang=lang, ip=client_ip, views=0)
     db.session.add(code)
@@ -34,9 +35,8 @@ def get_all_codes(lang=None):
     return Codes.query.filter_by(lang=lang).all()
 
 
-def add_view(id):
-    query = Codes.query.get(id)
-    query.views += 1
+def add_view(code):
+    code.views += 1
     db.session.commit()
 
 

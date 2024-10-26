@@ -5,6 +5,7 @@ from methods import *
 from manage import app
 
 celery = Celery('app', broker=CELERY_BROKER)
+celery.conf.task_default_queue = 'paste_queue'
 
 
 @celery.task()
@@ -24,7 +25,7 @@ def save_similarities(id):
             n = checker.similarity(code.code, code2.code)
 
             if n > SIMILARITY_LEVEL:
-                save_similarity(code.id, code2.id, n)
+                save_similarity(code, code2, n)
 
         code.checked = True
         db.session.commit()

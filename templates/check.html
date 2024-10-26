@@ -1,0 +1,23 @@
+{% extends 'code.html' %}
+{% block similar_codes %}
+
+    <div class="accordion py-3" id="similarCodesAccordion">
+        {% for similarity in similarities %}
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="heading-{{ similarity.code.id }}">
+                    <button class="accordion-button p-2 collapsed" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#collapse-{{ similarity.code.id }}" aria-expanded="true"
+                            aria-controls="collapse-{{ similarity.code.id }}">
+                        Код {{ similarity.code.id }} - {{ similarity.percent }}% схожести от {{ similarity.code.created_at.strftime("%d.%m.%Y %H:%M") }}
+                    </button>
+                </h2>
+                <div id="collapse-{{ similarity.code.id }}" class="accordion-collapse collapse"
+                     aria-labelledby="heading-{{ similarity.code.id }}" data-bs-parent="#similarCodesAccordion">
+                    <div class="accordion-body">
+                        <pre>{{ similarity.code.code }}</pre>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}
