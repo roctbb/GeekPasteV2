@@ -13,16 +13,18 @@
             <span class="m-1 flat-span flat-stats" style="float:right;">
                 <i class="fa fa-eye ms-1" aria-hidden="true"></i> {{ code.views }}
                 <i class="fa fa-calendar ms-1" aria-hidden="true"></i> {{ code.created_at.strftime('%d.%m.%Y') }}
-                {% if code.similar_codes | length %}
-                    <a href="/check?id={{ code.id }}"><i class="fa fa-circle ms-1" style="color: red; opacity: 0.3;"
+                {% if not code.checked %}
+                    <a href="/check?id={{ code.id }}"><i class="fa fa-hourglass ms-1"
+                                                         style="color: sandybrown; opacity: 0.3;"
                                                          aria-hidden="true"></i></a>
                 {% else %}
-                    <i class="fa fa-circle ms-1" style="color: green; opacity: 0.3;"
-                                                         aria-hidden="true"></i>
-                {% endif %}
-                {% if not code.checked %}
-                    <a href="/check?id={{ code.id }}"><i class="fa fa-hourglass ms-1" style="color: sandybrown; opacity: 0.3;"
-                                                         aria-hidden="true"></i></a>
+                    {% if code.similar_codes | length %}
+                        <a href="/check?id={{ code.id }}"><i class="fa fa-circle ms-1" style="color: red; opacity: 0.3;"
+                                                             aria-hidden="true"></i></a>
+                    {% else %}
+                        <i class="fa fa-circle ms-1" style="color: green; opacity: 0.3;"
+                           aria-hidden="true"></i>
+                    {% endif %}
                 {% endif %}
             </span>
             <pre class="m-0 flat-pre"><code id='code' class="{{ code.lang }} p-2 py-3">{{ code.code }}</code></pre>
