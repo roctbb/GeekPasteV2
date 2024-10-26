@@ -57,7 +57,7 @@ def raw():
         if not code:
             flash("Код не найден.", "danger")
         else:
-            return code.code
+            return f"<pre>{code.code}</pre>"
 
     return redirect('/')
 
