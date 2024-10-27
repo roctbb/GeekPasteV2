@@ -1,12 +1,8 @@
 # coding: utf8
 from flask import *
-from flask_basicauth import BasicAuth
 from paste_celery import save_similarities
 from methods import *
 from manage import *
-
-basic_auth = BasicAuth(app)
-
 
 @app.route('/submit', methods=['POST'])
 @login_required
