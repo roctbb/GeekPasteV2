@@ -133,6 +133,8 @@ class ExecutionContainer:
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                 timeout=time_limit
             )
+            if exec_result.returncode != 0:
+                return exec_result.stderr.decode().strip()
             return exec_result.stdout.decode().strip()
 
         except subprocess.TimeoutExpired:
@@ -161,7 +163,7 @@ class TestExecutor:
 
         try:
             os.chdir(self.container.path)
-            result = perform_tests(self.container.run)
+            result = perform_tests(self.container.run, self.code.code)
             os.chdir(self.original_path)
             return result
         except SolutionException as e:

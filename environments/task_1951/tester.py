@@ -13,7 +13,7 @@ comment_template = """
 """
 
 
-def perform_tests(runner):
+def perform_tests(runner, source_code=None):
     for length in [5, 10, 50]:
         input_data = f"{length}\n"
         expected_length = length

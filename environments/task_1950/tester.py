@@ -24,7 +24,7 @@ comment_template = """
 """
 
 
-def perform_tests(runner):
+def perform_tests(runner, source_code=None):
     tasks = [
         "Это фиаско, братан!", "Hello World", "Lets Rock!"
     ]
