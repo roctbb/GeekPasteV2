@@ -39,6 +39,7 @@ class ExecutionContainer:
             raise ExecutionException(e)
 
     def __del__(self):
+        print("deleting container")
         self.kill()
         self.clear_execution_folder()
 
@@ -82,22 +83,12 @@ class ExecutionContainer:
             subprocess.run(["docker", "pull", container_image], check=True)
 
             volume_binding = f"{self.path}:/code"
-            print(volume_binding)
             container_id = subprocess.run(
                 ["docker", "run", "-d", "-v", volume_binding, container_image, "sleep", "infinity"],
                 check=True,
                 stdout=subprocess.PIPE
             ).stdout.decode().strip()
 
-            # Show the contents of /code directory in the container
-            # ls_result = subprocess.run(
-            #     ["docker", "exec", container_id, "ls", "/code"],
-            #     check=True,
-            #     stdout=subprocess.PIPE,
-            #     stderr=subprocess.PIPE
-            # )
-            # print("Contents of /code directory in the container:")
-            # print(ls_result.stdout.decode())
         except Exception as e:
             return ExecutionException("Error creating container.")
 
@@ -159,21 +150,23 @@ class TestExecutor:
 
     def __del__(self):
         os.chdir(self.original_path)
+        del self.container
 
     def perform(self):
         try:
             tester_module = importlib.import_module(f"environments.task_{self.code.task_id}.tester")
-            print(tester_module)
             perform_tests = getattr(tester_module, 'perform_tests')
         except Exception as e:
             raise ExecutionException(f"Error importing tester module: {e}.")
 
         try:
             os.chdir(self.container.path)
-            return perform_tests(self.container.run)
+            result = perform_tests(self.container.run)
+            os.chdir(self.original_path)
+            return result
         except SolutionException as e:
+            os.chdir(self.original_path)
             raise e
         except Exception as e:
+            os.chdir(self.original_path)
             raise ExecutionException(f"Error running tester: {e}.")
-
-

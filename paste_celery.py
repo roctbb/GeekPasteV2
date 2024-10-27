@@ -50,6 +50,7 @@ def check_task(id):
         if not task:
             return
 
+        executor = None
         try:
             executor = TestExecutor(code)
             points, comments = executor.perform()
@@ -80,8 +81,12 @@ def check_task(id):
         code.checked_at = datetime.now()
         db.session.commit()
 
+        if executor:
+            print("deleting executor")
+            del executor
+
         if SUBMIT_URL and code.course_id:
-            answer = requests.post(SUBMIT_URL, json={
+            requests.post(SUBMIT_URL, json={
                 "points": code.check_points,
                 "comments": code.check_comments,
                 "solution": APP_URL + f"/?id={code.id}",
@@ -89,4 +94,4 @@ def check_task(id):
                 "token": generate_jwt(code.user_id, code.task_id)
             })
 
-            print(SUBMIT_URL, answer.status_code, answer.text)
+
