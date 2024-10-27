@@ -65,9 +65,12 @@ def raw():
 
 
 @app.route('/check', methods=['GET'])
-@basic_auth.required
+@login_required
 def check_code():
     code_id = request.args.get('id')
+
+    if session['role'] not in ['teacher', 'admin']:
+        abort(403)
 
     if not code_id:
         flash("Выберите код для проверки.", "danger")
