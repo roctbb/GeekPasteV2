@@ -3,12 +3,13 @@ from flask import *
 from flask_basicauth import BasicAuth
 from paste_celery import save_similarities
 from methods import *
-from manage import app
+from manage import *
 
 basic_auth = BasicAuth(app)
 
 
 @app.route('/submit', methods=['POST'])
+@login_required
 def submit():
     lang = request.form.get('lang')
     code = request.form.get('code')
@@ -22,7 +23,7 @@ def submit():
         flash("Выберите язык.", "danger")
         return redirect('/')
 
-    id = save_code(code, lang, client_ip)
+    id = save_code(code, lang, client_ip, user_id=session['user_id'])
     save_similarities.delay(id)
 
     flash("Теперь код доступен по адресу: https://paste.geekclass.ru/?id=" + str(id), 'success')
@@ -31,6 +32,7 @@ def submit():
 
 
 @app.route('/', methods=['GET'])
+@login_required
 def index():
     code_id = request.args.get('id')
 

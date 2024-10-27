@@ -2,7 +2,7 @@ import string
 import random
 import datetime
 from sqlalchemy import *
-from alchemy import *
+from models import *
 from config import *
 
 
@@ -11,10 +11,10 @@ def create_id():
 
 
 def get_code(id):
-    return Codes.query.filter_by(id=id).first()
+    return Code.query.filter_by(id=id).first()
 
 
-def save_code(code, lang, client_ip, id=None):
+def save_code(code, lang, client_ip, id=None, user_id=None):
     if not id:
         while True:
             id = create_id()
@@ -22,7 +22,7 @@ def save_code(code, lang, client_ip, id=None):
             if not get_code(id):
                 break
 
-    code = Codes(id=id, code=code, lang=lang, ip=client_ip, views=0)
+    code = Code(id=id, code=code, lang=lang, ip=client_ip, views=0, user_id=user_id)
     db.session.add(code)
     db.session.commit()
 
@@ -31,8 +31,8 @@ def save_code(code, lang, client_ip, id=None):
 
 def get_all_codes(lang=None):
     if not lang:
-        return Codes.query.all()
-    return Codes.query.filter_by(lang=lang).all()
+        return Code.query.all()
+    return Code.query.filter_by(lang=lang).all()
 
 
 def add_view(code):

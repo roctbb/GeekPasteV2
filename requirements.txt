@@ -6,3 +6,4 @@ Flask-Migrate
 celery
 psycopg2-binary
 tqdm
+PyJWT

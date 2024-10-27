@@ -22,6 +22,9 @@ def save_similarities(id):
             if code2.id == code.id:
                 continue
 
+            if code.user_id and code2.user_id and code.user_id == code2.user_id:
+                continue
+
             n = checker.similarity(code.code, code2.code)
 
             if n > SIMILARITY_LEVEL:
