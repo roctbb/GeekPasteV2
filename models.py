@@ -1,6 +1,4 @@
-from fiona.fio.helpers import nullable
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import *
 
 db = SQLAlchemy()
 
