@@ -22,13 +22,11 @@ from functools import wraps
 def make_jwt_auth(token):
     try:
         data = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-        print(data, time.time() - data['iat'])
-        if (time.time() - data['iat']) > 5:
+        if time.time() - data['iat'] > 5:
             abort(403)
         session['user_id'] = data['id']
         session['role'] = data['role']
     except Exception as e:
-        print(e)
         abort(403)
 
 
@@ -38,8 +36,7 @@ def login_required(f):
         token = request.args.get('token')
         if token:
             make_jwt_auth(token)
-
-        print(session)
+            return redirect(url_for(request.endpoint, **{k: v for k, v in request.args.items() if k != 'token'}))
 
         if 'user_id' not in session:
             return redirect(AUTH_URL + request.url)  # Redirect to login page if user_id is not in session
