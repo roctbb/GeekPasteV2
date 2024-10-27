@@ -1,5 +1,4 @@
 Flask
-Flask-BasicAuth
 SQLAlchemy
 python-dotenv
 Flask-Migrate
