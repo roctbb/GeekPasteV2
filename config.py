@@ -15,5 +15,5 @@ LOGIN = os.getenv('LOGIN', 'John')
 DEBUG = bool(os.getenv('DEBUG', False))
 PORT = int(os.getenv('PORT', 8084))
 SECRET = os.getenv('SECRET', 'key')
-AUTH_URL = os.getenv('AUTH_URL', 'https://codingprojects.ru/auth/jwt?redirect_url=') + APP_URL
+AUTH_URL = os.getenv('AUTH_URL', 'https://codingprojects.ru/insider/jwt?redirect_url=') + APP_URL
 JWT_SECRET = os.getenv('JWT_SECRET')
