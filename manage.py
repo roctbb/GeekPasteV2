@@ -42,7 +42,7 @@ def login_required(f):
         print(session)
 
         if 'user_id' not in session:
-            return redirect(AUTH_URL)  # Redirect to login page if user_id is not in session
+            return redirect(AUTH_URL + request.url)  # Redirect to login page if user_id is not in session
 
         return f(*args, **kwargs)
 
