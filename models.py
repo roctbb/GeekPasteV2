@@ -10,6 +10,16 @@ similarities_table = db.Table('similarities',
                               db.Column('percent', db.Integer)
                               )
 
+
+class Task(db.Model):
+    __tablename__ = 'tasks'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(), nullable=True)
+    lang = db.Column(db.String(), nullable=True)
+    points = db.Column(db.Integer(), nullable=True)
+
+
 class Code(db.Model):
     __tablename__ = 'codes'
 
@@ -22,11 +32,19 @@ class Code(db.Model):
     checked = db.Column(db.Boolean(), nullable=False, server_default='false')
     user_id = db.Column(db.Integer, nullable=True)
 
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=True)
+    course_id = db.Column(db.Integer, nullable=True)
+    check_state = db.Column(db.String(255), nullable=True, server_default='not checked')
+    check_comments = db.Column(db.Text(), nullable=True)
+    check_points = db.Column(db.Integer(), nullable=True)
+    checked_at = db.Column(db.DateTime(), nullable=True)
+
     similar_codes = db.relationship('Code',
                                     secondary=similarities_table,
                                     primaryjoin=id == similarities_table.c.code_id,
                                     secondaryjoin=id == similarities_table.c.code_id2,
                                     backref='related_codes')
+    task = db.relationship('Task', backref='solutions')
 
     def get_similar_codes_sorted(self):
         results = (db.session.query(Code, similarities_table.c.percent)

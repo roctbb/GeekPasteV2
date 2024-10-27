@@ -16,14 +16,12 @@
                 {% if session['role'] == 'teacher' or session['role'] == 'admin' %}
 
                     {% if not code.checked %}
-                        <a href="/check?id={{ code.id }}"><i class="fa fa-hourglass ms-1"
-                                                             style="color: sandybrown; opacity: 0.3;"
-                                                             aria-hidden="true"></i></a>
+                        <i class="fa fa-hourglass ms-1" style="color: sandybrown; opacity: 0.3;"
+                           aria-hidden="true"></i></a>
                     {% else %}
-                        {% if code.similar_codes | length %}
-                            <a href="/check?id={{ code.id }}"><i class="fa fa-circle ms-1"
-                                                                 style="color: red; opacity: 0.3;"
-                                                                 aria-hidden="true"></i></a>
+                        {% if similarities %}
+                            <i class="fa fa-circle ms-1" style="color: red; opacity: 0.3;"
+                               aria-hidden="true"></i></a>
                         {% else %}
                             <i class="fa fa-circle ms-1" style="color: green; opacity: 0.3;"
                                aria-hidden="true"></i>
@@ -33,21 +31,77 @@
             </span>
             <pre class="m-0 flat-pre"><code id='code' class="{{ code.lang }} p-2 py-3">{{ code.code }}</code></pre>
         </div>
-        <script>
-            new ClipboardJS('#copy-code')
-            document.addEventListener('DOMContentLoaded', function () {
-                var popoverTriggerEl = document.querySelector('#copy-code');
-                var popover = new bootstrap.Popover(popoverTriggerEl);
-
-                popoverTriggerEl.addEventListener('shown.bs.popover', function () {
-                    setTimeout(function () {
-                        popover.hide();
-                    }, 1000); // Время в миллисекундах (2000 ms = 2 секунды)
-                });
-            });
-        </script>
     </div>
 
-    {% block similar_codes %}
-    {% endblock %}
+    {% if code.task %}
+        <div class="card flat-card mt-3">
+            {% if code.check_state == 'not checked' %}
+                <div class="card-header bg-warning text-dark  py-1 px-3">
+                    <strong>Решение проверяется... <i class="fas fa-spinner float-end header-icon"></i></strong>
+                </div>
+            {% elif 'error' in code.check_state %}
+                <div class="card-header bg-danger text-white  py-1 px-3">
+                    <strong>Ошибка выполнения <i class="fas fa-gears float-end header-icon"></i></strong>
+                </div>
+            {% elif code.check_state == 'partially done' %}
+                <div class="card-header bg-info text-white  py-1 px-3">
+                    <strong>Частичное решение <i class="fas fa-battery-1 float-end header-icon"></i></strong>
+                </div>
+            {% else %}
+                <div class="card-header bg-success text-white py-1 px-3">
+                    <strong>Решение принято <i class="fas fa-check float-end header-icon"></i></strong>
+                </div>
+            {% endif %}
+            <div class="card-body p-0 position-relative gray">
+                <span class="top-badge badge bg-primary float-end">Очков: {{ code.check_points }}</span>
+                <pre class="m-0 flat-pre"><code class="p-2 py-3 txt">{{ code.check_comments }}</code></pre>
+
+                {% if code.check_state != 'done' and code.check_state != 'not checked' %}
+                    <a style="border: 1px solid #ddd;" href="/?task_id={{ code.task.id }}&course_id={{ code.course_id }}"
+                       class="btn btn-light btn-flat btn-sm mt-0 m-2">Отправить снова?</a>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+
+
+
+
+    {% if similarities %}
+        <div class="accordion py-3" id="similarCodesAccordion">
+            {% for similarity in similarities %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="heading-{{ similarity.code.id }}">
+                        <button class="accordion-button p-2 collapsed" type="button" data-bs-toggle="collapse"
+                                data-bs-target="#collapse-{{ similarity.code.id }}" aria-expanded="true"
+                                aria-controls="collapse-{{ similarity.code.id }}">
+                            Код {{ similarity.code.id }} - {{ similarity.percent }}% схожести
+                            от {{ similarity.code.created_at.strftime("%d.%m.%Y %H:%M") }}
+                        </button>
+                    </h2>
+                    <div id="collapse-{{ similarity.code.id }}" class="accordion-collapse collapse"
+                         aria-labelledby="heading-{{ similarity.code.id }}" data-bs-parent="#similarCodesAccordion">
+                        <div class="accordion-body">
+                            <pre>{{ similarity.code.code }}</pre>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <script>
+        new ClipboardJS('#copy-code')
+        document.addEventListener('DOMContentLoaded', function () {
+            var popoverTriggerEl = document.querySelector('#copy-code');
+            var popover = new bootstrap.Popover(popoverTriggerEl);
+
+            popoverTriggerEl.addEventListener('shown.bs.popover', function () {
+                setTimeout(function () {
+                    popover.hide();
+                }, 1000); // Время в миллисекундах (2000 ms = 2 секунды)
+            });
+        });
+    </script>
 {% endblock %}

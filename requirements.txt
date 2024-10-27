@@ -6,3 +6,4 @@ celery
 psycopg2-binary
 tqdm
 PyJWT
+requests

@@ -14,15 +14,16 @@ def get_code(id):
     return Code.query.filter_by(id=id).first()
 
 
-def save_code(code, lang, client_ip, id=None, user_id=None):
+def save_code(code, lang, client_ip, id=None, user_id=None, task_id=None, course_id=None):
     if not id:
         while True:
             id = create_id()
-
             if not get_code(id):
                 break
 
-    code = Code(id=id, code=code, lang=lang, ip=client_ip, views=0, user_id=user_id)
+    code = Code(id=id, code=code, lang=lang, ip=client_ip, views=0, user_id=user_id, task_id=task_id,
+                checked=False, checked_at=None, check_state=None, check_comments=None, check_points=0,
+                course_id=course_id)
     db.session.add(code)
     db.session.commit()
 

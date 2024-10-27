@@ -11,6 +11,10 @@
     padding: 10px;
 }
 
+.gray {
+    background-color: #fafafa;
+}
+
 /* Adjust the span for flat design */
 .flat-span {
     display: inline-block;
@@ -33,3 +37,17 @@ body, .main-container {
     line-height: 30px;
 }
 
+.top-badge {
+    position: absolute;
+    top: 10px; /* Расположение бейджика по вертикали, измените по необходимости */
+    right: 10px; /* Расположение бейджика по горизонтали, измените по необходимости */
+    z-index: 3;
+}
+
+.position-relative {
+    position: relative;
+}
+
+.header-icon {
+    line-height: 25px;
+}

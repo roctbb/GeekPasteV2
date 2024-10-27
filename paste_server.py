@@ -1,10 +1,11 @@
 # coding: utf8
 from flask import *
-from paste_celery import save_similarities
+from paste_celery import *
 from methods import *
 from manage import *
 
-@app.route('/submit', methods=['POST'])
+
+@app.route('/', methods=['POST'])
 @login_required
 def submit():
     lang = request.form.get('lang')
@@ -19,12 +20,27 @@ def submit():
         flash("Выберите язык.", "danger")
         return redirect('/')
 
-    id = save_code(code, lang, client_ip, user_id=session['user_id'])
+    task_id = request.args.get('task_id')
+    course_id = request.args.get('course_id')
+    if task_id and not Task.query.filter_by(id=task_id).first():
+        abort(404)
+
+    id = save_code(code, lang, client_ip, user_id=session['user_id'], task_id=task_id, course_id=course_id)
     save_similarities.delay(id)
+    if task_id:
+        check_task.delay(id)
 
     flash("Теперь код доступен по адресу: https://paste.geekclass.ru/?id=" + str(id), 'success')
 
     return redirect(f"/?id={id}")
+
+
+def is_teacher():
+    return session['role'] in ['teacher', 'admin']
+
+
+def is_author(code):
+    return code.user_id == session['user_id']
 
 
 @app.route('/', methods=['GET'])
@@ -35,14 +51,33 @@ def index():
     if code_id:
         code = get_code(code_id)
 
-        add_view(code)
-
         if not code:
             flash("Код не найден.", "danger")
+        elif code.task and not is_teacher() and not is_author(code):
+            flash("Нет доступа. Это приватный код.", "danger")
         else:
-            return render_template('code.html', code=code)
+            similarities = []
+            if is_teacher():
+                similarities = code.get_similar_codes_sorted()
+            elif not is_author(code):
+                add_view(code)
 
-    return render_template('index.html')
+            return render_template('code.html', code=code, similarities=similarities)
+
+    task_id = request.args.get('task_id')
+    course_id = request.args.get('course_id')
+
+    if task_id and course_id:
+        task = Task.query.filter_by(id=task_id).first()
+
+        if not task:
+            flash("Задача не найдена в базе.", "warning")
+        else:
+            flash(f"Отправка задания ID {task.id}: {task.name}. Оно будет проверено автоматически.", "info")
+    else:
+        task = None
+
+    return render_template('index.html', task=task)
 
 
 @app.route('/raw', methods=['GET'])
@@ -58,29 +93,6 @@ def raw():
             return f"<pre>{code.code}</pre>"
 
     return redirect('/')
-
-
-@app.route('/check', methods=['GET'])
-@login_required
-def check_code():
-    code_id = request.args.get('id')
-
-    if session['role'] not in ['teacher', 'admin']:
-        abort(403)
-
-    if not code_id:
-        flash("Выберите код для проверки.", "danger")
-        return redirect('/')
-
-    code = get_code(code_id)
-
-    if not code:
-        flash("Код не найден.", "danger")
-        return redirect('/')
-
-    similarities = code.get_similar_codes_sorted()
-
-    return render_template('check.html', code=code, similarities=similarities)
 
 
 if __name__ == '__main__':

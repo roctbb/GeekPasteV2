@@ -25,6 +25,7 @@ def make_jwt_auth(token):
         session['user_id'] = data['id']
         session['role'] = data['role']
     except Exception as e:
+        print(e)
         abort(403)
 
 
@@ -33,6 +34,7 @@ def login_required(f):
     def F(*args, **kwargs):
         token = request.args.get('token')
         if token:
+            print(token)
             make_jwt_auth(token)
             return redirect(url_for(request.endpoint, **{k: v for k, v in request.args.items() if k != 'token'}))
 
