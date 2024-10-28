@@ -48,7 +48,7 @@ def reflect_left_half(image_array):
 
 
 
-def perform_tests(runner):
+def perform_tests(runner, source_code=None):
     for index, (input_pixels, input_filename, output_filename) in enumerate(scenarios):
         # Сохранение входного изображения
         input_image = Image.fromarray(input_pixels)
