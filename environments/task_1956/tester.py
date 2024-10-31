@@ -45,7 +45,7 @@ def synthetic_runner(stdin):
     height = int(stdin)
 
     spaces = height - 1
-    res = "Введите высоту:\n\n"
+    res = ""
     for i in range(height):
         res += " " * spaces + "*" * (2 * i + 1) + '\n'
         spaces -= 1
