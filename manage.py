@@ -5,6 +5,8 @@ from models import db
 from config import *
 from flask_migrate import Migrate
 import jwt
+from markdown import markdown
+from markupsafe import Markup
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = CONNECTION_STRING
@@ -15,6 +17,10 @@ migrate = Migrate(app, db)
 
 from flask import session, redirect, url_for
 from functools import wraps
+
+@app.template_filter('markdown')
+def markdown_filter(text):
+    return Markup(markdown(text))
 
 
 def make_jwt_auth(token):
