@@ -57,7 +57,7 @@
                 {% if code.task.check_type == 'tests' %}
                     <pre class="m-0 flat-pre"><code class="p-2 py-3 txt">{{ code.check_comments }}</code></pre>
                 {% else %}
-                    <div class="p-2 py-3 txt">{ code.check_comments | safe | markdown }}</div>
+                    <code class="p-2 py-3 txt">{{ code.check_comments | safe | markdown }}</code>
                 {% endif %}
 
                 {% if code.check_state != 'done' and code.check_state != 'not checked' %}
