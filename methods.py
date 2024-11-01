@@ -141,7 +141,7 @@ def check_task_with_gpt(task, code):
         return
 
     points, comments = parse_gpt_answer(gpt_answer)
-    code.check_points = points
+    code.check_points = max(min(points, task.points), 1)
     code.check_comments = comments
 
     if code.check_points == task.points:
