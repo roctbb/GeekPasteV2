@@ -81,6 +81,7 @@ def index():
 
 
 @app.route('/raw', methods=['GET'])
+@login_required
 def raw():
     code_id = request.args.get('id')
 
@@ -90,7 +91,9 @@ def raw():
         if not code:
             flash("Код не найден.", "danger")
         else:
-            return f"<pre>{code.code}</pre>"
+            response = make_response(code.code)
+            response.headers['Content-Type'] = 'text/plain'
+            return response
 
     return redirect('/')
 
