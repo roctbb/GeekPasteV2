@@ -50,40 +50,14 @@ def check_task(id):
         if not task:
             return
 
-        executor = None
-        try:
-            executor = TestExecutor(code)
-            points, comments = executor.perform()
+        if task.check_type == 'tests':
+            check_task_with_tests(task, code)
 
-            if points > task.points:
-                raise ExecutionException("Too much points")
-
-            if not points:
-                points = 1
-
-            code.check_points = points
-            code.check_comments = comments
-
-            if code.check_points == task.points:
-                code.check_state = 'done'
-            else:
-                code.check_state = 'partially done'
-
-        except ExecutionException as e:
-            code.check_points = 1
-            code.check_state = 'execution error'
-            code.check_comments = str(e)
-        except SolutionException as e:
-            code.check_points = 1
-            code.check_state = 'solution error'
-            code.check_comments = str(e)
+        if task.check_type == 'gpt':
+            check_task_with_gpt(task, code)
 
         code.checked_at = datetime.now()
         db.session.commit()
-
-        if executor:
-            print("deleting executor")
-            del executor
 
         if SUBMIT_URL and code.course_id:
             requests.post(SUBMIT_URL, json={

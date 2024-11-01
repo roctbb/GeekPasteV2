@@ -50,3 +50,100 @@ def save_similarity(new_code, similar_code, percent):
 
     db.session.execute(similarity_entry)
     db.session.commit()
+
+
+def check_task_with_tests(task, code):
+    executor = None
+    try:
+        executor = TestExecutor(code)
+        points, comments = executor.perform()
+
+        if points > task.points:
+            raise ExecutionException("Too much points")
+
+        if not points:
+            points = 1
+
+        code.check_points = points
+        code.check_comments = comments
+
+        if code.check_points == task.points:
+            code.check_state = 'done'
+        else:
+            code.check_state = 'partially done'
+
+    except ExecutionException as e:
+        code.check_points = 1
+        code.check_state = 'execution error'
+        code.check_comments = str(e)
+    except SolutionException as e:
+        code.check_points = 1
+        code.check_state = 'solution error'
+        code.check_comments = str(e)
+
+    if executor:
+        print("deleting executor")
+        del executor
+
+
+def get_payload(task_text, solution_text):
+    payload = [
+        {
+            "role": "system",
+            "content": "Твоя задача оценить решение задачи по программированию. Оценивай только работоспособность, а не качество кода. Максимальный балл - 10. Если код не запускается или не компилируется, или завершается с ошибкой, ставь 0. Количество баллов кратно 5. На первой строке ответа напиши количество баллов числом. Далее - свой комментарий."
+        },
+        {
+            "role": "user",
+            "content": f"Условие задачи:\n{task_text}"
+        },
+        {
+            "role": "user",
+            "content": f"Решение ученика:\n{solution_text}"
+        }
+    ]
+    return payload
+
+
+def parse_gpt_answer(answer):
+    try:
+        points = int(answer.split('\n')[0])
+        comments = '\n'.join(answer.split('\n')[1:])
+    except Exception as e:
+        points = 1
+        comments = str(e)
+
+    return points, comments
+
+
+def check_task_with_gpt(task, code):
+    payload = {
+        "token": GPT_KEY,
+        "model": GPT_MODEL,
+        "context": get_payload(task.text, code.code)
+    }
+
+    try:
+        answer = requests.post(GPT_GATEWAY, json=payload)
+    except Exception as e:
+        code.check_points = 1
+        code.check_state = 'execution error'
+        code.check_comments = str(e)
+        return
+
+    try:
+        result = answer.json()
+        gpt_answer = result['result']['choices'][0]['message']['content']
+    except Exception as e:
+        code.check_points = 1
+        code.check_state = 'execution error'
+        code.check_comments = str(e)
+        return
+
+    points, comments = parse_gpt_answer(gpt_answer)
+    code.check_points = points
+    code.check_comments = comments
+
+    if code.check_points == task.points:
+        code.check_state = 'done'
+    else:
+        code.check_state = 'partially done'

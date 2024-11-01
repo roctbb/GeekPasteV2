@@ -16,3 +16,7 @@ SECRET = os.getenv('SECRET', 'key')
 AUTH_URL = os.getenv('AUTH_URL', 'https://codingprojects.ru/insider/jwt?redirect_url=')
 JWT_SECRET = os.getenv('JWT_SECRET')
 SUBMIT_URL = os.getenv('SUBMIT_URL')
+
+GPT_MODEL = os.getenv('GPT_MODEL', 'gpt-4o-mini')
+GPT_KEY = os.getenv('GPT_KEY')
+GPT_GATEWAY = os.getenv('GPT_GATEWAY', 'https://gpt-gateway.ai.medsenger.ru/ask')

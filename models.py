@@ -18,6 +18,8 @@ class Task(db.Model):
     name = db.Column(db.String(), nullable=True)
     lang = db.Column(db.String(), nullable=True)
     points = db.Column(db.Integer(), nullable=True)
+    check_type = db.Column(db.String(), nullable=True, server_default='tests')
+    text = db.Column(db.Text(), nullable=True)
 
 
 class Code(db.Model):
