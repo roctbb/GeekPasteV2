@@ -26,7 +26,7 @@ def perform_tests(runner, source_code=None):
         expected_height = height
         expected_result = "\n".join(" " * (expected_height - i - 1) + "*" * (2 * i + 1) for i in range(expected_height))
         original_result = runner(input_data)
-        result = original_result.strip()
+        result = '\n'.join(original_result.rstrip().split('\n')[-height:])
 
         if not result.endswith(expected_result):
             return 1, comment_template.format(input_data.strip(), expected_result, original_result)
@@ -41,6 +41,18 @@ def perform_tests(runner, source_code=None):
 
     return 10, "OK! :)"
 
+def synthetic_runner(stdin):
+    height = int(stdin)
+
+    spaces = height - 1
+    res = ""
+    for i in range(height):
+        res += " " * spaces + "*" * (2 * i + 1) + '\n'
+        spaces -= 1
+    return res
+
+if __name__ == "__main__":
+    print(perform_tests(synthetic_runner, "")[1])
 
 """
 

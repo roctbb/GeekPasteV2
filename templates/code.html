@@ -77,7 +77,7 @@
                                 data-bs-target="#collapse-{{ similarity.code.id }}" aria-expanded="true"
                                 aria-controls="collapse-{{ similarity.code.id }}">
                             Код {{ similarity.code.id }} - {{ similarity.percent }}% схожести
-                            от {{ similarity.code.created_at.strftime("%d.%m.%Y %H:%M") }}
+                            от {{ similarity.code.created_at.strftime("%d.%m.%Y %H:%M") }} (UID {{ similarity.code.user_id }})
                         </button>
                     </h2>
                     <div id="collapse-{{ similarity.code.id }}" class="accordion-collapse collapse"

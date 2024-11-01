@@ -134,8 +134,8 @@ class ExecutionContainer:
                 timeout=time_limit
             )
             if exec_result.returncode != 0:
-                return exec_result.stderr.decode().strip()
-            return exec_result.stdout.decode().strip()
+                return exec_result.stderr.decode()
+            return exec_result.stdout.decode()
 
         except subprocess.TimeoutExpired:
             raise SolutionException(f"Test failed: Execution timed out after {time_limit} seconds.")
