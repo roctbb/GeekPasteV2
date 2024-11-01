@@ -57,13 +57,13 @@
                 {% if code.task.check_type == 'tests' %}
                     <pre class="m-0 flat-pre"><code class="p-2 py-3 txt">{{ code.check_comments }}</code></pre>
                 {% else %}
-                    <div class="p-2 py-3 txt">{{ code.check_comments | safe | markdown }}</div>
+                    <div class="p-3 txt">{{ code.check_comments | safe | markdown }}</div>
                 {% endif %}
 
                 {% if code.check_state != 'done' and code.check_state != 'not checked' %}
                     <a style="border: 1px solid #ddd;"
                        href="/?task_id={{ code.task.id }}&course_id={{ code.course_id }}"
-                       class="btn btn-light btn-flat btn-sm mt-0 m-2">Отправить снова?</a>
+                       class="btn btn-light btn-flat btn-sm mt-0 m-2 mx-3">Отправить снова?</a>
                 {% endif %}
             </div>
         </div>
