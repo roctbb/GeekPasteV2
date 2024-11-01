@@ -54,7 +54,7 @@
             {% endif %}
             <div class="card-body p-0 position-relative gray">
                 <span class="top-badge badge bg-primary float-end">Очков: {{ code.check_points }}</span>
-                {% if task.check_type == 'tests' %}
+                {% if code.task.check_type == 'tests' %}
                     <pre class="m-0 flat-pre"><code class="p-2 py-3 txt">{{ code.check_comments }}</code></pre>
                 {% else %}
                     {{ code.check_comments | safe | markdown }}
