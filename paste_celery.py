@@ -5,7 +5,6 @@ from config import *
 import jwt
 from methods import *
 from manage import app
-from runner import TestExecutor, SolutionException, ExecutionException
 from datetime import datetime
 
 celery = Celery('app', broker=CELERY_BROKER)

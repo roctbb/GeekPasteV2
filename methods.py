@@ -5,6 +5,7 @@ from sqlalchemy import *
 from models import *
 from config import *
 import requests
+from runner import TestExecutor, SolutionException, ExecutionException
 
 
 def create_id():
@@ -87,11 +88,11 @@ def check_task_with_tests(task, code):
         del executor
 
 
-def get_payload(task_text, solution_text):
+def get_payload(task_text, solution_text, max_points):
     payload = [
         {
             "role": "system",
-            "content": "Твоя задача оценить решение задачи по программированию. Оценивай только работоспособность, а не качество кода. Максимальный балл - 10. Если код не запускается или не компилируется, или завершается с ошибкой, ставь 0. Количество баллов кратно 5. На первой строке ответа напиши количество баллов числом. Далее - свой комментарий."
+            "content": f"Твоя задача оценить решение задачи по программированию. Оценивай только работоспособность, а не качество кода. Максимальный балл - {max_points}. Если код не запускается или не компилируется, или завершается с ошибкой, ставь 0. Количество баллов кратно 5. На первой строке ответа напиши количество баллов числом. Далее - свой комментарий."
         },
         {
             "role": "user",
@@ -120,7 +121,7 @@ def check_task_with_gpt(task, code):
     payload = {
         "token": GPT_KEY,
         "model": GPT_MODEL,
-        "context": get_payload(task.text, code.code)
+        "context": get_payload(task.text, code.code, task.points)
     }
 
     try:
