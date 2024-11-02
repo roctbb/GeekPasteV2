@@ -13,9 +13,12 @@ CELERY_BROKER = os.getenv('CELERY_BROKER', 'redis://localhost:6379/0')
 DEBUG = bool(os.getenv('DEBUG', False))
 PORT = int(os.getenv('PORT', 8084))
 SECRET = os.getenv('SECRET', 'key')
-AUTH_URL = os.getenv('AUTH_URL', 'https://codingprojects.ru/insider/jwt?redirect_url=')
+GEEKCLASS_HOST = os.getenv('GEEKCLASS_HOST', 'https://codingprojects.ru')
 JWT_SECRET = os.getenv('JWT_SECRET')
-SUBMIT_URL = os.getenv('SUBMIT_URL')
+
+SUBMIT_URL = GEEKCLASS_HOST + '/api/geekpaste'
+AUTH_URL = GEEKCLASS_HOST + '/insider/jwt?redirect_url='
+USER_URL = GEEKCLASS_HOST + '/insider/profile/'
 
 GPT_MODEL = os.getenv('GPT_MODEL', 'gpt-4o-mini')
 GPT_KEY = os.getenv('GPT_KEY')

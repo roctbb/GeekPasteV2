@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="list-group">
+        {% for code in codes %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div class="text-decoration-none flex-grow-1 small">
+                    <span class="badge bg-warning"><i class="fas fa-clone"></i> {{ code.similar_codes | length }}</span>
+
+                    <span class="mx-1"><i class="fas fa-code"></i> {{ code.id }}</span>
+                    {% if code.user_id %}
+                        <span class="mx-1"><i class="fas fa-user"></i> <a href="{{ user_url }}{{ code.user_id }}"
+                                                                                target="_blank"> {{ code.user_id }}</a></span>{% endif %}
+                    {% if code.task %}<i class="fas fa-tasks ms-1"></i>
+                        {{ code.task.name }}{% endif %}
+                </div>
+                <div>
+                    <span class="text-muted small pe-1"><i
+                            class="fas fa-calendar-alt"></i> {{ code.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                    <a href="/?id={{ code.id }}" target="_blank" class="btn btn-primary btn-sm ml-3"><i
+                            class="fas fa-search"></i> Рассмотреть</a>
+                    <a href="/warnings/uncheck/{{ code.id }}" class="btn btn-success btn-sm ml-1"><i
+                            class="fas fa-exclamation-circle"></i> Снять предупреждение</a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% endblock %}

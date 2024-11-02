@@ -31,7 +31,7 @@ class Code(db.Model):
     ip = db.Column(db.String(), nullable=True)
     created_at = db.Column(db.DateTime(), nullable=True, default=db.func.current_timestamp())
     views = db.Column(db.Integer(), nullable=True, default=0)
-    checked = db.Column(db.Boolean(), nullable=False, server_default='false')
+    similarity_checked = db.Column(db.Boolean(), nullable=False, server_default='false')
     user_id = db.Column(db.Integer, nullable=True)
 
     task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=True)
@@ -40,6 +40,8 @@ class Code(db.Model):
     check_comments = db.Column(db.Text(), nullable=True)
     check_points = db.Column(db.Integer(), nullable=True)
     checked_at = db.Column(db.DateTime(), nullable=True)
+
+    has_similarity_warning = db.Column(db.Boolean(), server_default='false', nullable=False)
 
     similar_codes = db.relationship('Code',
                                     secondary=similarities_table,

@@ -43,6 +43,32 @@ def is_author(code):
     return code.user_id == session['user_id']
 
 
+@app.route('/warnings', methods=['GET'])
+@login_required
+def warnings():
+    if not is_teacher():
+        abort(403)
+
+    codes = Code.query.filter_by(has_similarity_warning=True).order_by(Code.created_at.desc()).all()
+
+    return render_template('similarity_warnings.html', codes=codes, user_url=USER_URL)
+
+
+@app.route('/warnings/uncheck/<code_id>', methods=['GET'])
+@login_required
+def uncheck_warning(code_id):
+    if not is_teacher():
+        abort(403)
+
+    code = get_code(code_id)
+
+    if code:
+        code.has_similarity_warning = False
+        db.session.commit()
+
+    return redirect('/warnings')
+
+
 @app.route('/', methods=['GET'])
 @login_required
 def index():
@@ -62,7 +88,7 @@ def index():
             elif not is_author(code):
                 add_view(code)
 
-            return render_template('code.html', code=code, similarities=similarities)
+            return render_template('code.html', code=code, similarities=similarities, user_url=USER_URL)
 
     task_id = request.args.get('task_id')
     course_id = request.args.get('course_id')

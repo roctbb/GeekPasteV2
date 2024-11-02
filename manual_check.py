@@ -17,7 +17,7 @@ with app.app_context():
                     continue
 
                 n = checker.similarity(code.code, code2.code)
-                code.checked = True
+                code.similarity_checked = True
 
                 if n >= SIMILARITY_LEVEL:
                     save_similarity(code, code2, n)

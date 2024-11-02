@@ -15,11 +15,11 @@
                 <i class="fa fa-calendar ms-1" aria-hidden="true"></i> {{ code.created_at.strftime('%d.%m.%Y') }}
                 {% if session['role'] == 'teacher' or session['role'] == 'admin' %}
 
-                    {% if not code.checked %}
+                    {% if not code.similarity_checked %}
                         <i class="fa fa-hourglass ms-1" style="color: sandybrown; opacity: 0.3;"
                            aria-hidden="true"></i></a>
                     {% else %}
-                        {% if similarities %}
+                        {% if code.has_similarity_warning %}
                             <i class="fa fa-circle ms-1" style="color: red; opacity: 0.3;"
                                aria-hidden="true"></i></a>
                         {% else %}
@@ -83,13 +83,14 @@
                                 aria-controls="collapse-{{ similarity.code.id }}">
                             Код {{ similarity.code.id }} - {{ similarity.percent }}% схожести
                             от {{ similarity.code.created_at.strftime("%d.%m.%Y %H:%M") }}
-                            (UID {{ similarity.code.user_id }})
+                            (UID&nbsp;<a href="{{ user_url }}{{ similarity.code.user_id }}"
+                                    target="_blank">{{ similarity.code.user_id }}</a>)
                         </button>
                     </h2>
                     <div id="collapse-{{ similarity.code.id }}" class="accordion-collapse collapse"
                          aria-labelledby="heading-{{ similarity.code.id }}" data-bs-parent="#similarCodesAccordion">
-                        <div class="accordion-body">
-                            <pre>{{ similarity.code.code }}</pre>
+                        <div class="accordion-body p-0">
+                            <pre class="m-0 flat-pre"><code id='code' class="{{ similarity.code.lang }} p-2 py-3">{{ similarity.code.code }}</code></pre>
                         </div>
                     </div>
                 </div>
