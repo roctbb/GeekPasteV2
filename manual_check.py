@@ -11,7 +11,7 @@ with app.app_context():
 
 
     for code in tqdm(codes):
-        if not code.checked:
+        if not code.similarity_checked:
             for code2 in codes:
                 if code2.id == code.id:
                     continue

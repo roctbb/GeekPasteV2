@@ -24,7 +24,7 @@ def save_code(code, lang, client_ip, id=None, user_id=None, task_id=None, course
                 break
 
     code = Code(id=id, code=code, lang=lang, ip=client_ip, views=0, user_id=user_id, task_id=task_id,
-                checked=False, checked_at=None, check_state=None, check_comments=None, check_points=0,
+                similarity_checked=False, checked_at=None, check_state=None, check_comments=None, check_points=0,
                 course_id=course_id)
     db.session.add(code)
     db.session.commit()

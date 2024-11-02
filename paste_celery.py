@@ -25,7 +25,7 @@ def save_similarities(id):
     with app.app_context():
         code = get_code(id)
 
-        if not code or not code.user_id or code.checked:
+        if not code or not code.user_id or code.similarity_checked:
             return
 
         all_codes = Code.query.filter(Code.user_id.isnot(None), Code.user_id != code.user_id).all()
