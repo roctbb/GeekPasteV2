@@ -9,7 +9,13 @@
                     <span class="mx-1"><i class="fas fa-code"></i> {{ code.id }}</span>
                     {% if code.user_id %}
                         <span class="mx-1"><i class="fas fa-user"></i> <a href="{{ user_url }}{{ code.user_id }}"
-                                                                                target="_blank"> {{ code.user_id }}</a></span>{% endif %}
+                                                                                target="_blank"> {{ code.user_id }}</a></span> |
+                        {% for similar_code in code.similar_codes %}
+                            <span class="ml-1"><i class="fas fa-user"></i> <a href="{{ user_url }}{{ similar_code.user_id }}"
+                                                                                target="_blank"> {{ similar_code.user_id }}</a></span>
+                        {% endif %}
+
+                    {% endif %}
                     {% if code.task %}<i class="fas fa-tasks ms-1"></i>
                         {{ code.task.name }}{% endif %}
                 </div>
