@@ -26,7 +26,9 @@ def perform_tests(runner, source_code=None):
         correct_result = process_image(input_filename)
 
         stdin = f"{input_filename}\n{output_filename}\n"
-        runner(stdin)
+        stdout = runner(stdin)
+
+        print(stdout)
 
         user_result = Image.open(output_filename)
         if not np.array_equal(np.array(correct_result), np.array(user_result)):
@@ -45,3 +47,24 @@ def synthetic_runner(stdin):
 if __name__ == "__main__":
     score, comments = perform_tests(synthetic_runner)
     print(comments)
+
+"""
+def process_image(path):
+    img = Image.open(path)
+
+    for j in range(img.height // 2, img.height):
+        for i in range(img.width):
+            img.putpixel((i, j), img.getpixel((i, img.height - 1)))
+
+    return img
+
+input_filename = input()
+output_filename = input()
+
+print(input_filename, output_filename)
+
+processed_image = process_image(input_filename)
+print("done")
+processed_image.save(output_filename)
+
+"""
