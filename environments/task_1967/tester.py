@@ -25,7 +25,7 @@ def perform_tests(runner, source_code=None):
         output_filename = test["output"]
         correct_result = process_image(input_filename)
 
-        stdin = f"{input_filename}\n{output_filename}"
+        stdin = f"{input_filename}\n{output_filename}\n"
         runner(stdin)
 
         user_result = Image.open(output_filename)
