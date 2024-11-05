@@ -35,6 +35,7 @@ def save_similarities(id):
 
             if n > SIMILARITY_LEVEL:
                 save_similarity(code, alternative, n)
+                code.has_similarity_warning = True
 
         code.similarity_checked = True
         db.session.commit()
