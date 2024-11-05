@@ -134,7 +134,7 @@ class ExecutionContainer:
                 timeout=time_limit
             )
             if exec_result.returncode != 0:
-                return exec_result.stderr.decode()
+                raise SolutionException(f"Runtime error: {exec_result.stderr.decode()}")
             return exec_result.stdout.decode()
 
         except subprocess.TimeoutExpired:
