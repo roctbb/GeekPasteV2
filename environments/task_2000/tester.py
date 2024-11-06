@@ -32,17 +32,11 @@ def get_mean_loudness_from_file(filename):
 def perform_tests(runner, source_code=None):
     for index, (input_file, output_file, level) in enumerate(scenarios):
         input_data = f"{input_file}\n{output_file}\n{level}\n"
-        result_signal, params = runner(input_data, 3)
 
-        # Создание временного файла для использования с wave при необходимости
-        temp_output_file = "temp_result.wav"
-        with wave.open(temp_output_file, 'wb') as temp_wave_file:
-            temp_wave_file.setparams(params)
-            temp_wave_file.writeframes(result_signal)
+        runner(input_data, 3)
 
         loudness_1 = get_mean_loudness_from_file("check.wav")
-        loudness_2 = get_mean_loudness_from_file(temp_output_file)
-        os.remove(temp_output_file)  # Удаляем временный файл
+        loudness_2 = get_mean_loudness_from_file(output_file)
 
         if np.abs(loudness_1 - loudness_2) > 10:
             return 1, "Результат тише ожидаемого"
@@ -52,16 +46,22 @@ def perform_tests(runner, source_code=None):
 
 
 # Simulated runner to use the calculation function
-def simulated_runner(user_input):
+def simulated_runner(user_input, t=0):
     input_file, output_file, level = user_input.strip().split('\n')
     level = int(level)
     with wave.open(input_file, 'rb') as wave_file:
         signal = wave_file.readframes(-1)
-        samples = np.frombuffer(signal, dtype=np.int16).tolist()
-        samples = [int(sample * level) for sample in samples]
         params = wave_file.getparams()
-        output_signal = np.array(samples, dtype=np.int16).tobytes()
-        return output_signal, params
+
+    samples = np.frombuffer(signal, dtype=np.int16).tolist()
+    samples = [int(sample * level) for sample in samples]
+    output_signal = np.array(samples, dtype=np.int16).tobytes()
+    with wave.open(output_file, 'wb') as output_wav_file:
+        output_wav_file.setparams(params)
+        output_wav_file.writeframes(output_signal)
+
+    return output_signal, params
+
 
 
 if __name__ == "__main__":
