@@ -32,7 +32,7 @@ def get_mean_loudness_from_file(filename):
 def perform_tests(runner, source_code=None):
     for index, (input_file, output_file, level) in enumerate(scenarios):
         input_data = f"{input_file}\n{output_file}\n{level}\n"
-        result_signal, params = runner(input_data)
+        result_signal, params = runner(input_data, 3)
 
         # Создание временного файла для использования с wave при необходимости
         temp_output_file = "temp_result.wav"
