@@ -60,8 +60,6 @@ def simulated_runner(user_input, t=0):
         output_wav_file.setparams(params)
         output_wav_file.writeframes(output_signal)
 
-    return output_signal, params
-
 
 
 if __name__ == "__main__":

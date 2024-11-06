@@ -36,7 +36,7 @@ def generate_test_audio_file(filename, channels, duration=10, sample_rate=44100)
         wav_file.writeframes(signal.tobytes())
 
 
-def perform_speed_tests(runner, source_code=None):
+def perform_tests(runner, source_code=None):
     for channels, duration in scenarios:
         filename = "task.wav"
         generate_test_audio_file(filename, channels, duration)
