@@ -126,5 +126,5 @@ def simulated_runner(user_input):
 
 
 if __name__ == "__main__":
-    points, comments = perform_speed_tests(simulated_runner, None)
+    points, comments = perform_tests(simulated_runner, None)
     print(points, comments)

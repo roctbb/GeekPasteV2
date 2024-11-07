@@ -51,6 +51,8 @@ def warnings():
 
     codes = Code.query.filter_by(has_similarity_warning=True).order_by(Code.created_at.desc()).all()
 
+    codes = list(filter(lambda c: not c.task_id or c.check_points == c.task.points, codes))
+
     return render_template('similarity_warnings.html', codes=codes, user_url=USER_URL)
 
 
