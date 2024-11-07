@@ -42,6 +42,7 @@ class Code(db.Model):
     checked_at = db.Column(db.DateTime(), nullable=True)
 
     has_similarity_warning = db.Column(db.Boolean(), server_default='false', nullable=False)
+    has_critical_similarity_warning = db.Column(db.Boolean(), server_default='false', nullable=False)
 
     similar_codes = db.relationship('Code',
                                     secondary=similarities_table,
