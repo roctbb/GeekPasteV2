@@ -37,6 +37,9 @@ def save_similarities(id):
                 save_similarity(code, alternative, n)
                 code.has_similarity_warning = True
 
+                if n > 95:
+                    code.has_critical_similarity_warning = True
+
         code.similarity_checked = True
         db.session.commit()
 
