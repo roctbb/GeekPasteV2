@@ -38,6 +38,12 @@
             {% if code.check_state == 'not checked' %}
                 <div class="card-header bg-warning text-dark  py-1 px-3">
                     <strong>Решение проверяется... <i class="fas fa-spinner float-end header-icon"></i></strong>
+
+                    <script>
+                        setTimeout(function () {
+                            location.reload();
+                        }, 3000);
+                    </script>
                 </div>
             {% elif 'error' in code.check_state %}
                 <div class="card-header bg-danger text-white  py-1 px-3">
