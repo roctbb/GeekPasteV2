@@ -134,6 +134,7 @@ def check_task_with_gpt(task, code):
 
     try:
         result = answer.json()
+        print(result)
         gpt_answer = result['result']['choices'][0]['message']['content']
     except Exception as e:
         code.check_points = 1
