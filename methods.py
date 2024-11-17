@@ -124,11 +124,8 @@ def check_task_with_gpt(task, code):
         "context": get_payload(task.text, code.code, task.points, task.lang)
     }
 
-    print("sending")
-
     try:
         answer = requests.post(GPT_GATEWAY, json=payload)
-        print(answer)
     except Exception as e:
         code.check_points = 1
         code.check_state = 'execution error'
