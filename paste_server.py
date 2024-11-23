@@ -95,7 +95,7 @@ def index():
     task_id = request.args.get('task_id')
     course_id = request.args.get('course_id')
 
-    if task_id and course_id:
+    if task_id and course_id and course_id.isnumeric():
         task = Task.query.filter_by(id=task_id).first()
 
         if not task:
