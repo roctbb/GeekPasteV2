@@ -97,13 +97,13 @@ def index():
 
     if task_id and course_id and course_id.isnumeric():
         task = Task.query.filter_by(id=task_id).first()
-
-        if not task:
-            flash("Задача не найдена в базе.", "warning")
-        else:
+        if task:
             flash(f"Отправка задания ID {task.id}: {task.name}. Оно будет проверено автоматически.", "info")
     else:
         task = None
+
+    if not task and task_id:
+        flash("Задача не найдена в базе.", "warning")
 
     return render_template('index.html', task=task)
 
