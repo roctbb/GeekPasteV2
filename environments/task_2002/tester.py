@@ -89,7 +89,7 @@ def validate_audio_transformation(input_file, result_file, channels, speed_facto
 
     if not np.array_equal(result_samples, expected_samples):
         if channels == 1:
-            return False, "Не удалось {mode} моно файл." + comment_template.format(np.frombuffer(input_signal, dtype=np.int16).tolist(), result_samples.tolist(), expected_samples.tolist())
+            return False, f"Не удалось {mode} моно файл." + comment_template.format(np.frombuffer(input_signal, dtype=np.int16).tolist(), result_samples.tolist(), expected_samples.tolist())
         if channels == 2:
             return False, f"Не удалось {mode} стерео файл." + comment_template.format(np.frombuffer(input_signal, dtype=np.int16).tolist(), result_samples.tolist(),
                                                                                       expected_samples.tolist())
