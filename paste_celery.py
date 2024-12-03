@@ -28,6 +28,9 @@ def save_similarities(id):
         if not code or not code.user_id or code.similarity_checked:
             return
 
+        if code.task and code.task.bypass_similarity_check:
+            return
+
         all_codes = Code.query.filter(Code.user_id.isnot(None), Code.user_id != code.user_id).all()
 
         for alternative in all_codes:
@@ -70,5 +73,3 @@ def check_task(id):
                 "course_id": code.course_id,
                 "token": generate_jwt(code.user_id, code.task_id)
             })
-
-

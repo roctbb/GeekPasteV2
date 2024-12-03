@@ -75,6 +75,7 @@ def uncheck_warning(code_id):
 @login_required
 def index():
     code_id = request.args.get('id')
+    has_error = False
 
     if code_id:
         code = get_code(code_id)
@@ -104,8 +105,9 @@ def index():
 
     if not task and task_id:
         flash("Задача не найдена в базе.", "warning")
+        has_error = True
 
-    return render_template('index.html', task=task)
+    return render_template('index.html', task=task, has_error=has_error)
 
 
 @app.route('/raw', methods=['GET'])

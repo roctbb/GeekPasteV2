@@ -20,6 +20,7 @@ class Task(db.Model):
     points = db.Column(db.Integer(), nullable=True)
     check_type = db.Column(db.String(), nullable=True, server_default='tests')
     text = db.Column(db.Text(), nullable=True)
+    bypass_similarity_check = db.Column(db.Boolean(), nullable=False, server_default='false')
 
 
 class Code(db.Model):
