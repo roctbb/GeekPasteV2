@@ -3,3 +3,4 @@ venv
 .idea
 database.sqlite
 executions
+__pycache__
