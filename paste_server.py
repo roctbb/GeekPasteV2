@@ -3,6 +3,7 @@ from flask import *
 from paste_celery import *
 from methods import *
 from manage import *
+import zipfile
 
 
 @app.route('/', methods=['POST'])
@@ -12,11 +13,31 @@ def submit():
     code = request.form.get('code')
     client_ip = request.remote_addr
 
+    if 'file' in request.files:
+        file = request.files['file']
+
+        if file.filename.endswith('.zip'):
+            lang = "zip"
+            content = file.read()
+
+            if len(content) > 300000:
+                flash("Слишком большой файл.", "danger")
+                return redirect('/?lang=zip')
+
+            code = extract_data_from_zipfile(content)
+            if not code:
+                flash("Не удалось прочитать архив.", "danger")
+                return redirect('/?lang=zip')
+
+        if file.filename.endswith('.ipynb'):
+            code = file.read().decode('utf-8')
+            lang = "ipynb"
+
     if not code.strip():
         flash("Введите код.", "danger")
         return redirect('/')
 
-    if not lang or lang not in LANGS:
+    if not lang or lang not in LANGS + ['ipynb', 'zip']:
         flash("Выберите язык.", "danger")
         return redirect('/')
 
@@ -75,6 +96,7 @@ def uncheck_warning(code_id):
 @login_required
 def index():
     code_id = request.args.get('id')
+    prefered_lang = request.args.get('lang')
 
     if code_id:
         code = get_code(code_id)
@@ -89,6 +111,9 @@ def index():
                 similarities = code.get_similar_codes_sorted()
             elif not is_author(code):
                 add_view(code)
+
+            if code.lang == 'zip':
+                code.code = json.loads(code.code)
 
             return render_template('code.html', code=code, similarities=similarities, user_url=USER_URL)
 
@@ -105,7 +130,7 @@ def index():
     else:
         task = None
 
-    return render_template('index.html', task=task)
+    return render_template('index.html', task=task, prefered_lang=prefered_lang)
 
 
 @app.route('/raw', methods=['GET'])

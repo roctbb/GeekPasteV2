@@ -30,8 +30,16 @@ def save_similarities(id):
 
         all_codes = Code.query.filter(Code.user_id.isnot(None), Code.user_id != code.user_id).all()
 
+        current_code = code.code
+        if code.lang == 'ipynb':
+            current_code = extract_code_from_ipynb(code.code)
+
         for alternative in all_codes:
-            n = checker.similarity(code.code, alternative.code)
+            alternative_code = alternative.code
+            if alternative.lang == 'ipynb':
+                alternative_code = extract_code_from_ipynb(alternative.code)
+
+            n = checker.similarity(current_code, alternative_code)
 
             if n > SIMILARITY_LEVEL:
                 save_similarity(code, alternative, n)
@@ -70,5 +78,3 @@ def check_task(id):
                 "course_id": code.course_id,
                 "token": generate_jwt(code.user_id, code.task_id)
             })
-
-

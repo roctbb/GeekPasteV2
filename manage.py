@@ -17,10 +17,15 @@ migrate = Migrate(app, db)
 
 from flask import session, redirect, url_for
 from functools import wraps
+import json
 
 @app.template_filter('markdown')
 def markdown_filter(text):
     return Markup(markdown(text))
+
+@app.template_filter('json')
+def json_filter(text):
+    return json.loads(text)
 
 
 def make_jwt_auth(token):

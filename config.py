@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 LANGS = ['cpp', 'python', 'java', 'cs', 'html', 'css', 'js', 'json', 'xml', 'swift', 'php']
+IGNORED_PARTS = ['.idea', 'venv', 'pycache', '.replit', 'node_modules', 'vendor', '.git', 'build', '.pro.user', '__MACOSX', '.DS_Store']
 
 APP_URL = os.getenv('APP_URL', 'https://paste.geekclass.ru')
 SIMILARITY_LEVEL = int(os.getenv('SIMILARITY_LEVEL', 75))

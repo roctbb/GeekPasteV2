@@ -29,7 +29,16 @@
                     {% endif %}
                 {% endif %}
             </span>
-            <pre class="m-0 flat-pre"><code id='code' class="{{ code.lang }} p-2 py-3">{{ code.code }}</code></pre>
+            {% if code.lang == 'ipynb' %}
+                <div id="code"></div>
+            {% elif code.lang == 'zip' %}
+                {% for code_part in code.code %}
+                    <div class=" py-1"><strong class="mx-1">{{ code_part.name }}</strong></div>
+                    <pre class="m-0 flat-pre"><code id='code' class="p-2 py-3">{{ code_part.content }}</code></pre>
+                {% endfor %}
+            {% else %}
+                <pre class="m-0 flat-pre"><code id='code' class="{{ code.lang }} p-2 py-3">{{ code.code }}</code></pre>
+            {% endif %}
         </div>
     </div>
 
@@ -90,13 +99,14 @@
                             Код {{ similarity.code.id }} - {{ similarity.percent }}% схожести
                             от {{ similarity.code.created_at.strftime("%d.%m.%Y %H:%M") }}
                             (UID&nbsp;<a href="{{ user_url }}{{ similarity.code.user_id }}"
-                                    target="_blank">{{ similarity.code.user_id }}</a>)
+                                         target="_blank">{{ similarity.code.user_id }}</a>)
                         </button>
                     </h2>
                     <div id="collapse-{{ similarity.code.id }}" class="accordion-collapse collapse"
                          aria-labelledby="heading-{{ similarity.code.id }}" data-bs-parent="#similarCodesAccordion">
                         <div class="accordion-body p-0">
-                            <pre class="m-0 flat-pre"><code id='code' class="{{ similarity.code.lang }} p-2 py-3">{{ similarity.code.code }}</code></pre>
+                            <pre class="m-0 flat-pre"><code id='code'
+                                                            class="{{ similarity.code.lang }} p-2 py-3">{{ similarity.code.code }}</code></pre>
                         </div>
                     </div>
                 </div>
@@ -116,5 +126,11 @@
                 }, 1000); // Время в миллисекундах (2000 ms = 2 секунды)
             });
         });
+
+        {% if code.lang == 'ipynb' %}
+            var notebook = nb.parse(JSON.parse({{ code.code | tojson }}));
+            var rendered = notebook.render();
+            document.getElementById("code").appendChild(rendered);
+        {% endif %}
     </script>
 {% endblock %}

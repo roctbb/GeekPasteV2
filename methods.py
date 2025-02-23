@@ -1,6 +1,11 @@
+import io
+import json
+import re
 import string
 import random
 import datetime
+import zipfile
+
 from sqlalchemy import *
 from models import *
 from config import *
@@ -118,10 +123,17 @@ def parse_gpt_answer(answer):
 
 
 def check_task_with_gpt(task, code):
+    if code.lang == 'zip':
+        student_code = '\n\n'.join([f'Файл {part.name}\n\n{part.content}' for part in json.loads(code.code)])
+    elif code.lang == 'ipynb':
+        student_code = f'Файл solution.ipynb\n\n{code.code}'
+    else:
+        student_code = code.code
+
     payload = {
         "token": GPT_KEY,
         "model": GPT_MODEL,
-        "context": get_payload(task.text, code.code, task.points, task.lang)
+        "context": get_payload(task.text, student_code, task.points, task.lang)
     }
 
     try:
@@ -149,3 +161,56 @@ def check_task_with_gpt(task, code):
         code.check_state = 'done'
     else:
         code.check_state = 'partially done'
+
+
+def extract_data_from_zipfile(file):
+    try:
+        with zipfile.ZipFile(io.BytesIO(file), 'r') as zip_ref:
+            file_info = []
+            for zip_item in zip_ref.infolist():
+                file_name = zip_item.filename
+
+                with zip_ref.open(zip_item) as extracted_file:
+                    content = extracted_file.read()
+
+                    if zip_item.is_dir():
+                        continue  # Пропускаем папки
+
+                    try:
+                        for part in IGNORED_PARTS:
+                            if part in file_name:
+                                raise Exception("bad name")
+                    except Exception as e:
+                        continue
+
+                    if b'\x00' in content:  # Проверяем, является ли файл бинарным
+                        file_info.append({
+                            "name": file_name,
+                            "content": f"Файл размером {len(content)} байт."
+                        })
+                    else:
+                        file_info.append({
+                            "name": file_name,
+                            "content": content.decode(errors='replace'),
+                        })
+
+            return json.dumps(file_info, ensure_ascii=False)
+    except Exception as e:
+        print(e)
+        return None
+
+
+def extract_code_from_ipynb(file_content):
+    try:
+        notebook = json.loads(file_content)
+        code_cells = [cell['source'] for cell in notebook.get('cells', []) if cell['cell_type'] == 'code']
+
+        combined_code = "\n".join("".join(cell) for cell in code_cells)
+
+        # Убираем комментарии
+        combined_code = re.sub(r'(?m)^\s*#.*$', '', combined_code)  # Убираем строки-комментарии
+        combined_code = re.sub(r'(?m)\s*#.*$', '', combined_code)  # Убираем комментарии после кода
+
+        return combined_code.strip()
+    except Exception as e:
+        return str(e)
