@@ -93,11 +93,14 @@ def check_task_with_tests(task, code):
         del executor
 
 
-def get_payload(task_text, solution_text, max_points, lang):
+def get_payload(task_text, solution_text, max_points, lang=None):
+    prompt = f"Твоя задача оценить решение задачи по программированию. Оценивай только работоспособность, а не качество кода. Максимальный балл - {max_points}. Если код не запускается или не компилируется, или завершается с ошибкой, ставь 0. Количество баллов кратно 5. На первой строке ответа напиши количество баллов числом. Далее - свой комментарий."
+    if lang:
+        prompt += "Код должен быть написан на языке {lang}."
     payload = [
         {
             "role": "system",
-            "content": f"Твоя задача оценить решение задачи по программированию. Оценивай только работоспособность, а не качество кода. Максимальный балл - {max_points}. Код должен быть написан на языке {lang}. Если код не запускается или не компилируется, или завершается с ошибкой, ставь 0. Количество баллов кратно 5. На первой строке ответа напиши количество баллов числом. Далее - свой комментарий."
+            "content": prompt
         },
         {
             "role": "user",
@@ -124,7 +127,7 @@ def parse_gpt_answer(answer):
 
 def check_task_with_gpt(task, code):
     if code.lang == 'zip':
-        student_code = '\n\n'.join([f'Файл {part.name}\n\n{part.content}' for part in json.loads(code.code)])
+        student_code = '\n\n'.join([f'Файл {part["name"]}\n\n{part["content"]}' for part in json.loads(code.code)])
     elif code.lang == 'ipynb':
         student_code = f'Файл solution.ipynb\n\n{code.code}'
     else:
@@ -133,7 +136,8 @@ def check_task_with_gpt(task, code):
     payload = {
         "token": GPT_KEY,
         "model": GPT_MODEL,
-        "context": get_payload(task.text, student_code, task.points, task.lang)
+        "context": get_payload(task.text, student_code, task.points,
+                               task.lang if task.lang not in ['zip', 'ipynb'] else None)
     }
 
     try:
@@ -148,6 +152,8 @@ def check_task_with_gpt(task, code):
         result = answer.json()
         gpt_answer = result['result']['choices'][0]['message']['content']
     except Exception as e:
+        print(answer.content)
+        print(payload)
         code.check_points = 1
         code.check_state = 'execution error'
         code.check_comments = str(e)
