@@ -28,6 +28,9 @@ def save_similarities(id):
         if not code or not code.user_id or code.similarity_checked:
             return
 
+        if code.task and code.task.bypass_similarity_check:
+            return
+
         all_codes = Code.query.filter(Code.user_id.isnot(None), Code.user_id != code.user_id).all()
 
         current_code = code.code

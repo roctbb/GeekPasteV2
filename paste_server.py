@@ -3,7 +3,6 @@ from flask import *
 from paste_celery import *
 from methods import *
 from manage import *
-import zipfile
 
 
 @app.route('/', methods=['POST'])
@@ -96,6 +95,7 @@ def uncheck_warning(code_id):
 @login_required
 def index():
     code_id = request.args.get('id')
+    has_error = False
     prefered_lang = request.args.get('lang')
 
     if code_id:
@@ -120,17 +120,18 @@ def index():
     task_id = request.args.get('task_id')
     course_id = request.args.get('course_id')
 
-    if task_id and course_id:
+    if task_id and course_id and course_id.isnumeric():
         task = Task.query.filter_by(id=task_id).first()
-
-        if not task:
-            flash("Задача не найдена в базе.", "warning")
-        else:
+        if task:
             flash(f"Отправка задания ID {task.id}: {task.name}. Оно будет проверено автоматически.", "info")
     else:
         task = None
 
-    return render_template('index.html', task=task, prefered_lang=prefered_lang)
+    if not task and task_id:
+        flash("Задача не найдена в базе.", "warning")
+        has_error = True
+
+    return render_template('index.html', task=task, has_error=has_error, prefered_lang=prefered_lang)
 
 
 @app.route('/raw', methods=['GET'])

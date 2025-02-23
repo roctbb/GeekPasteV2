@@ -1,10 +1,12 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    <div class="card flat-card">
-        <div class="card-body">
-            <form method="POST" enctype="multipart/form-data">
-                {% if not prefered_lang %}
+
+    {% if not has_error %}
+        <div class="card flat-card">
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+        {% if not prefered_lang %}
                     <div class="form-group me-2">
                         <label for="lang" class="text-muted">Язык</label>
 
@@ -34,6 +36,7 @@
                                   class="form-control my-1"
                                   id="code" rows="10" name="code"></textarea>
                     </div>
+
                 {% elif prefered_lang == 'ipynb' %}
                     <div class="form-group me-2">
                         <label for="file" class="text-muted mb-2">Код</label>
@@ -46,8 +49,9 @@
                     </div>
                 {% endif %}
 
-                <button type="submit" class="btn btn-primary mt-2">Сохранить</button>
-            </form>
+                    <button type="submit" class="btn btn-primary mt-2">Сохранить</button>
+                </form>
+            </div>
         </div>
-    </div>
+    {% endif %}
 {% endblock %}
