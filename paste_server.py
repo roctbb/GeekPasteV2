@@ -10,6 +10,9 @@ from manage import *
 def submit():
     lang = request.form.get('lang')
     code = request.form.get('code')
+    task_id = request.args.get('task_id')
+    course_id = request.args.get('course_id')
+
     client_ip = request.remote_addr
 
     if 'file' in request.files:
@@ -21,11 +24,15 @@ def submit():
 
             if len(content) > 300000:
                 flash("Слишком большой файл.", "danger")
+                if task_id and course_id:
+                    return redirect('/?task_id={}&course_id={}'.format(task_id, course_id))
                 return redirect('/?lang=zip')
 
             code = extract_data_from_zipfile(content)
             if not code:
                 flash("Не удалось прочитать архив.", "danger")
+                if task_id and course_id:
+                    return redirect('/?task_id={}&course_id={}'.format(task_id, course_id))
                 return redirect('/?lang=zip')
 
         if file.filename.endswith('.ipynb'):
@@ -40,8 +47,7 @@ def submit():
         flash("Выберите язык.", "danger")
         return redirect('/')
 
-    task_id = request.args.get('task_id')
-    course_id = request.args.get('course_id')
+
     if task_id and not Task.query.filter_by(id=task_id).first():
         abort(404)
 
