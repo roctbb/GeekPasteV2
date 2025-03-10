@@ -79,7 +79,7 @@ def warnings():
 
     codes = list(filter(lambda c: not c.task_id or c.check_points == c.task.points, codes))
 
-    return render_template('similarity_warnings.html', codes=codes, user_url=USER_URL)
+    return render_template('similarity_warnings.html', codes=codes, user_url=USER_URL, task_url=TASK_URL)
 
 
 @app.route('/warnings/uncheck/<code_id>', methods=['GET'])
