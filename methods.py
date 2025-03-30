@@ -226,7 +226,7 @@ def rebuild_zip(code):
     memory_file = io.BytesIO()
     with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for f in json.loads(code.code):
-            if "Файл размером" not in f["content"]:
+            if "Файл размером" in f["content"]:
                 continue
             zipf.writestr(f["name"], f["content"])
 
