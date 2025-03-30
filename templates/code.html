@@ -10,6 +10,12 @@
                class="btn btn-flat btn-light btn-sm mt-0">
                 Чистый
             </a>
+            {% if code.lang == 'zip' %}
+                <a href="/zip?id={{ code.id }}"
+                   class="btn btn-flat btn-light btn-sm mt-0">
+                    ZIP
+                </a>
+            {% endif %}
             <span class="m-1 flat-span flat-stats" style="float:right;">
                 <i class="fa fa-eye ms-1" aria-hidden="true"></i> {{ code.views }}
                 <i class="fa fa-calendar ms-1" aria-hidden="true"></i> {{ code.created_at.strftime('%d.%m.%Y') }}

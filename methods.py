@@ -220,3 +220,16 @@ def extract_code_from_ipynb(file_content):
         return combined_code.strip()
     except Exception as e:
         return str(e)
+
+
+def rebuild_zip(code):
+    memory_file = io.BytesIO()
+    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for f in json.loads(code.code):
+            if "Файл размером" not in f["content"]:
+                continue
+            zipf.writestr(f["name"], f["content"])
+
+    memory_file.seek(0)
+
+    return memory_file.read()

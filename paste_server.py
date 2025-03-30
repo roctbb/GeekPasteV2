@@ -1,4 +1,6 @@
 # coding: utf8
+from io import BytesIO
+
 from flask import *
 from paste_celery import *
 from methods import *
@@ -133,6 +135,27 @@ def index():
         has_error = True
 
     return render_template('index.html', task=task, has_error=has_error, prefered_lang=prefered_lang)
+
+
+@app.route('/zip')
+def download_archive():
+    code_id = request.args.get('id')
+
+    if code_id:
+        code = get_code(code_id)
+
+        if not code or code.lang != 'zip':
+            flash("Код не найден.", "danger")
+        elif code.task and not is_teacher() and not is_author(code):
+            flash("Нет доступа. Это приватный код.", "danger")
+        else:
+            response = make_response(rebuild_zip(code))
+            response.headers['Content-Type'] = 'application/zip'
+            response.headers['Content-Disposition'] = f'attachment; filename=paste_{code.id}.zip'
+
+            return response
+
+    return redirect('/')
 
 
 @app.route('/raw', methods=['GET'])
