@@ -20,6 +20,7 @@ JWT_SECRET = os.getenv('JWT_SECRET')
 SUBMIT_URL = GEEKCLASS_HOST + '/api/geekpaste'
 AUTH_URL = GEEKCLASS_HOST + '/insider/jwt?redirect_url='
 USER_URL = GEEKCLASS_HOST + '/insider/profile/'
+TASK_URL = GEEKCLASS_HOST + '/insider/courses/{course_id}/tasks/{task_id}/student/{user_id}'
 
 GPT_MODEL = os.getenv('GPT_MODEL', 'gpt-4o-mini')
 GPT_KEY = os.getenv('GPT_KEY')

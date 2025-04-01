@@ -10,6 +10,12 @@
                class="btn btn-flat btn-light btn-sm mt-0">
                 Чистый
             </a>
+            {% if code.lang == 'zip' %}
+                <a href="/zip?id={{ code.id }}"
+                   class="btn btn-flat btn-light btn-sm mt-0">
+                    ZIP
+                </a>
+            {% endif %}
             <span class="m-1 flat-span flat-stats" style="float:right;">
                 <i class="fa fa-eye ms-1" aria-hidden="true"></i> {{ code.views }}
                 <i class="fa fa-calendar ms-1" aria-hidden="true"></i> {{ code.created_at.strftime('%d.%m.%Y') }}
@@ -89,30 +95,21 @@
 
 
     {% if similarities %}
-        <div class="accordion py-3" id="similarCodesAccordion">
-            {% for similarity in similarities %}
-                <div class="accordion-item">
-                    <h2 class="accordion-header" id="heading-{{ similarity.code.id }}">
-                        <button class="accordion-button p-2 collapsed" type="button" data-bs-toggle="collapse"
-                                data-bs-target="#collapse-{{ similarity.code.id }}" aria-expanded="true"
-                                aria-controls="collapse-{{ similarity.code.id }}">
-                            Код {{ similarity.code.id }} - {{ similarity.percent }}% схожести
-                            от {{ similarity.code.created_at.strftime("%d.%m.%Y %H:%M") }}
-                            (UID&nbsp;<a href="{{ user_url }}{{ similarity.code.user_id }}"
-                                         target="_blank">{{ similarity.code.user_id }}</a>)
-                        </button>
-                    </h2>
-                    <div id="collapse-{{ similarity.code.id }}" class="accordion-collapse collapse"
-                         aria-labelledby="heading-{{ similarity.code.id }}" data-bs-parent="#similarCodesAccordion">
-                        <div class="accordion-body p-0">
-                            <pre class="m-0 flat-pre"><code id='code'
-                                                            class="{{ similarity.code.lang }} p-2 py-3">{{ similarity.code.code }}</code></pre>
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
+    <ul class="list-group py-3">
+        {% for similarity in similarities %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <a href="/?id={{ similarity.code.id }}" target="_blank">
+                    Код {{ similarity.code.id }} - {{ similarity.percent }}% схожести
+                </a>
+                <small class="text-muted">
+                    от {{ similarity.code.created_at.strftime("%d.%m.%Y %H:%M") }}
+                    (UID <a href="{{ user_url }}{{ similarity.code.user_id }}" target="_blank">{{ similarity.code.user_id }}</a>)
+                </small>
+            </li>
+        {% endfor %}
+    </ul>
+{% endif %}
+
 
     <script>
         new ClipboardJS('#copy-code')
