@@ -6,7 +6,17 @@
         <div class="card flat-card">
             <div class="card-body">
                 <form method="POST" enctype="multipart/form-data">
-                    {% if not prefered_lang %}
+                    {% if prefered_lang == 'ipynb' %}
+                        <div class="form-group me-2">
+                            <label for="file" class="text-muted mb-2">Код</label>
+                            <input class="form-control" type="file" name="file" accept=".ipynb"></input>
+                        </div>
+                    {% elif prefered_lang == 'zip' %}
+                        <div class="form-group me-2">
+                            <label for="file" class="text-muted mb-2">Архив с кодом</label>
+                            <input class="form-control" type="file" name="file" accept=".zip"></input>
+                        </div>
+                    {% else %}
                         <div>
                             <a href="/?lang=zip" class="btn-sm btn-secondary btn my-2">Сдать архив</a>
                             <a href="/?lang=ipynb" class="btn-sm btn-secondary btn my-2">Сдать тетрадку</a>
@@ -42,16 +52,7 @@
                                       id="code" rows="10" name="code"></textarea>
                         </div>
 
-                    {% elif prefered_lang == 'ipynb' %}
-                        <div class="form-group me-2">
-                            <label for="file" class="text-muted mb-2">Код</label>
-                            <input class="form-control" type="file" name="file" accept=".ipynb"></input>
-                        </div>
-                    {% elif prefered_lang == 'zip' %}
-                        <div class="form-group me-2">
-                            <label for="file" class="text-muted mb-2">Архив с кодом</label>
-                            <input class="form-control" type="file" name="file" accept=".zip"></input>
-                        </div>
+
                     {% endif %}
 
                     <button type="submit" class="btn btn-primary mt-2">Сохранить</button>
