@@ -17,10 +17,12 @@
                             <input class="form-control" type="file" name="file" accept=".zip"></input>
                         </div>
                     {% else %}
-                        <div>
-                            <a href="/?lang=zip" class="btn-sm btn-secondary btn my-2">Сдать архив</a>
-                            <a href="/?lang=ipynb" class="btn-sm btn-secondary btn my-2">Сдать тетрадку</a>
-                        </div>
+                        {% if not task %}
+                            <div>
+                                <a href="/?lang=zip" class="btn-sm btn-secondary btn my-2">Сдать архив</a>
+                                <a href="/?lang=ipynb" class="btn-sm btn-secondary btn my-2">Сдать тетрадку</a>
+                            </div>
+                        {% endif %}
 
                         <div class="form-group me-2">
                             <label for="lang" class="text-muted">Язык</label>
