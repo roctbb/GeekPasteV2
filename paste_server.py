@@ -130,6 +130,8 @@ def index():
 
     if task_id and course_id and course_id.isnumeric():
         task = Task.query.filter_by(id=task_id).first()
+        if not task:
+            abort(404)
         prefered_lang = task.lang
         if task:
             flash(f"Отправка задания ID {task.id}: {task.name}. Оно будет проверено автоматически.", "info")
