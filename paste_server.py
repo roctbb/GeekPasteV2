@@ -24,7 +24,7 @@ def submit():
             lang = "zip"
             content = file.read()
 
-            if len(content) > 300000:
+            if len(content) > 2000000:
                 flash("Слишком большой файл.", "danger")
                 if task_id and course_id:
                     return redirect('/?task_id={}&course_id={}'.format(task_id, course_id))
@@ -130,8 +130,9 @@ def index():
 
     if task_id and course_id and course_id.isnumeric():
         task = Task.query.filter_by(id=task_id).first()
-        prefered_lang = task.lang
+
         if task:
+            prefered_lang = task.lang
             flash(f"Отправка задания ID {task.id}: {task.name}. Оно будет проверено автоматически.", "info")
     else:
         task = None
