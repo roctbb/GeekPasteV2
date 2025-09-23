@@ -49,14 +49,17 @@ def add_view(code):
 
 
 def save_similarity(new_code, similar_code, percent):
-    similarity_entry = similarities_table.insert().values(
-        code_id=new_code.id,
-        code_id2=similar_code.id,
-        percent=percent
-    )
+    try:
+        similarity_entry = similarities_table.insert().values(
+            code_id=new_code.id,
+            code_id2=similar_code.id,
+            percent=percent
+        )
 
-    db.session.execute(similarity_entry)
-    db.session.commit()
+        db.session.execute(similarity_entry)
+        db.session.commit()
+    except:
+        pass
 
 
 def check_task_with_tests(task, code):
