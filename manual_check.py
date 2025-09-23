@@ -34,7 +34,7 @@ with app.app_context():
     unchecked_codes = list(filter(lambda c: not c.similarity_checked, codes))
 
     for code in tqdm(unchecked_codes):
-        for code2 in codes:
+        for code2 in [alternative for alternative in codes if alternative.user_id != code.user_id]:
             if code2.id == code.id:
                 continue
 
