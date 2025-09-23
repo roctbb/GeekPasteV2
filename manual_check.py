@@ -22,6 +22,10 @@ with app.app_context():
 
     codes = list(filter(should_check, codes))
 
+    if args.state:
+        codes = list(filter(lambda c: c.check_state == args.state, codes))
+        print(f"Фильтрация по состоянию '{args.state}': найдено {len(codes)} записей")
+
     # Фильтрация по дате, если указан аргумент --after-date
     if args.after_date:
         try:
@@ -33,10 +37,6 @@ with app.app_context():
             exit(1)
 
     unchecked_codes = list(filter(lambda c: not c.similarity_checked, codes))
-
-    if args.state:
-        unchecked_codes = list(filter(lambda c: c.check_state == args.state, unchecked_codes))
-        print(f"Фильтрация по состоянию '{args.state}': найдено {len(unchecked_codes)} записей")
 
     for code in tqdm(unchecked_codes):
         for code2 in [alternative for alternative in codes if alternative.user_id != code.user_id]:
