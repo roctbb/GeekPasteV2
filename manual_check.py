@@ -9,7 +9,10 @@ with app.app_context():
     def bypass(code):
         return (code.task and code.task.bypass_similarity_check) or not code.user_id
 
-    codes = list(filter(bypass, codes))
+    def should_check(code):
+        return not bypass(code)
+
+    codes = list(filter(should_check, codes))
     unchecked_codes = list(filter(lambda c: not c.similarity_checked, codes))
 
     for code in tqdm(unchecked_codes):
