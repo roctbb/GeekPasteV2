@@ -7,6 +7,9 @@ with app.app_context():
     codes = get_all_codes()
 
     for code in tqdm(codes):
+        if not code.user_id:
+            continue
+
         if not code.similarity_checked:
             if code.task and code.task.bypass_similarity_check:
                 print(f"Bypass code ID {code.id}")
@@ -15,6 +18,9 @@ with app.app_context():
             print(f"Checking code ID {code.id}")
 
             for code2 in codes:
+                if not code2.user_id:
+                    continue
+
                 if code2.id == code.id:
                     continue
 
