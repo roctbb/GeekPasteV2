@@ -6,29 +6,21 @@ import checker
 with app.app_context():
     codes = get_all_codes()
 
-    for code in tqdm(codes):
-        if not code.user_id:
-            continue
+    def bypass(code):
+        return (code.task and code.task.bypass_similarity_check) or not code.user_id
 
-        if not code.similarity_checked:
-            if code.task and code.task.bypass_similarity_check:
-                print(f"Bypass code ID {code.id}")
+    codes = list(filter(bypass, codes))
+    unchecked_codes = list(filter(lambda c: not c.similarity_checked, codes))
+
+    for code in tqdm(unchecked_codes):
+        for code2 in codes:
+            if code2.id == code.id:
                 continue
 
-            print(f"Checking code ID {code.id}")
+            n = checker.similarity(code.code, code2.code)
 
-            for code2 in codes:
-                if not code2.user_id:
-                    continue
+            if n >= SIMILARITY_LEVEL:
+                save_similarity(code, code2, n)
 
-                if code2.id == code.id:
-                    continue
-
-                n = checker.similarity(code.code, code2.code)
-
-                if n >= SIMILARITY_LEVEL:
-                    save_similarity(code, code2, n)
-
-            code.similarity_checked = True
-
-    db.session.commit()
+        code.similarity_checked = True
+        db.session.commit()
