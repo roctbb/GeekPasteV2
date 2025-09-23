@@ -8,6 +8,7 @@ from datetime import datetime
 # Парсинг аргументов командной строки
 parser = argparse.ArgumentParser(description='Проверка схожести кода')
 parser.add_argument('--after-date', type=str, help='Проверять только код, созданный после указанной даты (формат: YYYY-MM-DD)')
+parser.add_argument('--state', type=str, help='Фильтровать по состоянию проверки (значение поля check_state)')
 args = parser.parse_args()
 
 with app.app_context():
@@ -32,6 +33,10 @@ with app.app_context():
             exit(1)
 
     unchecked_codes = list(filter(lambda c: not c.similarity_checked, codes))
+
+    if args.state:
+        unchecked_codes = list(filter(lambda c: c.check_state == args.state, unchecked_codes))
+        print(f"Фильтрация по состоянию '{args.state}': найдено {len(unchecked_codes)} записей")
 
     for code in tqdm(unchecked_codes):
         for code2 in [alternative for alternative in codes if alternative.user_id != code.user_id]:
