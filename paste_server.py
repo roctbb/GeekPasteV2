@@ -107,7 +107,6 @@ def index():
     prefered_lang = request.args.get('lang')
 
     if code_id:
-        ensure_viewed_column()
         code = get_code(code_id)
 
         if not code:
@@ -229,7 +228,6 @@ def solutions():
 def mark_solution_viewed(code_id):
     if not is_teacher():
         abort(403)
-    ensure_viewed_column()
     code = get_code(code_id)
     if not code:
         abort(404)
@@ -246,7 +244,6 @@ def mark_solution_viewed(code_id):
 def mark_solution_unviewed(code_id):
     if not is_teacher():
         abort(403)
-    ensure_viewed_column()
     code = get_code(code_id)
     if not code:
         abort(404)
