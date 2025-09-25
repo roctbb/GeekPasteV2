@@ -8,3 +8,5 @@ tqdm
 PyJWT
 requests
 markdown
+pytelegrambotapi
+redis

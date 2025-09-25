@@ -10,7 +10,9 @@ from sqlalchemy import *
 from models import *
 from config import *
 import requests
+import jwt
 from runner import TestExecutor, SolutionException, ExecutionException
+from telegram_notifier import send_telegram_message
 
 
 def create_id():
@@ -68,6 +70,48 @@ def save_similarity(new_code, similar_code, percent):
         db.session.execute(similarity_entry)
         db.session.commit()
 
+        # Notify about suspected plagiarism when threshold met
+        try:
+            if percent >= SIMILARITY_LEVEL:
+                url1 = f"{APP_URL}/?id={new_code.id}"
+                url2 = f"{APP_URL}/?id={similar_code.id}"
+                user_a = f"{USER_URL}{new_code.user_id}" if new_code.user_id else ""
+                user_b = f"{USER_URL}{similar_code.user_id}" if similar_code.user_id else ""
+                task_link = ""
+                if new_code.task_id and new_code.course_id and new_code.user_id:
+                    task_link = TASK_URL.format(course_id=new_code.course_id, task_id=new_code.task_id, user_id=new_code.user_id)
+                profiles_part = ""
+                if user_a:
+                    profiles_part += f"\nПрофиль A: {user_a}"
+                if user_b:
+                    profiles_part += f"\nПрофиль B: {user_b}"
+                task_part = ""
+                if new_code.task_id:
+                    task_part = f"\nЗадание: {new_code.task_id} ({new_code.task.name if new_code.task and new_code.task.name else ''})"
+                if task_link:
+                    task_part += f"\nСтраница задания: {task_link}"
+                text = (
+                    "⚠️ Подозрение на плагиат"\
+                    f"\nПохожесть: {percent}%"\
+                    f"\nКод A: {new_code.id} (user {new_code.user_id}) {url1}"\
+                    f"\nКод B: {similar_code.id} (user {similar_code.user_id}) {url2}"\
+                    f"{profiles_part}"\
+                    f"{task_part}"
+                )
+                send_telegram_message(text)
+        except Exception:
+            pass
+
+    # Always set flags on the new code if threshold met
+    try:
+        if percent >= SIMILARITY_LEVEL:
+            new_code.has_similarity_warning = True
+            if percent > 95:
+                new_code.has_critical_similarity_warning = True
+            db.session.commit()
+    except Exception:
+        pass
+
 
 def check_task_with_tests(task, code):
     executor = None
@@ -93,6 +137,25 @@ def check_task_with_tests(task, code):
         code.check_points = 1
         code.check_state = 'execution error'
         code.check_comments = str(e)
+        try:
+            profile_url = f"{USER_URL}{code.user_id}" if code.user_id else ""
+            task_link = TASK_URL.format(course_id=code.course_id, task_id=code.task_id, user_id=code.user_id) if code.course_id and code.task_id and code.user_id else ""
+            extra_links = ""
+            if profile_url:
+                extra_links += f"\nПрофиль: {profile_url}"
+            if task_link:
+                extra_links += f"\nСтраница задания: {task_link}"
+            text = (
+                "❗ Системная ошибка при проверке (tests)"
+                f"\nКод: {code.id} (user {code.user_id})"
+                f"\nЗадание: {code.task_id} ({code.task.name if code.task and code.task.name else ''})"
+                f"\nОшибка: {str(e)}"
+                f"\nСсылка: {APP_URL}/?id={code.id}" +
+                f"{extra_links}"
+            )
+            send_telegram_message(text)
+        except Exception:
+            pass
     except SolutionException as e:
         code.check_points = 1
         code.check_state = 'solution error'
@@ -156,6 +219,25 @@ def check_task_with_gpt(task, code):
         code.check_points = 1
         code.check_state = 'execution error'
         code.check_comments = str(e)
+        try:
+            profile_url = f"{USER_URL}{code.user_id}" if code.user_id else ""
+            task_link = TASK_URL.format(course_id=code.course_id, task_id=code.task_id, user_id=code.user_id) if code.course_id and code.task_id and code.user_id else ""
+            extra_links = ""
+            if profile_url:
+                extra_links += f"\nПрофиль: {profile_url}"
+            if task_link:
+                extra_links += f"\nСтраница задания: {task_link}"
+            text = (
+                "❗ Системная ошибка при проверке (gpt запрос)"
+                f"\nКод: {code.id} (user {code.user_id})"
+                f"\nЗадание: {code.task_id} ({code.task.name if code.task and code.task.name else ''})"
+                f"\nОшибка: {str(e)}"
+                f"\nСсылка: {APP_URL}/?id={code.id}" +
+                f"{extra_links}"
+            )
+            send_telegram_message(text)
+        except Exception:
+            pass
         return
 
     try:
@@ -167,6 +249,25 @@ def check_task_with_gpt(task, code):
         code.check_points = 1
         code.check_state = 'execution error'
         code.check_comments = str(e)
+        try:
+            profile_url = f"{USER_URL}{code.user_id}" if code.user_id else ""
+            task_link = TASK_URL.format(course_id=code.course_id, task_id=code.task_id, user_id=code.user_id) if code.course_id and code.task_id and code.user_id else ""
+            extra_links = ""
+            if profile_url:
+                extra_links += f"\nПрофиль: {profile_url}"
+            if task_link:
+                extra_links += f"\nСтраница задания: {task_link}"
+            text = (
+                "❗ Системная ошибка при проверке (gpt парсинг ответа)"
+                f"\nКод: {code.id} (user {code.user_id})"
+                f"\nЗадание: {code.task_id} ({code.task.name if code.task and code.task.name else ''})"
+                f"\nОшибка: {str(e)}"
+                f"\nСсылка: {APP_URL}/?id={code.id}" +
+                f"{extra_links}"
+            )
+            send_telegram_message(text)
+        except Exception:
+            pass
         return
 
     points, comments = parse_gpt_answer(gpt_answer)
@@ -243,3 +344,12 @@ def rebuild_zip(code):
     memory_file.seek(0)
 
     return memory_file.read()
+
+
+def generate_jwt(user_id, task_id):
+    payload = {
+        'user_id': user_id,
+        'task_id': task_id
+    }
+    token = jwt.encode(payload, JWT_SECRET, algorithm='HS256')
+    return token

@@ -2,7 +2,6 @@ import requests
 from celery import Celery
 import checker
 from config import *
-import jwt
 from methods import *
 from manage import app
 from datetime import datetime
@@ -11,13 +10,6 @@ celery = Celery('app', broker=CELERY_BROKER)
 celery.conf.task_default_queue = 'paste_queue'
 
 
-def generate_jwt(user_id, task_id):
-    payload = {
-        'user_id': user_id,
-        'task_id': task_id
-    }
-    token = jwt.encode(payload, JWT_SECRET, algorithm='HS256')
-    return token
 
 
 @celery.task()
@@ -44,12 +36,8 @@ def save_similarities(id):
 
             n = checker.similarity(current_code, alternative_code)
 
-            if n > SIMILARITY_LEVEL:
+            if n >= SIMILARITY_LEVEL:
                 save_similarity(code, alternative, n)
-                code.has_similarity_warning = True
-
-                if n > 95:
-                    code.has_critical_similarity_warning = True
 
         code.similarity_checked = True
         db.session.commit()
@@ -69,6 +57,10 @@ def check_task(id):
 
         if task.check_type == 'gpt':
             check_task_with_gpt(task, code)
+
+        # Auto-mark as viewed by teacher if bypass flag is set on the task
+        if task.bypass_similarity_check and code.check_state == 'done':
+            code.viewed_by_teacher = True
 
         code.checked_at = datetime.now()
         db.session.commit()

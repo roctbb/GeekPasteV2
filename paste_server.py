@@ -5,6 +5,9 @@ from flask import *
 from paste_celery import *
 from methods import *
 from manage import *
+from datetime import datetime, timedelta
+from telegram_notifier import send_telegram_message
+from config import USER_URL, TASK_URL
 
 
 @app.route('/', methods=['POST'])
@@ -54,6 +57,35 @@ def submit():
         abort(404)
 
     id = save_code(code, lang, client_ip, user_id=session['user_id'], task_id=task_id, course_id=course_id)
+
+    # Notify if too many submissions for the same task in the last hour (>5)
+    try:
+        if task_id:
+            task = Task.query.filter_by(id=task_id).first()
+            if task and task.check_type == 'gpt':
+                window_start = datetime.now() - timedelta(hours=1)
+                cnt = (Code.query
+                       .filter_by(user_id=session['user_id'], task_id=task_id)
+                       .filter(Code.created_at >= window_start)
+                       .count())
+                if cnt >= 6 and cnt % 6 == 0:
+                    profile_url = f"{USER_URL}{session['user_id']}"
+                    task_link = TASK_URL.format(course_id=course_id, task_id=task_id, user_id=session['user_id']) if course_id and task_id else ""
+                    extra_links = f"\nПрофиль: {profile_url}"
+                    if task_link:
+                        extra_links += f"\nСтраница задания: {task_link}"
+                    text = (
+                        "🔁 Частые отправки решения (GPT)"
+                        f"\nПользователь: {session['user_id']}"
+                        f"\nЗадание: {task_id} ({task.name if task and task.name else ''})"
+                        f"\nОтправок за последний час: {cnt}"
+                        f"\nПоследняя отправка: {APP_URL}/?id={id}" +
+                        f"{extra_links}"
+                    )
+                    send_telegram_message(text)
+    except Exception:
+        pass
+
     save_similarities.delay(id)
     if task_id:
         check_task.delay(id)
