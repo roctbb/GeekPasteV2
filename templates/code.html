@@ -16,21 +16,31 @@
                     ZIP
                 </a>
             {% endif %}
+
+            {% if session['role'] == 'teacher' or session['role'] == 'admin' %}
+                {% if code.user_id %}
+                    <a href="{{ user_url }}{{ code.user_id }}" class="btn btn-flat btn-light btn-sm mt-0" target="_blank">
+                        <i class="fas fa-user"></i> Профиль
+                    </a>
+                {% endif %}
+                {% if code.task %}
+                    <a href="{{ task_url.format(task_id=code.task_id, course_id=code.course_id, user_id=code.user_id) }}" class="btn btn-flat btn-primary btn-sm mt-0" target="_blank">
+                        <i class="fas fa-link"></i> К задаче
+                    </a>
+                {% endif %}
+            {% endif %}
+
             <span class="m-1 flat-span flat-stats" style="float:right;">
                 <i class="fa fa-eye ms-1" aria-hidden="true"></i> {{ code.views }}
                 <i class="fa fa-calendar ms-1" aria-hidden="true"></i> {{ code.created_at.strftime('%d.%m.%Y') }}
                 {% if session['role'] == 'teacher' or session['role'] == 'admin' %}
-
                     {% if not code.similarity_checked %}
-                        <i class="fa fa-hourglass ms-1" style="color: sandybrown; opacity: 0.3;"
-                           aria-hidden="true"></i></a>
+                        <i class="fa fa-hourglass ms-1" style="color: sandybrown; opacity: 0.3;" aria-hidden="true"></i>
                     {% else %}
                         {% if code.has_similarity_warning %}
-                            <i class="fa fa-circle ms-1" style="color: red; opacity: 0.3;"
-                               aria-hidden="true"></i></a>
+                            <i class="fa fa-circle ms-1" style="color: red; opacity: 0.3;" aria-hidden="true"></i>
                         {% else %}
-                            <i class="fa fa-circle ms-1" style="color: green; opacity: 0.3;"
-                               aria-hidden="true"></i>
+                            <i class="fa fa-circle ms-1" style="color: green; opacity: 0.3;" aria-hidden="true"></i>
                         {% endif %}
                     {% endif %}
                 {% endif %}

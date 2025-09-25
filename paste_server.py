@@ -107,6 +107,7 @@ def index():
     prefered_lang = request.args.get('lang')
 
     if code_id:
+        ensure_viewed_column()
         code = get_code(code_id)
 
         if not code:
@@ -123,7 +124,7 @@ def index():
             if code.lang == 'zip':
                 code.code = json.loads(code.code)
 
-            return render_template('code.html', code=code, similarities=similarities, user_url=USER_URL)
+            return render_template('code.html', code=code, similarities=similarities, user_url=USER_URL, task_url=TASK_URL)
 
     task_id = request.args.get('task_id')
     course_id = request.args.get('course_id')
@@ -197,8 +198,14 @@ def solutions():
     except Exception:
         page = 1
 
+    filter_mode = request.args.get('filter', 'unviewed')  # 'all' or 'unviewed'
+
     per_page = 50
-    query = Code.query.filter(Code.task_id.isnot(None), Code.check_state == 'done').order_by(Code.created_at.desc())
+    base_query = Code.query.filter(Code.task_id.isnot(None), Code.check_state == 'done')
+    if filter_mode == 'unviewed':
+        base_query = base_query.filter_by(viewed_by_teacher=False)
+    query = base_query.order_by(Code.created_at.desc())
+
     total = query.count()
     codes = query.offset((page - 1) * per_page).limit(per_page).all()
 
@@ -213,7 +220,40 @@ def solutions():
                            total=total,
                            per_page=per_page,
                            user_url=USER_URL,
-                           task_url=TASK_URL)
+                           task_url=TASK_URL,
+                           filter_mode=filter_mode)
+
+
+@app.route('/solutions/mark_viewed/<code_id>', methods=['POST', 'GET'])
+@login_required
+def mark_solution_viewed(code_id):
+    if not is_teacher():
+        abort(403)
+    ensure_viewed_column()
+    code = get_code(code_id)
+    if not code:
+        abort(404)
+    code.viewed_by_teacher = True
+    db.session.commit()
+
+    # redirect back to solutions list keeping page/filter if possible
+    ref = request.referrer or url_for('solutions')
+    return redirect(ref)
+
+
+@app.route('/solutions/mark_unviewed/<code_id>', methods=['POST', 'GET'])
+@login_required
+def mark_solution_unviewed(code_id):
+    if not is_teacher():
+        abort(403)
+    ensure_viewed_column()
+    code = get_code(code_id)
+    if not code:
+        abort(404)
+    code.viewed_by_teacher = False
+    db.session.commit()
+    ref = request.referrer or url_for('solutions')
+    return redirect(ref)
 
 
 @app.route('/my/submissions', methods=['GET'])
