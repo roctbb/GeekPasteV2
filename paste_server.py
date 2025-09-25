@@ -183,5 +183,65 @@ def raw():
     return redirect('/')
 
 
+@app.route('/solutions', methods=['GET'])
+@login_required
+def solutions():
+    # Teacher-only page with paginated successful task submissions
+    if not is_teacher():
+        abort(403)
+
+    try:
+        page = int(request.args.get('page', 1))
+        if page < 1:
+            page = 1
+    except Exception:
+        page = 1
+
+    per_page = 50
+    query = Code.query.filter(Code.task_id.isnot(None), Code.check_state == 'done').order_by(Code.created_at.desc())
+    total = query.count()
+    codes = query.offset((page - 1) * per_page).limit(per_page).all()
+
+    has_prev = page > 1
+    has_next = page * per_page < total
+
+    return render_template('solutions.html',
+                           codes=codes,
+                           page=page,
+                           has_prev=has_prev,
+                           has_next=has_next,
+                           total=total,
+                           per_page=per_page,
+                           user_url=USER_URL,
+                           task_url=TASK_URL)
+
+
+@app.route('/my/submissions', methods=['GET'])
+@login_required
+def my_submissions():
+    try:
+        page = int(request.args.get('page', 1))
+        if page < 1:
+            page = 1
+    except Exception:
+        page = 1
+
+    per_page = 50
+    query = Code.query.filter_by(user_id=session['user_id']).order_by(Code.created_at.desc())
+    total = query.count()
+    codes = query.offset((page - 1) * per_page).limit(per_page).all()
+
+    has_prev = page > 1
+    has_next = page * per_page < total
+
+    return render_template('my_codes.html',
+                           codes=codes,
+                           page=page,
+                           has_prev=has_prev,
+                           has_next=has_next,
+                           total=total,
+                           per_page=per_page)
+
+
 if __name__ == '__main__':
     app.run(debug=DEBUG, port=PORT)

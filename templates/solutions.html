@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="m-0">Успешные сдачи задач</h5>
+        <div>
+            {% if has_prev %}
+                <a class="btn btn-sm btn-outline-secondary" href="/solutions?page={{ page - 1 }}">Назад</a>
+            {% endif %}
+            <span class="mx-2 small text-muted">Стр. {{ page }}</span>
+            {% if has_next %}
+                <a class="btn btn-sm btn-outline-secondary" href="/solutions?page={{ page + 1 }}">Вперед</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="list-group">
+        {% for code in codes %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div class="text-decoration-none flex-grow-1 small">
+                    <span class="mx-1"><i class="fas fa-code"></i> <a href="/?id={{ code.id }}" target="_blank">{{ code.id }}</a></span>
+                    {% if code.user_id %}
+                        <span class="mx-1"><i class="fas fa-user"></i> <a href="{{ user_url }}{{ code.user_id }}" target="_blank">{{ code.user_id }}</a></span>
+                    {% endif %}
+                    {% if code.task %}
+                        <span class="mx-1"><i class="fas fa-tasks"></i> {{ code.task.name }}</span>
+                    {% endif %}
+                </div>
+                <div>
+                    <span class="text-muted small pe-1"><i class="fas fa-calendar-alt"></i> {{ code.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                    {% if code.task %}
+                        <a href="{{ task_url.format(task_id=code.task_id, course_id=code.course_id, user_id=code.user_id) }}" class="btn btn-primary btn-sm" target="_blank">
+                            <i class="fas fa-link"></i> К задаче
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <div></div>
+        <div>
+            {% if has_prev %}
+                <a class="btn btn-sm btn-outline-secondary" href="/solutions?page={{ page - 1 }}">Назад</a>
+            {% endif %}
+            <span class="mx-2 small text-muted">Стр. {{ page }}</span>
+            {% if has_next %}
+                <a class="btn btn-sm btn-outline-secondary" href="/solutions?page={{ page + 1 }}">Вперед</a>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
