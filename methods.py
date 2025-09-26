@@ -50,7 +50,7 @@ def add_view(code):
     db.session.commit()
 
 
-def save_similarity(new_code, similar_code, percent):
+def save_similarity(new_code, similar_code, percent, send_notification=True):
     existing_similarity = db.session.execute(
         similarities_table.select().where(
             ((similarities_table.c.code_id == new_code.id) &
@@ -70,37 +70,38 @@ def save_similarity(new_code, similar_code, percent):
         db.session.execute(similarity_entry)
         db.session.commit()
 
-        # Notify about suspected plagiarism when threshold met
-        try:
-            if percent >= SIMILARITY_LEVEL:
-                url1 = f"{APP_URL}/?id={new_code.id}"
-                url2 = f"{APP_URL}/?id={similar_code.id}"
-                user_a = f"{USER_URL}{new_code.user_id}" if new_code.user_id else ""
-                user_b = f"{USER_URL}{similar_code.user_id}" if similar_code.user_id else ""
-                task_link = ""
-                if new_code.task_id and new_code.course_id and new_code.user_id:
-                    task_link = TASK_URL.format(course_id=new_code.course_id, task_id=new_code.task_id, user_id=new_code.user_id)
-                profiles_part = ""
-                if user_a:
-                    profiles_part += f"\nПрофиль A: {user_a}"
-                if user_b:
-                    profiles_part += f"\nПрофиль B: {user_b}"
-                task_part = ""
-                if new_code.task_id:
-                    task_part = f"\nЗадание: {new_code.task_id} ({new_code.task.name if new_code.task and new_code.task.name else ''})"
-                if task_link:
-                    task_part += f"\nСтраница задания: {task_link}"
-                text = (
-                    "⚠️ Подозрение на плагиат"\
-                    f"\nПохожесть: {percent}%"\
-                    f"\nКод A: {new_code.id} (user {new_code.user_id}) {url1}"\
-                    f"\nКод B: {similar_code.id} (user {similar_code.user_id}) {url2}"\
-                    f"{profiles_part}"\
-                    f"{task_part}"
-                )
-                send_telegram_message(text)
-        except Exception:
-            pass
+        # Notify about suspected plagiarism when threshold met (only if send_notification is True)
+        if send_notification:
+            try:
+                if percent >= SIMILARITY_LEVEL:
+                    url1 = f"{APP_URL}/?id={new_code.id}"
+                    url2 = f"{APP_URL}/?id={similar_code.id}"
+                    user_a = f"{USER_URL}{new_code.user_id}" if new_code.user_id else ""
+                    user_b = f"{USER_URL}{similar_code.user_id}" if similar_code.user_id else ""
+                    task_link = ""
+                    if new_code.task_id and new_code.course_id and new_code.user_id:
+                        task_link = TASK_URL.format(course_id=new_code.course_id, task_id=new_code.task_id, user_id=new_code.user_id)
+                    profiles_part = ""
+                    if user_a:
+                        profiles_part += f"\nПрофиль A: {user_a}"
+                    if user_b:
+                        profiles_part += f"\nПрофиль B: {user_b}"
+                    task_part = ""
+                    if new_code.task_id:
+                        task_part = f"\nЗадание: {new_code.task_id} ({new_code.task.name if new_code.task and new_code.task.name else ''})"
+                    if task_link:
+                        task_part += f"\nСтраница задания: {task_link}"
+                    text = (
+                        "⚠️ Подозрение на плагиат"\
+                        f"\nПохожесть: {percent}%"\
+                        f"\nКод A: {new_code.id} (user {new_code.user_id}) {url1}"\
+                        f"\nКод B: {similar_code.id} (user {similar_code.user_id}) {url2}"\
+                        f"{profiles_part}"\
+                        f"{task_part}"
+                    )
+                    send_telegram_message(text)
+            except Exception:
+                pass
 
     # Always set flags on the new code if threshold met
     try:
@@ -109,6 +110,53 @@ def save_similarity(new_code, similar_code, percent):
             if percent > 95:
                 new_code.has_critical_similarity_warning = True
             db.session.commit()
+    except Exception:
+        pass
+
+
+def send_similarity_summary_notification(main_code, similarities):
+    """
+    Send a single summary notification about all detected similarities.
+    main_code: the code being checked
+    similarities: list of tuples (similar_code, percent) for matches above threshold
+    """
+    if not similarities:
+        return
+        
+    try:
+        # Sort similarities by percentage (highest first)
+        similarities.sort(key=lambda x: x[1], reverse=True)
+        
+        # Prepare main submission info
+        main_url = f"{APP_URL}/?id={main_code.id}"
+        profile_url = f"{USER_URL}{main_code.user_id}" if main_code.user_id else ""
+        task_link = ""
+        if main_code.task_id and main_code.course_id and main_code.user_id:
+            task_link = TASK_URL.format(course_id=main_code.course_id, task_id=main_code.task_id, user_id=main_code.user_id)
+        
+        # Build the summary message
+        text = (
+            "⚠️ Обнаружены похожие решения"
+            f"\nКод: {main_code.id} (user {main_code.user_id})"
+        )
+        
+        if main_code.task_id:
+            text += f"\nЗадание: {main_code.task_id} ({main_code.task.name if main_code.task and main_code.task.name else ''})"
+        
+        text += f"\nКоличество совпадений: {len(similarities)}"
+        text += f"\nСсылка на посылку: {main_url}"
+        
+        if profile_url:
+            text += f"\nПрофиль: {profile_url}"
+        if task_link:
+            text += f"\nСтраница задания: {task_link}"
+        
+        # Add similarity details
+        text += "\n\nСовпадения:"
+        for similar_code, percent in similarities:
+            text += f"\n• {percent}% с кодом {similar_code.id} (user {similar_code.user_id})"
+        
+        send_telegram_message(text)
     except Exception:
         pass
 

@@ -39,6 +39,9 @@ with app.app_context():
     unchecked_codes = list(filter(lambda c: not c.similarity_checked, codes))
 
     for code in tqdm(unchecked_codes):
+        # Collect all similarities above threshold for summary notification
+        found_similarities = []
+        
         for code2 in [alternative for alternative in codes if alternative.user_id != code.user_id]:
             if code2.id == code.id:
                 continue
@@ -46,7 +49,13 @@ with app.app_context():
             n = checker.similarity(code.code, code2.code)
 
             if n >= SIMILARITY_LEVEL:
-                save_similarity(code, code2, n)
+                # Save similarity without sending individual notification
+                save_similarity(code, code2, n, send_notification=False)
+                found_similarities.append((code2, n))
+
+        # Send single summary notification for all similarities
+        if found_similarities:
+            send_similarity_summary_notification(code, found_similarities)
 
         code.similarity_checked = True
         db.session.commit()
