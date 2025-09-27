@@ -29,6 +29,9 @@ def save_similarities(id):
         if code.lang == 'ipynb':
             current_code = extract_code_from_ipynb(code.code)
 
+        # Collect all similarities above threshold for summary notification
+        found_similarities = []
+
         for alternative in all_codes:
             alternative_code = alternative.code
             if alternative.lang == 'ipynb':
@@ -37,7 +40,13 @@ def save_similarities(id):
             n = checker.similarity(current_code, alternative_code)
 
             if n >= SIMILARITY_LEVEL:
-                save_similarity(code, alternative, n)
+                # Save similarity without sending individual notification
+                save_similarity(code, alternative, n, send_notification=False)
+                found_similarities.append((alternative, n))
+
+        # Send single summary notification for all similarities
+        if found_similarities:
+            send_similarity_summary_notification(code, found_similarities)
 
         code.similarity_checked = True
         db.session.commit()
