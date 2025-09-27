@@ -27,7 +27,7 @@ def submit():
             lang = "zip"
             content = file.read()
 
-            if len(content) > 2000000:
+            if len(content) > 200000000:
                 flash("Слишком большой файл.", "danger")
                 if task_id and course_id:
                     return redirect('/?task_id={}&course_id={}'.format(task_id, course_id))
