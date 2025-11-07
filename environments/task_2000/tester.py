@@ -33,7 +33,7 @@ def perform_tests(runner, source_code=None):
     for index, (input_file, output_file, level) in enumerate(scenarios):
         input_data = f"{input_file}\n{output_file}\n{level}\n"
 
-        runner(input_data, 3)
+        runner(input_data, 5)
 
         loudness_1 = get_mean_loudness_from_file("check.wav")
         loudness_2 = get_mean_loudness_from_file(output_file)
