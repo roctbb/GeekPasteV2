@@ -51,7 +51,7 @@ def perform_tests(runner, source_code=None):
         generate_random_audio_file(filename, channels)
 
         input_data = f"{filename}\nresult.wav\n"
-        runner(input_data)
+        runner(input_data, 5)
 
         with wave.open("result.wav", "rb") as result_wav_file:
             signal = result_wav_file.readframes(-1)
