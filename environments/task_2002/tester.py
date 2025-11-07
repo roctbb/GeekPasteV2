@@ -43,7 +43,7 @@ def perform_tests(runner, source_code=None):
 
         # Test speeding up
         input_data = f"{filename}\nresult.wav\n1\n"
-        runner(input_data)
+        runner(input_data, 5)
         result, comments = validate_audio_transformation(filename, "result.wav", channels, 0.5, "ускорить")
 
         if not result and channels == 1:
