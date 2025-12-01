@@ -351,12 +351,14 @@ def extract_data_from_zipfile(file):
                     if b'\x00' in content:  # Проверяем, является ли файл бинарным
                         file_info.append({
                             "name": file_name,
-                            "content": f"Файл размером {len(content)} байт."
+                            "content": f"Файл размером {len(content)} байт.",
+                            "is-binary": True
                         })
                     else:
                         file_info.append({
                             "name": file_name,
                             "content": content.decode(errors='replace'),
+                            "is-binary": False
                         })
 
             return json.dumps(file_info, ensure_ascii=False)
@@ -385,7 +387,7 @@ def rebuild_zip(code):
     memory_file = io.BytesIO()
     with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for f in json.loads(code.code):
-            if "Файл размером" in f["content"]:
+            if f.get("is-binary", False):
                 continue
             zipf.writestr(f["name"], f["content"])
 
