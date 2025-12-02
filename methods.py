@@ -387,7 +387,8 @@ def rebuild_zip(code):
     memory_file = io.BytesIO()
     with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for f in json.loads(code.code):
-            if f.get("is-binary", re.fullmatch(r"Файл размером \d+ байт\.", f["content"].strip())):
+            if f.get("is-binary") or (
+                    "is-binary" not in f and re.fullmatch(r"Файл размером \d+ байт\.", f["content"].strip())):
                 continue
             zipf.writestr(f["name"], f["content"])
 
