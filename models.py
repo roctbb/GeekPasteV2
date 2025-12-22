@@ -46,6 +46,12 @@ class Code(db.Model):
     has_critical_similarity_warning = db.Column(db.Boolean(), server_default='false', nullable=False)
     viewed_by_teacher = db.Column(db.Boolean(), server_default='false', nullable=False)
 
+    # AI detection fields
+    has_ai_warning = db.Column(db.Boolean(), server_default='false', nullable=False)
+    ai_warning_reasons = db.Column(db.Text(), nullable=True)
+    ai_confidence = db.Column(db.String(20), nullable=True)  # low/medium/high
+    gpt_llm_probability = db.Column(db.Integer(), nullable=True)  # 0-100 от GPT проверки
+
     similar_codes = db.relationship('Code',
                                     secondary=similarities_table,
                                     primaryjoin=id == similarities_table.c.code_id,

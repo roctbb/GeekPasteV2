@@ -1,23 +1,59 @@
 {% extends 'base.html' %}
 {% block content %}
+    <ul class="nav nav-tabs mb-3">
+        <li class="nav-item">
+            <a class="nav-link {% if warning_type == 'similarity' %}active{% endif %}" href="/warnings?type=similarity">
+                <i class="fas fa-clone"></i> Списывание
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if warning_type == 'ai' %}active{% endif %}" href="/warnings?type=ai">
+                <i class="fas fa-robot"></i> Использование AI
+            </a>
+        </li>
+    </ul>
+
     <div class="list-group">
         {% for code in codes %}
             <div class="list-group-item d-flex justify-content-between align-items-center">
                 <div class="text-decoration-none flex-grow-1 small">
-                    <span class="badge {% if code.has_critical_similarity_warning %}bg-danger{% else %}bg-warning{% endif %}"><i class="fas fa-clone"></i> {{ code.similar_codes | length }}</span>
+                    {% if warning_type == 'similarity' %}
+                        <span class="badge {% if code.has_critical_similarity_warning %}bg-danger{% else %}bg-warning{% endif %}">
+                            <i class="fas fa-clone"></i> {{ code.similar_codes | length }}
+                        </span>
+                    {% else %}
+                        <span class="badge
+                            {% if code.ai_confidence == 'high' %}bg-danger
+                            {% elif code.ai_confidence == 'medium' %}bg-warning
+                            {% else %}bg-info
+                            {% endif %}">
+                            <i class="fas fa-robot"></i> {{ code.ai_confidence or 'low' }}
+                        </span>
+                    {% endif %}
 
                     <span class="mx-1"><i class="fas fa-code"></i> {{ code.id }}</span>
                     {% if code.user_id %}
                         <span class="mx-1"><i class="fas fa-user"></i> <a href="{{ user_url }}{{ code.user_id }}"
-                                                                                target="_blank"> {{ code.user_id }}</a></span> /
-                        {% for similar_code in code.similar_codes %}
-                            <span class="ms-1"><i class="fas fa-user"></i> <a href="{{ user_url }}{{ similar_code.user_id }}"
-                                                                                target="_blank"> {{ similar_code.user_id }}</a></span>
-                        {% endfor %}
-
+                                                                                target="_blank"> {{ code.user_id }}</a></span>
+                        {% if warning_type == 'similarity' %}
+                            /
+                            {% for similar_code in code.similar_codes %}
+                                <span class="ms-1"><i class="fas fa-user"></i> <a href="{{ user_url }}{{ similar_code.user_id }}"
+                                                                                    target="_blank"> {{ similar_code.user_id }}</a></span>
+                            {% endfor %}
+                        {% endif %}
                     {% endif %}
                     {% if code.task %}<i class="fas fa-tasks ms-2"></i>
                         {{ code.task.name }}{% endif %}
+
+                    {% if warning_type == 'ai' and code.ai_warning_reasons %}
+                        <div class="small text-muted mt-1">
+                            <i class="fas fa-info-circle"></i> {{ code.ai_warning_reasons }}
+                            {% if code.gpt_llm_probability %}
+                                | GPT: {{ code.gpt_llm_probability }}%
+                            {% endif %}
+                        </div>
+                    {% endif %}
                 </div>
                 <div>
                     <span class="text-muted small pe-1"><i
@@ -28,7 +64,7 @@
                     <a href="{{ task_url.format(task_id=code.task_id, course_id=code.course_id, user_id=code.user_id) }}" class="btn btn-danger btn-sm ml-1"><i
                             class="fas fa-ban"></i> Оценить</a>
                     {% endif %}
-                    <a href="/warnings/uncheck/{{ code.id }}" class="btn btn-success btn-sm ml-1"><i
+                    <a href="/warnings/uncheck/{{ code.id }}?type={{ warning_type }}" class="btn btn-success btn-sm ml-1"><i
                             class="fas fa-exclamation-circle"></i> Сброс</a>
 
                 </div>

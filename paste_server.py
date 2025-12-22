@@ -109,11 +109,16 @@ def warnings():
     if not is_teacher():
         abort(403)
 
-    codes = Code.query.filter_by(has_similarity_warning=True).order_by(Code.created_at.desc()).all()
+    warning_type = request.args.get('type', 'similarity')  # similarity or ai
+
+    if warning_type == 'ai':
+        codes = Code.query.filter_by(has_ai_warning=True).order_by(Code.created_at.desc()).all()
+    else:
+        codes = Code.query.filter_by(has_similarity_warning=True).order_by(Code.created_at.desc()).all()
 
     codes = list(filter(lambda c: not c.task_id or c.check_points == c.task.points, codes))
 
-    return render_template('similarity_warnings.html', codes=codes, user_url=USER_URL, task_url=TASK_URL)
+    return render_template('similarity_warnings.html', codes=codes, user_url=USER_URL, task_url=TASK_URL, warning_type=warning_type)
 
 
 @app.route('/warnings/uncheck/<code_id>', methods=['GET'])
@@ -122,13 +127,17 @@ def uncheck_warning(code_id):
     if not is_teacher():
         abort(403)
 
+    warning_type = request.args.get('type', 'similarity')
     code = get_code(code_id)
 
     if code:
-        code.has_similarity_warning = False
+        if warning_type == 'ai':
+            code.has_ai_warning = False
+        else:
+            code.has_similarity_warning = False
         db.session.commit()
 
-    return redirect('/warnings')
+    return redirect(f'/warnings?type={warning_type}')
 
 
 @app.route('/', methods=['GET'])

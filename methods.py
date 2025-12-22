@@ -13,6 +13,7 @@ import requests
 import jwt
 from runner import TestExecutor, SolutionException, ExecutionException
 from telegram_notifier import send_telegram_message
+from ai_detector import analyze_code_for_ai_usage, get_ai_detection_prompt_addition
 
 
 def create_id():
@@ -214,10 +215,14 @@ def check_task_with_tests(task, code):
         del executor
 
 
-def get_payload(task_text, solution_text, max_points, lang=None):
+def get_payload(task_text, solution_text, max_points, lang=None, check_ai=False):
     prompt = f"Твоя задача оценить решение задачи по программированию. Оценивай только работоспособность, а не качество кода. Максимальный балл - {max_points}. Если код не запускается или не компилируется, или завершается с ошибкой, ставь 0. Количество баллов кратно 5. На первой строке ответа напиши количество баллов числом. Далее - свой комментарий."
     if lang and lang != 'zip' and lang != 'ipynb':
         prompt += "Код должен быть написан на языке {lang}."
+
+    if check_ai:
+        prompt += get_ai_detection_prompt_addition()
+
     payload = [
         {
             "role": "system",
@@ -243,7 +248,19 @@ def parse_gpt_answer(answer):
         points = 1
         comments = str(e)
 
-    return points, comments
+    # Извлекаем вероятность использования LLM, если она есть
+    llm_probability = None
+    try:
+        import re
+        match = re.search(r'LLM_PROBABILITY:\s*(\d+)', answer)
+        if match:
+            llm_probability = int(match.group(1))
+            # Удаляем эту строку из комментариев
+            comments = re.sub(r'LLM_PROBABILITY:\s*\d+', '', comments).strip()
+    except:
+        pass
+
+    return points, comments, llm_probability
 
 
 def check_task_with_gpt(task, code):
@@ -258,7 +275,8 @@ def check_task_with_gpt(task, code):
         "token": GPT_KEY,
         "model": GPT_MODEL,
         "context": get_payload(task.text, student_code, task.points,
-                               task.lang if task.lang not in ['zip', 'ipynb'] else None)
+                               task.lang if task.lang not in ['zip', 'ipynb'] else None,
+                               check_ai=True)
     }
 
     try:
@@ -318,14 +336,77 @@ def check_task_with_gpt(task, code):
             pass
         return
 
-    points, comments = parse_gpt_answer(gpt_answer)
+    points, comments, llm_probability = parse_gpt_answer(gpt_answer)
     code.check_points = max(min(points, task.points), 1)
     code.check_comments = comments
+
+    # Сохраняем вероятность использования LLM от GPT
+    if llm_probability is not None:
+        code.gpt_llm_probability = llm_probability
 
     if code.check_points == task.points:
         code.check_state = 'done'
     else:
         code.check_state = 'partially done'
+
+    # Выполняем статический анализ на использование AI
+    try:
+        ai_analysis = analyze_code_for_ai_usage(
+            code.code,
+            code.lang,
+            user_id=code.user_id,
+            task_id=code.task_id,
+            db_session=db.session
+        )
+
+        if ai_analysis['suspicious']:
+            code.has_ai_warning = True
+            code.ai_warning_reasons = '; '.join(ai_analysis['reasons'])
+            code.ai_confidence = ai_analysis['confidence']
+
+        # Если GPT тоже подозревает (вероятность > 60), усиливаем confidence
+        if llm_probability and llm_probability > 60:
+            if not code.has_ai_warning:
+                code.has_ai_warning = True
+                code.ai_warning_reasons = f"GPT оценка вероятности использования LLM: {llm_probability}%"
+                code.ai_confidence = 'medium' if llm_probability > 75 else 'low'
+            else:
+                # Если уже есть подозрения, увеличиваем confidence
+                if code.ai_confidence == 'low':
+                    code.ai_confidence = 'medium'
+                elif code.ai_confidence == 'medium':
+                    code.ai_confidence = 'high'
+
+        db.session.commit()
+
+        # Отправляем уведомление о подозрении на использование AI
+        if code.has_ai_warning and code.ai_confidence in ['medium', 'high']:
+            try:
+                profile_url = f"{USER_URL}{code.user_id}" if code.user_id else ""
+                task_link = TASK_URL.format(course_id=code.course_id, task_id=code.task_id, user_id=code.user_id) if code.course_id and code.task_id and code.user_id else ""
+                extra_links = ""
+                if profile_url:
+                    extra_links += f"\nПрофиль: {profile_url}"
+                if task_link:
+                    extra_links += f"\nСтраница задания: {task_link}"
+
+                confidence_emoji = "⚠️" if code.ai_confidence == 'medium' else "🚨"
+                text = (
+                    f"{confidence_emoji} Подозрение на использование AI/LLM ({code.ai_confidence})"
+                    f"\nКод: {code.id} (user {code.user_id})"
+                    f"\nЗадание: {code.task_id} ({code.task.name if code.task and code.task.name else ''})"
+                    f"\nПричины: {code.ai_warning_reasons}"
+                )
+                if llm_probability:
+                    text += f"\nGPT оценка: {llm_probability}%"
+                text += f"\nСсылка: {APP_URL}/?id={code.id}{extra_links}"
+                send_telegram_message(text)
+            except Exception:
+                pass
+    except Exception as e:
+        # Не падаем, если AI-детекция не работает
+        print(f"AI detection error: {e}")
+        pass
 
 
 def extract_data_from_zipfile(file):
