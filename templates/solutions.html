@@ -5,18 +5,34 @@
         <div>
             <div class="btn-group me-2" role="group" aria-label="Фильтр">
                 <a class="btn btn-sm btn-outline-secondary {% if filter_mode != 'all' %}active{% endif %}"
-                   href="/solutions?filter=unviewed">Непросмотренные</a>
+                   href="/solutions?filter=unviewed{% if selected_task_id %}&task_id={{ selected_task_id }}{% endif %}">Непросмотренные</a>
                 <a class="btn btn-sm btn-outline-secondary {% if filter_mode == 'all' %}active{% endif %}"
-                   href="/solutions?filter=all">Все</a>
+                   href="/solutions?filter=all{% if selected_task_id %}&task_id={{ selected_task_id }}{% endif %}">Все</a>
             </div>
             {% if has_prev %}
-                <a class="btn btn-sm btn-outline-secondary" href="/solutions?filter={{ filter_mode }}&page={{ page - 1 }}">Назад</a>
+                <a class="btn btn-sm btn-outline-secondary" href="/solutions?filter={{ filter_mode }}&page={{ page - 1 }}{% if selected_task_id %}&task_id={{ selected_task_id }}{% endif %}">Назад</a>
             {% endif %}
             <span class="mx-2 small text-muted">Стр. {{ page }}</span>
             {% if has_next %}
-                <a class="btn btn-sm btn-outline-secondary" href="/solutions?filter={{ filter_mode }}&page={{ page + 1 }}">Вперед</a>
+                <a class="btn btn-sm btn-outline-secondary" href="/solutions?filter={{ filter_mode }}&page={{ page + 1 }}{% if selected_task_id %}&task_id={{ selected_task_id }}{% endif %}">Вперед</a>
             {% endif %}
         </div>
+    </div>
+
+    <div class="mb-3">
+        <form method="get" action="/solutions" class="d-inline-flex align-items-center">
+            <input type="hidden" name="filter" value="{{ filter_mode }}">
+            <label for="task_filter" class="me-2 small">Задача:</label>
+            <select name="task_id" id="task_filter" class="form-select form-select-sm me-2" style="width: auto;" onchange="this.form.submit()">
+                <option value="">Все задачи</option>
+                {% for task in tasks %}
+                    <option value="{{ task.id }}" {% if selected_task_id and selected_task_id|string == task.id|string %}selected{% endif %}>
+                        {{ task.id }} - {{ task.name if task.name else 'Без названия' }}
+                    </option>
+                {% endfor %}
+            </select>
+            <noscript><button type="submit" class="btn btn-sm btn-primary">Применить</button></noscript>
+        </form>
     </div>
 
     <div class="list-group">

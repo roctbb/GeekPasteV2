@@ -239,11 +239,14 @@ def solutions():
         page = 1
 
     filter_mode = request.args.get('filter', 'unviewed')  # 'all' or 'unviewed'
+    task_id = request.args.get('task_id')  # filter by task
 
     per_page = 50
     base_query = Code.query.filter(Code.task_id.isnot(None), Code.check_state == 'done')
     if filter_mode == 'unviewed':
         base_query = base_query.filter_by(viewed_by_teacher=False)
+    if task_id:
+        base_query = base_query.filter_by(task_id=task_id)
     query = base_query.order_by(Code.created_at.desc())
 
     total = query.count()
@@ -251,6 +254,9 @@ def solutions():
 
     has_prev = page > 1
     has_next = page * per_page < total
+
+    # Get list of all tasks for filter dropdown
+    tasks = Task.query.order_by(Task.id).all()
 
     return render_template('solutions.html',
                            codes=codes,
@@ -261,7 +267,9 @@ def solutions():
                            per_page=per_page,
                            user_url=USER_URL,
                            task_url=TASK_URL,
-                           filter_mode=filter_mode)
+                           filter_mode=filter_mode,
+                           tasks=tasks,
+                           selected_task_id=task_id)
 
 
 @app.route('/solutions/mark_viewed/<code_id>', methods=['POST', 'GET'])
