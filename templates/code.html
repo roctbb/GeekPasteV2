@@ -27,6 +27,11 @@
                     <a href="{{ task_url.format(task_id=code.task_id, course_id=code.course_id, user_id=code.user_id) }}" class="btn btn-flat btn-primary btn-sm mt-0" target="_blank">
                         <i class="fas fa-link"></i> К задаче
                     </a>
+                    <form method="POST" action="/recheck?id={{ code.id }}" style="display: inline;">
+                        <button type="submit" class="btn btn-flat btn-warning btn-sm mt-0">
+                            <i class="fas fa-rotate-right"></i> Перепроверить
+                        </button>
+                    </form>
                 {% endif %}
             {% endif %}
 

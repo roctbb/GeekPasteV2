@@ -329,5 +329,36 @@ def my_submissions():
                            per_page=per_page)
 
 
+@app.route('/recheck', methods=['POST'])
+@login_required
+def recheck_task():
+    if not is_teacher():
+        abort(403)
+
+    code_id = request.args.get('id')
+    code = get_code(code_id)
+
+    if not code:
+        flash("Код не найден.", "danger")
+        return redirect('/')
+
+    if not code.task:
+        flash("Это не решение задачи.", "danger")
+        return redirect(f'/?id={code_id}')
+
+    # Сбрасываем состояние проверки
+    code.check_state = 'not checked'
+    code.check_points = 0
+    code.check_comments = None
+    code.checked_at = None
+    db.session.commit()
+
+    # Запускаем проверку заново
+    check_task.delay(code_id)
+
+    flash("Задача отправлена на повторную проверку.", "info")
+    return redirect(f'/?id={code_id}')
+
+
 if __name__ == '__main__':
     app.run(debug=DEBUG, port=PORT)
