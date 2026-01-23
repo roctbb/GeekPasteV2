@@ -141,7 +141,6 @@ def uncheck_warning(code_id):
 
 
 @app.route('/', methods=['GET'])
-@login_required
 def index():
     code_id = request.args.get('id')
     has_error = False
@@ -152,19 +151,25 @@ def index():
 
         if not code:
             flash("Код не найден.", "danger")
-        elif code.task and not is_teacher() and not is_author(code):
+        elif code.task and not code.available_without_auth and not (session.get('user_id') and (is_teacher() or is_author(code))):
             flash("Нет доступа. Это приватный код.", "danger")
+        elif not code.available_without_auth and not session.get('user_id'):
+            return redirect(url_for('login'))
         else:
             similarities = []
-            if is_teacher():
+            if session.get('user_id') and is_teacher():
                 similarities = code.get_similar_codes_sorted()
-            elif not is_author(code):
+            elif not session.get('user_id') or not is_author(code):
                 add_view(code)
 
             if code.lang == 'zip':
                 code.code = json.loads(code.code)
 
             return render_template('code.html', code=code, similarities=similarities, user_url=USER_URL, task_url=TASK_URL)
+
+    # For creating new pastes, require login
+    if not session.get('user_id'):
+        return redirect(url_for('login'))
 
     task_id = request.args.get('task_id')
     course_id = request.args.get('course_id')
@@ -194,8 +199,10 @@ def download_archive():
 
         if not code or code.lang != 'zip':
             flash("Код не найден.", "danger")
-        elif code.task and not is_teacher() and not is_author(code):
+        elif code.task and not code.available_without_auth and not (session.get('user_id') and (is_teacher() or is_author(code))):
             flash("Нет доступа. Это приватный код.", "danger")
+        elif not code.available_without_auth and not session.get('user_id'):
+            return redirect(url_for('login'))
         else:
             response = make_response(rebuild_zip(code))
             response.headers['Content-Type'] = 'application/zip'
@@ -207,7 +214,6 @@ def download_archive():
 
 
 @app.route('/raw', methods=['GET'])
-@login_required
 def raw():
     code_id = request.args.get('id')
 
@@ -216,6 +222,8 @@ def raw():
 
         if not code:
             flash("Код не найден.", "danger")
+        elif not code.available_without_auth and not session.get('user_id'):
+            return redirect(url_for('login'))
         else:
             response = make_response(code.code)
             response.headers['Content-Type'] = 'text/plain'

@@ -52,6 +52,9 @@ class Code(db.Model):
     ai_confidence = db.Column(db.String(20), nullable=True)  # low/medium/high
     gpt_llm_probability = db.Column(db.Integer(), nullable=True)  # 0-100 от GPT проверки
 
+    # Public access field
+    available_without_auth = db.Column(db.Boolean(), server_default='false', nullable=False)
+
     similar_codes = db.relationship('Code',
                                     secondary=similarities_table,
                                     primaryjoin=id == similarities_table.c.code_id,
