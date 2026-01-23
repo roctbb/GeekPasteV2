@@ -142,6 +142,15 @@ def uncheck_warning(code_id):
 
 @app.route('/', methods=['GET'])
 def index():
+    # Handle JWT token if present
+    token = request.args.get('token')
+    if token:
+        try:
+            make_jwt_auth(token)
+            return redirect(url_for(request.endpoint, **{k: v for k, v in request.args.items() if k != 'token'}))
+        except:
+            pass
+
     code_id = request.args.get('id')
     has_error = False
     prefered_lang = request.args.get('lang')
@@ -193,6 +202,15 @@ def index():
 
 @app.route('/zip')
 def download_archive():
+    # Handle JWT token if present
+    token = request.args.get('token')
+    if token:
+        try:
+            make_jwt_auth(token)
+            return redirect(url_for(request.endpoint, **{k: v for k, v in request.args.items() if k != 'token'}))
+        except:
+            pass
+
     code_id = request.args.get('id')
 
     if code_id:
@@ -217,6 +235,15 @@ def download_archive():
 
 @app.route('/raw', methods=['GET'])
 def raw():
+    # Handle JWT token if present
+    token = request.args.get('token')
+    if token:
+        try:
+            make_jwt_auth(token)
+            return redirect(url_for(request.endpoint, **{k: v for k, v in request.args.items() if k != 'token'}))
+        except:
+            pass
+
     code_id = request.args.get('id')
 
     if code_id:
