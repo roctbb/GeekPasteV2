@@ -154,7 +154,7 @@ def index():
         elif code.task and not code.available_without_auth and not (session.get('user_id') and (is_teacher() or is_author(code))):
             flash("Нет доступа. Это приватный код.", "danger")
         elif not code.available_without_auth and not session.get('user_id'):
-            return redirect(AUTH_URL + request.url)
+            return redirect(AUTH_URL + request.url.replace('http://', 'https://'))
         else:
             similarities = []
             if session.get('user_id') and is_teacher():
@@ -202,7 +202,7 @@ def download_archive():
         elif code.task and not code.available_without_auth and not (session.get('user_id') and (is_teacher() or is_author(code))):
             flash("Нет доступа. Это приватный код.", "danger")
         elif not code.available_without_auth and not session.get('user_id'):
-            return redirect(AUTH_URL + request.url)
+            return redirect(AUTH_URL + request.url.replace('http://', 'https://'))
         else:
             response = make_response(rebuild_zip(code))
             response.headers['Content-Type'] = 'application/zip'
@@ -223,7 +223,7 @@ def raw():
         if not code:
             flash("Код не найден.", "danger")
         elif not code.available_without_auth and not session.get('user_id'):
-            return redirect(AUTH_URL + request.url)
+            return redirect(AUTH_URL + request.url.replace('http://', 'https://'))
         else:
             response = make_response(code.code)
             response.headers['Content-Type'] = 'text/plain'
