@@ -151,10 +151,11 @@ def index():
 
         if not code:
             flash("Код не найден.", "danger")
+        elif not code.available_without_auth and not session.get('user_id'):
+            redirect_url = request.url if request.url.startswith('https://') else request.url.replace('http://', 'https://')
+            return redirect(AUTH_URL + redirect_url)
         elif code.task and not code.available_without_auth and not (session.get('user_id') and (is_teacher() or is_author(code))):
             flash("Нет доступа. Это приватный код.", "danger")
-        elif not code.available_without_auth and not session.get('user_id'):
-            return redirect(AUTH_URL + request.url.replace('http://', 'https://'))
         else:
             similarities = []
             if session.get('user_id') and is_teacher():
@@ -199,10 +200,11 @@ def download_archive():
 
         if not code or code.lang != 'zip':
             flash("Код не найден.", "danger")
+        elif not code.available_without_auth and not session.get('user_id'):
+            redirect_url = request.url if request.url.startswith('https://') else request.url.replace('http://', 'https://')
+            return redirect(AUTH_URL + redirect_url)
         elif code.task and not code.available_without_auth and not (session.get('user_id') and (is_teacher() or is_author(code))):
             flash("Нет доступа. Это приватный код.", "danger")
-        elif not code.available_without_auth and not session.get('user_id'):
-            return redirect(AUTH_URL + request.url.replace('http://', 'https://'))
         else:
             response = make_response(rebuild_zip(code))
             response.headers['Content-Type'] = 'application/zip'
@@ -223,7 +225,8 @@ def raw():
         if not code:
             flash("Код не найден.", "danger")
         elif not code.available_without_auth and not session.get('user_id'):
-            return redirect(AUTH_URL + request.url.replace('http://', 'https://'))
+            redirect_url = request.url if request.url.startswith('https://') else request.url.replace('http://', 'https://')
+            return redirect(AUTH_URL + redirect_url)
         else:
             response = make_response(code.code)
             response.headers['Content-Type'] = 'text/plain'
