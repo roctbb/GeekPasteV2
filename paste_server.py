@@ -7,7 +7,7 @@ from methods import *
 from manage import *
 from datetime import datetime, timedelta
 from telegram_notifier import send_telegram_message
-from config import USER_URL, TASK_URL
+from config import USER_URL, TASK_URL, AUTH_URL
 
 
 @app.route('/', methods=['POST'])
@@ -154,7 +154,7 @@ def index():
         elif code.task and not code.available_without_auth and not (session.get('user_id') and (is_teacher() or is_author(code))):
             flash("Нет доступа. Это приватный код.", "danger")
         elif not code.available_without_auth and not session.get('user_id'):
-            return redirect(url_for('login'))
+            return redirect(AUTH_URL + request.url)
         else:
             similarities = []
             if session.get('user_id') and is_teacher():
@@ -169,7 +169,7 @@ def index():
 
     # For creating new pastes, require login
     if not session.get('user_id'):
-        return redirect(url_for('login'))
+        return redirect(AUTH_URL + request.url)
 
     task_id = request.args.get('task_id')
     course_id = request.args.get('course_id')
@@ -202,7 +202,7 @@ def download_archive():
         elif code.task and not code.available_without_auth and not (session.get('user_id') and (is_teacher() or is_author(code))):
             flash("Нет доступа. Это приватный код.", "danger")
         elif not code.available_without_auth and not session.get('user_id'):
-            return redirect(url_for('login'))
+            return redirect(AUTH_URL + request.url)
         else:
             response = make_response(rebuild_zip(code))
             response.headers['Content-Type'] = 'application/zip'
@@ -223,7 +223,7 @@ def raw():
         if not code:
             flash("Код не найден.", "danger")
         elif not code.available_without_auth and not session.get('user_id'):
-            return redirect(url_for('login'))
+            return redirect(AUTH_URL + request.url)
         else:
             response = make_response(code.code)
             response.headers['Content-Type'] = 'text/plain'
