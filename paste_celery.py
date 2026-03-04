@@ -8,6 +8,8 @@ from datetime import datetime
 
 celery = Celery('app', broker=CELERY_BROKER)
 celery.conf.task_default_queue = 'paste_queue'
+celery.conf.worker_max_tasks_per_child = 100 # Restart worker after 1000 tasks
+celery.conf.worker_prefetch_multiplier = 1  # Reduce prefetching
 
 
 
@@ -23,7 +25,8 @@ def save_similarities(id):
         if code.task and code.task.bypass_similarity_check:
             return
 
-        all_codes = Code.query.filter(Code.user_id.isnot(None), Code.user_id != code.user_id).all()
+        # Use yield_per to avoid loading all records into memory at once
+        query = Code.query.filter(Code.user_id.isnot(None), Code.user_id != code.user_id)
 
         current_code = code.code
         if code.lang == 'ipynb':
@@ -32,7 +35,8 @@ def save_similarities(id):
         # Collect all similarities above threshold for summary notification
         found_similarities = []
 
-        for alternative in all_codes:
+        # Process in batches to avoid memory overflow
+        for alternative in query.yield_per(100):
             alternative_code = alternative.code
             if alternative.lang == 'ipynb':
                 alternative_code = extract_code_from_ipynb(alternative.code)
@@ -50,6 +54,9 @@ def save_similarities(id):
 
         code.similarity_checked = True
         db.session.commit()
+
+        # Explicitly clean up session to free memory
+        db.session.expire_all()
 
 
 @celery.task()
@@ -82,3 +89,6 @@ def check_task(id):
                 "course_id": code.course_id,
                 "token": generate_jwt(code.user_id, code.task_id)
             })
+
+        # Clean up session
+        db.session.expire_all()
