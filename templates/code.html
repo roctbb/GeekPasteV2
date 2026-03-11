@@ -16,6 +16,12 @@
                     ZIP
                 </a>
             {% endif %}
+            {% if code.lang == 'ipynb' and (session['role'] == 'teacher' or session['role'] == 'admin') %}
+                <a href="/solutions/download/{{ code.id }}"
+                   class="btn btn-flat btn-light btn-sm mt-0">
+                    <i class="fas fa-download"></i> .ipynb
+                </a>
+            {% endif %}
 
             {% if session['role'] == 'teacher' or session['role'] == 'admin' %}
                 {% if code.user_id %}
