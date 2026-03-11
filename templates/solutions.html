@@ -52,6 +52,11 @@
                 </div>
                 <div>
                     <span class="text-muted small pe-1"><i class="fas fa-calendar-alt"></i> {{ code.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                    {% if code.lang == 'ipynb' %}
+                        <a href="/solutions/download/{{ code.id }}" class="btn btn-info btn-sm" download>
+                            <i class="fas fa-download"></i> .ipynb
+                        </a>
+                    {% endif %}
                     {% if code.task %}
                         <a href="{{ task_url.format(task_id=code.task_id, course_id=code.course_id, user_id=code.user_id) }}" class="btn btn-primary btn-sm" target="_blank">
                             <i class="fas fa-link"></i> К задаче

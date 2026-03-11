@@ -326,6 +326,17 @@ def mark_solution_viewed(code_id):
     return redirect(ref)
 
 
+@app.route('/solutions/download/<code_id>')
+@login_required
+def download_solution(code_id):
+    if not is_teacher():
+        abort(403)
+    code = get_code(code_id)
+    if not code or code.lang != 'ipynb':
+        abort(404)
+    return Response(code.code, mimetype='application/x-ipynb+json', headers={'Content-Disposition': f'attachment; filename=solution_{code_id}.ipynb'})
+
+
 @app.route('/solutions/mark_unviewed/<code_id>', methods=['POST', 'GET'])
 @login_required
 def mark_solution_unviewed(code_id):
