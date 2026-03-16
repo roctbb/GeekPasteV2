@@ -272,13 +272,17 @@ def check_task_with_gpt(task, code):
         student_code = code.code
 
     model = task.gpt_model or GPT_MODEL
+    context = get_payload(task.text, student_code, task.points,
+                          task.lang if task.lang not in ['zip', 'ipynb'] else None,
+                          check_ai=True)
+
+    # Convert chat messages to responses API input format
+    input_messages = [{"role": msg["role"], "content": msg["content"]} for msg in context]
 
     payload = {
         "token": GPT_KEY,
         "model": model,
-        "context": get_payload(task.text, student_code, task.points,
-                               task.lang if task.lang not in ['zip', 'ipynb'] else None,
-                               check_ai=True)
+        "input": input_messages,
     }
 
     try:
@@ -310,7 +314,7 @@ def check_task_with_gpt(task, code):
 
     try:
         result = answer.json()
-        gpt_answer = result['result']['choices'][0]['message']['content']
+        gpt_answer = result['result']['output'][0]['content'][0]['text']
     except Exception as e:
         print(answer.content)
         print(payload)

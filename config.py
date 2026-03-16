@@ -24,4 +24,4 @@ TASK_URL = GEEKCLASS_HOST + '/insider/courses/{course_id}/tasks/{task_id}/studen
 
 GPT_MODEL = os.getenv('GPT_MODEL', 'gpt-5-mini')
 GPT_KEY = os.getenv('GPT_KEY')
-GPT_GATEWAY = os.getenv('GPT_GATEWAY', 'https://gpt-gateway.ai.medsenger.ru/ask')
+GPT_GATEWAY = os.getenv('GPT_GATEWAY', 'https://gpt-gateway.ai.medsenger.ru/v1/responses')
