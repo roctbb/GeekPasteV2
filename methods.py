@@ -271,9 +271,11 @@ def check_task_with_gpt(task, code):
     else:
         student_code = code.code
 
+    model = task.gpt_model or GPT_MODEL
+
     payload = {
         "token": GPT_KEY,
-        "model": GPT_MODEL,
+        "model": model,
         "context": get_payload(task.text, student_code, task.points,
                                task.lang if task.lang not in ['zip', 'ipynb'] else None,
                                check_ai=True)

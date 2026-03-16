@@ -21,6 +21,7 @@ class Task(db.Model):
     check_type = db.Column(db.String(), nullable=True, server_default='tests')
     text = db.Column(db.Text(), nullable=True)
     bypass_similarity_check = db.Column(db.Boolean(), nullable=False, server_default='false')
+    gpt_model = db.Column(db.String(), nullable=True)
 
 
 class Code(db.Model):
