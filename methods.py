@@ -314,7 +314,8 @@ def check_task_with_gpt(task, code):
 
     try:
         result = answer.json()
-        gpt_answer = result['result']['output'][0]['content'][0]['text']
+        message = next(item for item in result['result']['output'] if item['type'] == 'message')
+        gpt_answer = message['content'][0]['text']
     except Exception as e:
         print(answer.content)
         print(payload)
