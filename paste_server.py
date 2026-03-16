@@ -8,6 +8,7 @@ from manage import *
 from datetime import datetime, timedelta
 from telegram_notifier import send_telegram_message
 from config import USER_URL, TASK_URL, AUTH_URL
+from urllib.parse import quote
 
 
 @app.route('/', methods=['POST'])
@@ -162,7 +163,7 @@ def index():
             flash("Код не найден.", "danger")
         elif not code.available_without_auth and not session.get('user_id'):
             redirect_url = request.url if request.url.startswith('https://') else request.url.replace('http://', 'https://')
-            return redirect(AUTH_URL + redirect_url)
+            return redirect(AUTH_URL + quote(redirect_url, safe=''))
         elif code.task and not code.available_without_auth and not (session.get('user_id') and (is_teacher() or is_author(code))):
             flash("Нет доступа. Это приватный код.", "danger")
         else:
@@ -179,7 +180,7 @@ def index():
 
     # For creating new pastes, require login
     if not session.get('user_id'):
-        return redirect(AUTH_URL + request.url)
+        return redirect(AUTH_URL + quote(request.url, safe=''))
 
     task_id = request.args.get('task_id')
     course_id = request.args.get('course_id')
@@ -220,7 +221,7 @@ def download_archive():
             flash("Код не найден.", "danger")
         elif not code.available_without_auth and not session.get('user_id'):
             redirect_url = request.url if request.url.startswith('https://') else request.url.replace('http://', 'https://')
-            return redirect(AUTH_URL + redirect_url)
+            return redirect(AUTH_URL + quote(redirect_url, safe=''))
         elif code.task and not code.available_without_auth and not (session.get('user_id') and (is_teacher() or is_author(code))):
             flash("Нет доступа. Это приватный код.", "danger")
         else:
@@ -253,7 +254,7 @@ def raw():
             flash("Код не найден.", "danger")
         elif not code.available_without_auth and not session.get('user_id'):
             redirect_url = request.url if request.url.startswith('https://') else request.url.replace('http://', 'https://')
-            return redirect(AUTH_URL + redirect_url)
+            return redirect(AUTH_URL + quote(redirect_url, safe=''))
         else:
             response = make_response(code.code)
             response.headers['Content-Type'] = 'text/plain'

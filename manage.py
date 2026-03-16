@@ -18,6 +18,7 @@ migrate = Migrate(app, db)
 from flask import session, redirect, url_for
 from functools import wraps
 import json
+from urllib.parse import quote
 
 @app.template_filter('markdown')
 def markdown_filter(text):
@@ -50,7 +51,7 @@ def login_required(f):
             return redirect(url_for(request.endpoint, **{k: v for k, v in request.args.items() if k != 'token'}))
 
         if 'user_id' not in session:
-            return redirect(AUTH_URL + request.url)  # Redirect to login page if user_id is not in session
+            return redirect(AUTH_URL + quote(request.url, safe=''))  # Redirect to login page if user_id is not in session
 
         return f(*args, **kwargs)
 
