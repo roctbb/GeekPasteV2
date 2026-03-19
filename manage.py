@@ -7,6 +7,7 @@ from flask_migrate import Migrate
 import jwt
 from markdown import markdown
 from markupsafe import Markup
+import redis
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = CONNECTION_STRING
@@ -14,6 +15,9 @@ app.config['SECRET_KEY'] = SECRET  # Set secret key
 db.init_app(app)
 
 migrate = Migrate(app, db)
+
+# Redis client for rate limiting
+redis_client = redis.from_url(REDIS_URL, decode_responses=True)
 
 from flask import session, redirect, url_for
 from functools import wraps

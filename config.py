@@ -25,3 +25,7 @@ TASK_URL = GEEKCLASS_HOST + '/insider/courses/{course_id}/tasks/{task_id}/studen
 GPT_MODEL = os.getenv('GPT_MODEL', 'gpt-5-mini')
 GPT_KEY = os.getenv('GPT_KEY')
 GPT_GATEWAY = os.getenv('GPT_GATEWAY', 'https://gpt-gateway.ai.medsenger.ru/v1/responses')
+
+# GPT Rate Limiting
+DEFAULT_GPT_RATE_LIMIT = int(os.getenv('DEFAULT_GPT_RATE_LIMIT', 3))  # посылок в час
+REDIS_URL = os.getenv('REDIS_URL', CELERY_BROKER)
