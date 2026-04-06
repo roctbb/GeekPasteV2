@@ -7,6 +7,7 @@ from flask_migrate import Migrate
 import jwt
 from markdown import markdown
 from markupsafe import Markup
+import redis
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = CONNECTION_STRING
@@ -15,9 +16,13 @@ db.init_app(app)
 
 migrate = Migrate(app, db)
 
+# Redis client for rate limiting
+redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+
 from flask import session, redirect, url_for
 from functools import wraps
 import json
+from urllib.parse import quote
 
 @app.template_filter('markdown')
 def markdown_filter(text):
@@ -50,7 +55,7 @@ def login_required(f):
             return redirect(url_for(request.endpoint, **{k: v for k, v in request.args.items() if k != 'token'}))
 
         if 'user_id' not in session:
-            return redirect(AUTH_URL + request.url)  # Redirect to login page if user_id is not in session
+            return redirect(AUTH_URL + quote(request.url, safe=''))  # Redirect to login page if user_id is not in session
 
         return f(*args, **kwargs)
 

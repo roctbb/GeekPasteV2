@@ -3,6 +3,15 @@
 {% block content %}
 
     {% if not has_error %}
+        {% if gpt_limit_info %}
+            <div class="alert alert-info">
+                <strong>Лимит GPT-сдач:</strong> использовано {{ gpt_limit_info.current_count }} из {{ gpt_limit_info.limit }}
+                {% if gpt_limit_info.time_left > 0 %}
+                    (сброс через {{ (gpt_limit_info.time_left // 60) + 1 }} мин)
+                {% endif %}
+            </div>
+        {% endif %}
+
         <div class="card flat-card">
             <div class="card-body">
                 <form method="POST" enctype="multipart/form-data">

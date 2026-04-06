@@ -7,7 +7,75 @@ from methods import *
 from manage import *
 from datetime import datetime, timedelta
 from telegram_notifier import send_telegram_message
-from config import USER_URL, TASK_URL, AUTH_URL
+from config import USER_URL, TASK_URL, AUTH_URL, DEFAULT_GPT_RATE_LIMIT
+from urllib.parse import quote
+
+
+def check_gpt_rate_limit(user_id, task_id, task=None):
+    """
+    Проверяет, не превысил ли пользователь лимит на GPT-сдачи для конкретной задачи.
+    Возвращает (allowed: bool, current_count: int, limit: int)
+    """
+    # Получаем лимит для задачи из БД или используем стандартный
+    if task is None:
+        task = Task.query.filter_by(id=task_id).first()
+
+    limit = task.gpt_rate_limit if task and task.gpt_rate_limit is not None else DEFAULT_GPT_RATE_LIMIT
+
+    # Ключ в Redis: gpt_limit:user_id:task_id
+    redis_key = f"gpt_limit:{user_id}:{task_id}"
+
+    try:
+        # Получаем текущее количество сдач
+        current_count = redis_client.get(redis_key)
+        current_count = int(current_count) if current_count else 0
+
+        if current_count >= limit:
+            return False, current_count, limit
+
+        # Увеличиваем счетчик и устанавливаем TTL атомарно
+        pipe = redis_client.pipeline()
+        pipe.incr(redis_key)
+
+        # Устанавливаем TTL только если ключ новый (первая сдача)
+        if current_count == 0:
+            pipe.expire(redis_key, 3600)  # TTL 1 час
+
+        results = pipe.execute()
+        new_count = results[0]
+
+        return True, new_count, limit
+    except Exception as e:
+        # В случае ошибки Redis разрешаем сдачу
+        print(f"Redis error in rate limiting: {e}")
+        return True, 0, limit
+
+
+def get_gpt_rate_limit_info(user_id, task_id, task=None):
+    """
+    Получает информацию о текущем состоянии лимита для пользователя и задачи.
+    Возвращает (current_count: int, limit: int, time_left_seconds: int)
+    """
+    # Получаем лимит для задачи из БД или используем стандартный
+    if task is None:
+        task = Task.query.filter_by(id=task_id).first()
+
+    limit = task.gpt_rate_limit if task and task.gpt_rate_limit is not None else DEFAULT_GPT_RATE_LIMIT
+
+    redis_key = f"gpt_limit:{user_id}:{task_id}"
+
+    try:
+        current_count = redis_client.get(redis_key)
+        current_count = int(current_count) if current_count else 0
+
+        # Получаем оставшееся время до сброса
+        ttl = redis_client.ttl(redis_key)
+        ttl = ttl if ttl > 0 else 0
+
+        return current_count, limit, ttl
+    except Exception as e:
+        print(f"Redis error in rate limit info: {e}")
+        return 0, limit, 0
 
 
 @app.route('/', methods=['POST'])
@@ -52,9 +120,18 @@ def submit():
         flash("Выберите язык.", "danger")
         return redirect('/')
 
+    # Проверяем существование задачи и лимиты для GPT-задач
+    if task_id:
+        task = Task.query.filter_by(id=task_id).first()
+        if not task:
+            abort(404)
 
-    if task_id and not Task.query.filter_by(id=task_id).first():
-        abort(404)
+        # Проверка лимита для GPT-задач
+        if task.check_type == 'gpt':
+            allowed, current_count, limit = check_gpt_rate_limit(session['user_id'], task_id, task)
+            if not allowed:
+                flash(f"Превышен лимит сдач для этой задачи ({limit} в час). Попробуйте позже.", "danger")
+                return redirect('/?task_id={}&course_id={}'.format(task_id, course_id))
 
     id = save_code(code, lang, client_ip, user_id=session['user_id'], task_id=task_id, course_id=course_id)
 
@@ -162,7 +239,7 @@ def index():
             flash("Код не найден.", "danger")
         elif not code.available_without_auth and not session.get('user_id'):
             redirect_url = request.url if request.url.startswith('https://') else request.url.replace('http://', 'https://')
-            return redirect(AUTH_URL + redirect_url)
+            return redirect(AUTH_URL + quote(redirect_url, safe=''))
         elif code.task and not code.available_without_auth and not (session.get('user_id') and (is_teacher() or is_author(code))):
             flash("Нет доступа. Это приватный код.", "danger")
         else:
@@ -179,7 +256,7 @@ def index():
 
     # For creating new pastes, require login
     if not session.get('user_id'):
-        return redirect(AUTH_URL + request.url)
+        return redirect(AUTH_URL + quote(request.url, safe=''))
 
     task_id = request.args.get('task_id')
     course_id = request.args.get('course_id')
@@ -197,7 +274,17 @@ def index():
         flash("Задача не найдена в базе.", "warning")
         has_error = True
 
-    return render_template('index.html', task=task, has_error=has_error, prefered_lang=prefered_lang)
+    # Получаем информацию о лимите для GPT-задачи
+    gpt_limit_info = None
+    if task and task.check_type == 'gpt':
+        current_count, limit, time_left = get_gpt_rate_limit_info(session['user_id'], task_id, task)
+        gpt_limit_info = {
+            'current_count': current_count,
+            'limit': limit,
+            'time_left': time_left
+        }
+
+    return render_template('index.html', task=task, has_error=has_error, prefered_lang=prefered_lang, gpt_limit_info=gpt_limit_info)
 
 
 @app.route('/zip')
@@ -220,7 +307,7 @@ def download_archive():
             flash("Код не найден.", "danger")
         elif not code.available_without_auth and not session.get('user_id'):
             redirect_url = request.url if request.url.startswith('https://') else request.url.replace('http://', 'https://')
-            return redirect(AUTH_URL + redirect_url)
+            return redirect(AUTH_URL + quote(redirect_url, safe=''))
         elif code.task and not code.available_without_auth and not (session.get('user_id') and (is_teacher() or is_author(code))):
             flash("Нет доступа. Это приватный код.", "danger")
         else:
@@ -253,7 +340,7 @@ def raw():
             flash("Код не найден.", "danger")
         elif not code.available_without_auth and not session.get('user_id'):
             redirect_url = request.url if request.url.startswith('https://') else request.url.replace('http://', 'https://')
-            return redirect(AUTH_URL + redirect_url)
+            return redirect(AUTH_URL + quote(redirect_url, safe=''))
         else:
             response = make_response(code.code)
             response.headers['Content-Type'] = 'text/plain'
@@ -407,6 +494,36 @@ def recheck_task():
 
     flash("Задача отправлена на повторную проверку.", "info")
     return redirect(f'/?id={code_id}')
+
+
+@app.route('/api/gpt_rate_limit', methods=['GET'])
+@login_required
+def gpt_rate_limit_api():
+    """
+    API endpoint для получения информации о лимите GPT-сдач.
+    Параметры: task_id
+    Возвращает: JSON с информацией о текущем состоянии лимита
+    """
+    task_id = request.args.get('task_id')
+
+    if not task_id:
+        return jsonify({'error': 'task_id is required'}), 400
+
+    task = Task.query.filter_by(id=task_id).first()
+    if not task:
+        return jsonify({'error': 'Task not found'}), 404
+
+    if task.check_type != 'gpt':
+        return jsonify({'error': 'This task is not a GPT task'}), 400
+
+    current_count, limit, time_left = get_gpt_rate_limit_info(session['user_id'], task_id, task)
+
+    return jsonify({
+        'current_count': current_count,
+        'limit': limit,
+        'time_left_seconds': time_left,
+        'can_submit': current_count < limit
+    })
 
 
 if __name__ == '__main__':

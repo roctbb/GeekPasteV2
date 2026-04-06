@@ -22,6 +22,7 @@ class Task(db.Model):
     text = db.Column(db.Text(), nullable=True)
     bypass_similarity_check = db.Column(db.Boolean(), nullable=False, server_default='false')
     gpt_model = db.Column(db.String(), nullable=True)
+    gpt_rate_limit = db.Column(db.Integer, nullable=True)  # None = использовать стандартный лимит
 
 
 class Code(db.Model):

@@ -6,7 +6,11 @@ import telebot  # pytelegrambotapi
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 TELEGRAM_ENABLED = os.getenv('TELEGRAM_ENABLED', 'true').lower() in ['1', 'true', 'yes']
+TELEGRAM_PROXY = os.getenv('TELEGRAM_PROXY')  # e.g. socks5h://user:pass@host:port
 
+if TELEGRAM_PROXY:
+    from telebot import apihelper
+    apihelper.proxy = {'https': TELEGRAM_PROXY}
 
 bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN, parse_mode=None)
 
