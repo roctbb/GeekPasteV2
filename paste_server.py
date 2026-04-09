@@ -7,7 +7,7 @@ from methods import *
 from manage import *
 from datetime import datetime, timedelta
 from telegram_notifier import send_telegram_message
-from config import USER_URL, TASK_URL, AUTH_URL, DEFAULT_GPT_RATE_LIMIT
+from config import USER_URL, TASK_URL, AUTH_URL, DEFAULT_GPT_RATE_LIMIT, LANGS
 from urllib.parse import quote
 
 
@@ -524,6 +524,76 @@ def gpt_rate_limit_api():
         'time_left_seconds': time_left,
         'can_submit': current_count < limit
     })
+
+
+@app.route('/tasks', methods=['GET'])
+@login_required
+def tasks_list():
+    if not is_teacher():
+        abort(403)
+    tasks = Task.query.order_by(Task.id.desc()).all()
+    return render_template('tasks.html', tasks=tasks, langs=LANGS, edit_task=None)
+
+
+@app.route('/tasks/<int:task_id>', methods=['GET'])
+@login_required
+def tasks_edit(task_id):
+    if not is_teacher():
+        abort(403)
+    edit_task = Task.query.get_or_404(task_id)
+    tasks = Task.query.order_by(Task.id.desc()).all()
+    return render_template('tasks.html', tasks=tasks, langs=LANGS, edit_task=edit_task)
+
+
+def _fill_task(task):
+    task.name = request.form.get('name') or None
+    task.lang = request.form.get('lang') or None
+    task.points = int(request.form['points']) if request.form.get('points') else None
+    task.check_type = request.form.get('check_type') or 'tests'
+    task.text = request.form.get('text') or None
+    task.gpt_model = request.form.get('gpt_model') or None
+    task.gpt_rate_limit = int(request.form['gpt_rate_limit']) if request.form.get('gpt_rate_limit') else None
+    task.bypass_similarity_check = 'bypass_similarity_check' in request.form
+
+
+@app.route('/tasks', methods=['POST'])
+@login_required
+def tasks_create():
+    if not is_teacher():
+        abort(403)
+    task = Task()
+    _fill_task(task)
+    db.session.add(task)
+    db.session.commit()
+    flash(f'Задача #{task.id} создана.', 'success')
+    return redirect('/tasks')
+
+
+@app.route('/tasks/<int:task_id>', methods=['POST'])
+@login_required
+def tasks_update(task_id):
+    if not is_teacher():
+        abort(403)
+    task = Task.query.get_or_404(task_id)
+    _fill_task(task)
+    db.session.commit()
+    flash(f'Задача #{task.id} обновлена.', 'success')
+    return redirect('/tasks')
+
+
+@app.route('/tasks/<int:task_id>/delete', methods=['POST'])
+@login_required
+def tasks_delete(task_id):
+    if not is_teacher():
+        abort(403)
+    task = Task.query.get_or_404(task_id)
+    if task.solutions:
+        flash(f'Нельзя удалить задачу #{task_id}: есть {len(task.solutions)} решений.', 'danger')
+        return redirect('/tasks')
+    db.session.delete(task)
+    db.session.commit()
+    flash(f'Задача #{task_id} удалена.', 'success')
+    return redirect('/tasks')
 
 
 if __name__ == '__main__':
