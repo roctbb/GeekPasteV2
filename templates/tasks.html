@@ -44,6 +44,10 @@
 
 <form method="POST" action="{{ '/tasks/' ~ edit_task.id if edit_task else '/tasks' }}">
     <div class="row g-2 mb-2">
+        <div class="col-md-1">
+            <label class="form-label">ID</label>
+            <input type="number" name="id" class="form-control form-control-sm" value="{{ edit_task.id if edit_task else '' }}" placeholder="авто">
+        </div>
         <div class="col-md-4">
             <label class="form-label">Название</label>
             <input type="text" name="name" class="form-control form-control-sm" value="{{ edit_task.name or '' if edit_task else '' }}">

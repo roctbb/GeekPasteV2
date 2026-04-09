@@ -546,6 +546,9 @@ def tasks_edit(task_id):
 
 
 def _fill_task(task):
+    new_id = request.form.get('id')
+    if new_id and new_id.strip():
+        task.id = int(new_id)
     task.name = request.form.get('name') or None
     task.lang = request.form.get('lang') or None
     task.points = int(request.form['points']) if request.form.get('points') else None
