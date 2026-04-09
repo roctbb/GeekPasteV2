@@ -52,7 +52,7 @@
             <label class="form-label">Язык</label>
             <select name="lang" class="form-select form-select-sm">
                 <option value="">—</option>
-                {% for l in langs %}
+                {% for l in langs + ['zip', 'ipynb'] %}
                     <option value="{{ l }}" {{ 'selected' if edit_task and edit_task.lang == l else '' }}>{{ l }}</option>
                 {% endfor %}
             </select>
