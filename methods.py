@@ -216,7 +216,7 @@ def check_task_with_tests(task, code):
 
 
 def get_payload(task_text, solution_text, max_points, lang=None, check_ai=False):
-    prompt = f"Твоя задача оценить решение задачи по программированию. Оценивай только работоспособность, а не качество кода (если это отдельно не требуется в задаче). Максимальный балл - {max_points}. Если код не запускается или не компилируется, или завершается с ошибкой, ставь 0. Количество баллов кратно 5. На первой строке ответа напиши количество баллов числом. Далее - свой подробный комментарий по критериям на русском языке."
+    prompt = f"Твоя задача оценить решение задачи по программированию. Оценивай только работоспособность, а не качество кода (если это отдельно не требуется в задаче). Максимальный балл - {max_points}. Если код не запускается или не компилируется, или завершается с ошибкой, ставь 0. Количество баллов кратно 5, если иного не указано в задаче. На первой строке ответа напиши количество баллов числом. Далее - свой подробный комментарий по критериям на русском языке."
     if lang and lang != 'zip' and lang != 'ipynb':
         prompt += "Код должен быть написан на языке {lang}."
 
@@ -241,11 +241,21 @@ def get_payload(task_text, solution_text, max_points, lang=None, check_ai=False)
 
 
 def parse_gpt_answer(answer):
+    print(1, answer)
     try:
-        points = int(answer.split('\n')[0])
-        comments = '\n'.join(answer.split('\n')[1:])
+        import re
+        # Find first integer on its own line or at the start
+        match = re.search(r'^\s*(\d+)', answer, re.MULTILINE)
+        if match:
+            points = int(match.group(1))
+            # Everything after the matched line is the comment
+            rest = answer[match.end():]
+            comments = rest.strip()
+        else:
+            points = 0
+            comments = answer
     except Exception as e:
-        points = 1
+        points = 0
         comments = str(e)
 
     # Извлекаем вероятность использования LLM, если она есть

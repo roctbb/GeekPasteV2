@@ -99,6 +99,7 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
     """Check code/text submitted from GeekAuditor and send result via callback."""
     with app.app_context():
         result = {'callback_id': callback_id, 'status': 'error', 'points': 0, 'max_points': 1, 'comment': '', 'details': []}
+        print(check_config, check_type)
         try:
             if check_type == 'tests':
                 tests = check_config.get('tests', [])
