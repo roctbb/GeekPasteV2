@@ -53,8 +53,12 @@ class ExecutionContainer:
     def create_execution_folder(self, template_path):
         os.makedirs(self.path, exist_ok=True)
 
-        template_path = os.path.abspath(template_path)
-        if os.path.isdir(template_path):
+        if not template_path:
+            template_path = None
+        else:
+            template_path = os.path.abspath(template_path)
+
+        if template_path and os.path.isdir(template_path):
             for item in os.listdir(template_path):
                 s = os.path.join(template_path, item)
                 d = os.path.join(self.path, item)
