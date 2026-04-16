@@ -92,3 +92,69 @@ def check_task(id):
 
         # Clean up session
         db.session.expire_all()
+
+
+@celery.task(bind=True, max_retries=3)
+def external_check_task(self, code, lang, task_text, check_type, check_config, callback_url, callback_id):
+    """Check code/text submitted from GeekAuditor and send result via callback."""
+    with app.app_context():
+        result = {'callback_id': callback_id, 'status': 'error', 'points': 0, 'max_points': 1, 'comment': '', 'details': []}
+        try:
+            if check_type == 'tests':
+                tests = check_config.get('tests', [])
+                max_points = len(tests) if tests else 1
+                passed = 0
+                details = []
+
+                if lang == 'brainfuck':
+                    from runner import BrainfuckExecutor, SolutionException, ExecutionException
+                    executor = BrainfuckExecutor(code)
+                    run_fn = executor.run
+                else:
+                    from runner import ExecutionContainer, SolutionException, ExecutionException
+                    container = ExecutionContainer(lang, '', code)
+                    run_fn = container.run
+
+                try:
+                    for t in tests:
+                        try:
+                            output = run_fn(t.get('input', ''), time_limit=5).strip()
+                            expected = str(t.get('expected', '')).strip()
+                            ok = output == expected
+                            if ok:
+                                passed += 1
+                            details.append({'input': t.get('input'), 'expected': expected, 'got': output, 'ok': ok})
+                        except (SolutionException, ExecutionException) as e:
+                            details.append({'input': t.get('input'), 'error': str(e), 'ok': False})
+                finally:
+                    if lang != 'brainfuck':
+                        del container
+                result.update({'status': 'success', 'points': passed, 'max_points': max_points,
+                                'comment': f'{passed} из {max_points} тестов пройдено', 'details': details})
+
+            elif check_type == 'gpt':
+                from methods import get_payload, parse_gpt_answer
+                from config import GPT_KEY, GPT_GATEWAY, GPT_MODEL
+                answer_text = check_config.get('answer', '')
+                max_points = check_config.get('max_points', 10)
+                prompt_extra = check_config.get('prompt', '')
+                context = get_payload(task_text + ('\n\nЭталонный ответ: ' + answer_text if answer_text else '') + ('\n\n' + prompt_extra if prompt_extra else ''), code, max_points, lang)
+                input_messages = [{"role": m["role"], "content": m["content"]} for m in context]
+                resp = requests.post(GPT_GATEWAY, json={"token": GPT_KEY, "model": GPT_MODEL, "input": input_messages}, timeout=60)
+                resp.raise_for_status()
+                gpt_text = resp.json().get('output_text', '')
+                points, comment, _ = parse_gpt_answer(gpt_text)
+                result.update({'status': 'success', 'points': min(points, max_points), 'max_points': max_points, 'comment': comment})
+
+        except Exception as e:
+            result['comment'] = str(e)
+            try:
+                self.retry(countdown=10 * (2 ** self.request.retries))
+                return  # retry scheduled, don't send callback
+            except self.MaxRetriesExceededError:
+                pass
+
+        try:
+            requests.post(callback_url, json=result, timeout=10)
+        except Exception as e:
+            print(f'Callback failed: {e}')

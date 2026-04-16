@@ -143,6 +143,73 @@ class ExecutionContainer:
             raise SolutionException(f"Error occurred: {e}")
 
 
+class BrainfuckExecutor:
+    """Pure-Python Brainfuck interpreter. No Docker needed."""
+
+    def __init__(self, code):
+        self.code = code
+
+    def run(self, input_data='', time_limit=5):
+        import signal
+
+        tape = [0] * 30000
+        dp = 0  # data pointer
+        ip = 0  # instruction pointer
+        output = []
+        inp = iter(input_data.encode())
+
+        # Precompute bracket matching
+        brackets = {}
+        stack = []
+        for i, c in enumerate(self.code):
+            if c == '[':
+                stack.append(i)
+            elif c == ']':
+                if not stack:
+                    raise SolutionException('Unmatched ]')
+                j = stack.pop()
+                brackets[j] = i
+                brackets[i] = j
+        if stack:
+            raise SolutionException('Unmatched [')
+
+        def _timeout(signum, frame):
+            raise SolutionException(f'Execution timed out after {time_limit} seconds.')
+
+        signal.signal(signal.SIGALRM, _timeout)
+        signal.alarm(time_limit)
+        try:
+            while ip < len(self.code):
+                c = self.code[ip]
+                if c == '+':
+                    tape[dp] = (tape[dp] + 1) % 256
+                elif c == '-':
+                    tape[dp] = (tape[dp] - 1) % 256
+                elif c == '>':
+                    dp += 1
+                    if dp >= len(tape):
+                        raise SolutionException('Tape overflow')
+                elif c == '<':
+                    dp -= 1
+                    if dp < 0:
+                        raise SolutionException('Tape underflow')
+                elif c == '.':
+                    output.append(chr(tape[dp]))
+                elif c == ',':
+                    tape[dp] = next(inp, 0)
+                elif c == '[':
+                    if tape[dp] == 0:
+                        ip = brackets[ip]
+                elif c == ']':
+                    if tape[dp] != 0:
+                        ip = brackets[ip]
+                ip += 1
+        finally:
+            signal.alarm(0)
+
+        return ''.join(output)
+
+
 class TestExecutor:
     def __init__(self, code):
         self.original_path = os.getcwd()

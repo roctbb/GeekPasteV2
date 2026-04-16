@@ -7,7 +7,8 @@ from methods import *
 from manage import *
 from datetime import datetime, timedelta
 from telegram_notifier import send_telegram_message
-from config import USER_URL, TASK_URL, AUTH_URL, DEFAULT_GPT_RATE_LIMIT, LANGS
+import jwt
+from config import USER_URL, TASK_URL, AUTH_URL, DEFAULT_GPT_RATE_LIMIT, LANGS, JWT_SECRET
 from urllib.parse import quote
 
 
@@ -597,6 +598,45 @@ def tasks_delete(task_id):
     db.session.commit()
     flash(f'Задача #{task_id} удалена.', 'success')
     return redirect('/tasks')
+
+
+
+# ── External check API (for GeekAuditor) ──────────────────────────────────────
+
+def _verify_service_token():
+    """Verify JWT signed with shared JWT_SECRET from Authorization header."""
+    auth = request.headers.get('Authorization', '')
+    if not auth.startswith('Bearer '):
+        abort(401)
+    token = auth[7:]
+    try:
+        jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+    except Exception:
+        abort(401)
+
+
+@app.route('/api/external/check', methods=['POST'])
+def external_check():
+    _verify_service_token()
+    data = request.get_json()
+    if not data:
+        abort(400)
+
+    required = ('callback_url', 'callback_id', 'code', 'lang')
+    if not all(k in data for k in required):
+        return jsonify({'error': 'Missing required fields'}), 400
+
+    from paste_celery import external_check_task
+    job = external_check_task.delay(
+        code=data['code'],
+        lang=data['lang'],
+        task_text=data.get('task_text', ''),
+        check_type=data.get('check_type', 'tests'),
+        check_config=data.get('check_config', {}),
+        callback_url=data['callback_url'],
+        callback_id=data['callback_id'],
+    )
+    return jsonify({'status': 'queued', 'job_id': job.id})
 
 
 if __name__ == '__main__':
