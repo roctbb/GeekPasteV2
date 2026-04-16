@@ -143,7 +143,9 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
                 input_messages = [{"role": m["role"], "content": m["content"]} for m in context]
                 resp = requests.post(GPT_GATEWAY, json={"token": GPT_KEY, "model": GPT_MODEL, "input": input_messages}, timeout=60)
                 resp.raise_for_status()
-                gpt_text = resp.json().get('output_text', '')
+                resp_data = resp.json()
+                message = next(item for item in resp_data['result']['output'] if item['type'] == 'message')
+                gpt_text = message['content'][0]['text']
                 points, comment, _ = parse_gpt_answer(gpt_text)
                 result.update({'status': 'success', 'points': min(points, max_points), 'max_points': max_points, 'comment': comment})
 
