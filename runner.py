@@ -94,7 +94,7 @@ class ExecutionContainer:
             ).stdout.decode().strip()
 
         except Exception as e:
-            return ExecutionException("Error creating container.")
+            raise ExecutionException("Error creating container.")
 
         return container_id
 

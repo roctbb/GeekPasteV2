@@ -626,13 +626,28 @@ def external_check():
     if not all(k in data for k in required):
         return jsonify({'error': 'Missing required fields'}), 400
 
+    check_type = data.get('check_type', 'tests')
+    if check_type not in ('tests', 'gpt'):
+        return jsonify({'error': 'Invalid check_type. Expected one of: tests, gpt'}), 400
+
+    # External API is used for code checks in GeekExam/GeekCodeBattle MVP.
+    # Keep supported languages explicit to fail fast on bad payloads.
+    if data.get('lang') not in ('python', 'cpp'):
+        return jsonify({'error': 'Invalid lang. Expected one of: python, cpp'}), 400
+
+    check_config = data.get('check_config', {})
+    if check_config is None:
+        check_config = {}
+    if not isinstance(check_config, dict):
+        return jsonify({'error': 'Invalid check_config. Expected JSON object'}), 400
+
     from paste_celery import external_check_task
     job = external_check_task.delay(
         code=data['code'],
         lang=data['lang'],
         task_text=data.get('task_text', ''),
-        check_type=data.get('check_type', 'tests'),
-        check_config=data.get('check_config', {}),
+        check_type=check_type,
+        check_config=check_config,
         callback_url=data['callback_url'],
         callback_id=data['callback_id'],
     )

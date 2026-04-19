@@ -1,4 +1,6 @@
 import requests
+import time
+import jwt
 from celery import Celery
 import checker
 from config import *
@@ -10,6 +12,11 @@ celery = Celery('app', broker=CELERY_BROKER)
 celery.conf.task_default_queue = 'paste_queue'
 celery.conf.worker_max_tasks_per_child = 100 # Restart worker after 1000 tasks
 celery.conf.worker_prefetch_multiplier = 1  # Reduce prefetching
+
+
+def _make_callback_service_token():
+    payload = {'service': 'geekpaste', 'iat': int(time.time())}
+    return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
 
 
 
@@ -98,7 +105,15 @@ def check_task(id):
 def external_check_task(self, code, lang, task_text, check_type, check_config, callback_url, callback_id):
     """Check code/text submitted from GeekAuditor and send result via callback."""
     with app.app_context():
-        result = {'callback_id': callback_id, 'status': 'error', 'points': 0, 'max_points': 1, 'comment': '', 'details': []}
+        result = {
+            'callback_id': callback_id,
+            'job_id': self.request.id,
+            'status': 'error',
+            'points': 0,
+            'max_points': 1,
+            'comment': '',
+            'details': []
+        }
         print(check_config, check_type)
         try:
             if check_type == 'tests':
@@ -119,7 +134,8 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
                 try:
                     for t in tests:
                         try:
-                            output = run_fn(t.get('input', ''), time_limit=5).strip()
+                            per_test_time_limit = t.get('time_limit', check_config.get('time_limit', 5))
+                            output = run_fn(t.get('input', ''), time_limit=per_test_time_limit).strip()
                             expected = str(t.get('expected', '')).strip()
                             ok = output == expected
                             if ok:
@@ -158,6 +174,7 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
                 pass
 
         try:
-            requests.post(callback_url, json=result, timeout=10)
+            callback_headers = {'Authorization': f'Bearer {_make_callback_service_token()}'}
+            requests.post(callback_url, json=result, headers=callback_headers, timeout=10)
         except Exception as e:
             print(f'Callback failed: {e}')
