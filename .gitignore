@@ -7,3 +7,5 @@ zip_archives
 __pycache__/
 **/__pycache__/
 .DS_Store
+node_modules/
+static/vendor/

@@ -1,87 +1,87 @@
 {% extends 'base.html' %}
 {% block content %}
     <div class="card flat-card shadow-soft">
-        <div class="card-body" style="padding: 0;">
-            <button class="btn btn-flat btn-success btn-sm ms-1 my-1" id="copy-code" data-clipboard-target="#code"
-                    data-bs-toggle="popover" data-bs-placement="right" data-bs-content="Скопировано">
-                Копировать код
-            </button>
-            <a href="/raw?id={{ code.id }}"
-               class="btn btn-flat btn-light btn-sm mt-0">
-                Чистый
-            </a>
-            {% if code.lang == 'zip' %}
-                <a href="/zip?id={{ code.id }}"
-                   class="btn btn-flat btn-light btn-sm mt-0">
-                    ZIP
+        <div class="code-toolbar">
+            <div class="code-toolbar-main">
+                <button class="btn btn-flat btn-success btn-sm" id="copy-code" data-clipboard-target="#code"
+                        data-bs-toggle="popover" data-bs-placement="right" data-bs-content="Скопировано">
+                    Копировать код
+                </button>
+                <a href="/raw?id={{ code.id }}" class="btn btn-flat btn-light btn-sm mt-0">
+                    Чистый
                 </a>
-            {% endif %}
-            {% if code.lang == 'github' and github_meta and github_meta.repo_url %}
-                <a href="{{ github_meta.repo_url }}" target="_blank"
-                   class="btn btn-flat btn-light btn-sm mt-0">
-                    <i class="fab fa-github"></i> Repo
-                </a>
-            {% endif %}
-            {% if code.lang == 'ipynb' and (session['role'] == 'teacher' or session['role'] == 'admin') %}
-                <a href="/solutions/download/{{ code.id }}"
-                   class="btn btn-flat btn-light btn-sm mt-0">
-                    <i class="fas fa-download"></i> .ipynb
-                </a>
-            {% endif %}
-
-            {% if session['role'] == 'teacher' or session['role'] == 'admin' %}
-                {% if code.user_id %}
-                    <a href="{{ user_url }}{{ code.user_id }}" class="btn btn-flat btn-light btn-sm mt-0" target="_blank">
-                        <i class="fas fa-user"></i> Профиль
+                {% if code.lang == 'zip' %}
+                    <a href="/zip?id={{ code.id }}" class="btn btn-flat btn-light btn-sm mt-0">
+                        ZIP
                     </a>
                 {% endif %}
-                {% if code.task %}
-                    <a href="{{ task_url.format(task_id=code.task_id, course_id=code.course_id, user_id=code.user_id) }}" class="btn btn-flat btn-primary btn-sm mt-0" target="_blank">
-                        <i class="fas fa-link"></i> К задаче
+                {% if code.lang == 'github' and github_meta and github_meta.repo_url %}
+                    <a href="{{ github_meta.repo_url }}" target="_blank" class="btn btn-flat btn-light btn-sm mt-0">
+                        <i class="fab fa-github"></i> Repo
                     </a>
-                    <form method="POST" action="/recheck?id={{ code.id }}" style="display: inline;">
-                        <button type="submit" class="btn btn-flat btn-warning btn-sm mt-0">
-                            <i class="fas fa-rotate-right"></i> Перепроверить
-                        </button>
-                    </form>
                 {% endif %}
-            {% endif %}
+                {% if code.lang == 'ipynb' and (session['role'] == 'teacher' or session['role'] == 'admin') %}
+                    <a href="/solutions/download/{{ code.id }}" class="btn btn-flat btn-light btn-sm mt-0">
+                        <i class="fas fa-download"></i> .ipynb
+                    </a>
+                {% endif %}
 
-            <span class="m-1 flat-span flat-stats" style="float:right;">
-                <i class="fa fa-eye ms-1" aria-hidden="true"></i> {{ code.views }}
-                <i class="fa fa-calendar ms-1" aria-hidden="true"></i> {{ code.created_at.strftime('%d.%m.%Y') }}
                 {% if session['role'] == 'teacher' or session['role'] == 'admin' %}
-                    {% if not code.similarity_checked %}
-                        <i class="fa fa-hourglass ms-1" style="color: sandybrown; opacity: 0.3;" aria-hidden="true"></i>
-                    {% else %}
-                        {% if code.has_similarity_warning %}
-                            <i class="fa fa-circle ms-1" style="color: red; opacity: 0.3;" aria-hidden="true"></i>
-                        {% else %}
-                            <i class="fa fa-circle ms-1" style="color: green; opacity: 0.3;" aria-hidden="true"></i>
-                        {% endif %}
+                    {% if code.user_id %}
+                        <a href="{{ user_url }}{{ code.user_id }}" class="btn btn-flat btn-light btn-sm mt-0" target="_blank">
+                            <i class="fas fa-user"></i> Профиль
+                        </a>
+                    {% endif %}
+                    {% if code.task %}
+                        <a href="{{ task_url.format(task_id=code.task_id, course_id=code.course_id, user_id=code.user_id) }}" class="btn btn-flat btn-primary btn-sm mt-0" target="_blank">
+                            <i class="fas fa-link"></i> К задаче
+                        </a>
+                        <form method="POST" action="/recheck?id={{ code.id }}" style="display: inline;">
+                            <button type="submit" class="btn btn-flat btn-warning btn-sm mt-0">
+                                <i class="fas fa-rotate-right"></i> Перепроверить
+                            </button>
+                        </form>
                     {% endif %}
                 {% endif %}
-            </span>
-            {% if code.lang == 'ipynb' %}
-                <div id="code"></div>
-            {% elif code.lang == 'zip' or code.lang == 'github' %}
-                {% if code.lang == 'github' and github_meta %}
-                    <div class="px-2 py-2 small text-muted border-top">
-                        <i class="fab fa-github"></i>
-                        {{ github_meta.resolved_repo or github_meta.repo_url }}
-                        {% if github_meta.ref %}
-                            · ветка/ref: {{ github_meta.ref }}
-                        {% endif %}
-                    </div>
+            </div>
+            <div class="code-toolbar-stats">
+                <span class="stat-pill">
+                    <i class="fa fa-eye" aria-hidden="true"></i> {{ code.views }}
+                </span>
+                <span class="stat-pill">
+                    <i class="fa fa-calendar" aria-hidden="true"></i> {{ code.created_at.strftime('%d.%m.%Y') }}
+                </span>
+                {% if session['role'] == 'teacher' or session['role'] == 'admin' %}
+                    {% if not code.similarity_checked %}
+                        <span class="stat-pill"><i class="fa fa-hourglass" style="color: #d97706;" aria-hidden="true"></i> Схожесть: ожидание</span>
+                    {% elif code.has_similarity_warning %}
+                        <span class="stat-pill"><i class="fa fa-circle" style="color: #dc2626;" aria-hidden="true"></i> Схожесть: флаг</span>
+                    {% else %}
+                        <span class="stat-pill"><i class="fa fa-circle" style="color: #16a34a;" aria-hidden="true"></i> Схожесть: чисто</span>
+                    {% endif %}
                 {% endif %}
-                {% for code_part in code.code %}
-                    <div class=" py-1"><strong class="mx-1">{{ code_part.name }}</strong></div>
-                    <pre class="m-0 flat-pre"><code {% if loop.first %}id='code'{% endif %} class="p-2 py-3">{{ code_part.content }}</code></pre>
-                {% endfor %}
-            {% else %}
-                <pre class="m-0 flat-pre"><code id='code' class="{{ code.lang }} p-2 py-3">{{ code.code }}</code></pre>
-            {% endif %}
+            </div>
         </div>
+
+        {% if code.lang == 'ipynb' %}
+            <div id="code"></div>
+        {% elif code.lang == 'zip' or code.lang == 'github' %}
+            {% if code.lang == 'github' and github_meta %}
+                <div class="px-2 py-2 small text-muted border-top">
+                    <i class="fab fa-github"></i>
+                    {{ github_meta.resolved_repo or github_meta.repo_url }}
+                    {% if github_meta.ref %}
+                        · ветка/ref: {{ github_meta.ref }}
+                    {% endif %}
+                </div>
+            {% endif %}
+            {% for code_part in code.code %}
+                <div class="code-file-title"><strong>{{ code_part.name }}</strong></div>
+                <pre class="m-0 flat-pre"><code {% if loop.first %}id='code'{% endif %} class="p-2 py-3">{{ code_part.content }}</code></pre>
+            {% endfor %}
+        {% else %}
+            <pre class="m-0 flat-pre"><code id='code' class="{{ code.lang }} p-2 py-3">{{ code.code }}</code></pre>
+        {% endif %}
     </div>
 
     {% if code.task %}

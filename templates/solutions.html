@@ -1,8 +1,10 @@
 {% extends 'base.html' %}
 {% block content %}
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <h5 class="m-0">Успешные сдачи задач</h5>
+    <div class="page-head">
         <div>
+            <h5 class="page-head-title">Успешные сдачи задач</h5>
+        </div>
+        <div class="page-head-actions">
             <div class="btn-group me-2" role="group" aria-label="Фильтр">
                 <a class="btn btn-sm btn-outline-secondary {% if filter_mode != 'all' %}active{% endif %}"
                    href="/solutions?filter=unviewed{% if selected_task_id %}&task_id={{ selected_task_id }}{% endif %}">Непросмотренные</a>
@@ -12,82 +14,100 @@
             {% if has_prev %}
                 <a class="btn btn-sm btn-outline-secondary" href="/solutions?filter={{ filter_mode }}&page={{ page - 1 }}{% if selected_task_id %}&task_id={{ selected_task_id }}{% endif %}">Назад</a>
             {% endif %}
-            <span class="mx-2 small text-muted">Стр. {{ page }}</span>
+            <span class="small text-muted">Стр. {{ page }}</span>
             {% if has_next %}
                 <a class="btn btn-sm btn-outline-secondary" href="/solutions?filter={{ filter_mode }}&page={{ page + 1 }}{% if selected_task_id %}&task_id={{ selected_task_id }}{% endif %}">Вперед</a>
             {% endif %}
         </div>
     </div>
 
-    <div class="mb-3">
-        <form method="get" action="/solutions" class="d-inline-flex align-items-center">
-            <input type="hidden" name="filter" value="{{ filter_mode }}">
-            <label for="task_filter" class="me-2 small">Задача:</label>
-            <select name="task_id" id="task_filter" class="form-select form-select-sm me-2" style="width: auto;" onchange="this.form.submit()">
-                <option value="">Все задачи</option>
-                {% for task in tasks %}
-                    <option value="{{ task.id }}" {% if selected_task_id and selected_task_id|string == task.id|string %}selected{% endif %}>
-                        {{ task.id }} - {{ task.name if task.name else 'Без названия' }}
-                    </option>
-                {% endfor %}
-            </select>
-            <noscript><button type="submit" class="btn btn-sm btn-primary">Применить</button></noscript>
-        </form>
+    <div class="card flat-card shadow-soft compact-filter mb-3">
+        <div class="card-body py-2">
+            <form method="get" action="/solutions" class="row g-2 align-items-center">
+                <input type="hidden" name="filter" value="{{ filter_mode }}">
+                <div class="col-auto">
+                    <label for="task_filter" class="form-label small text-muted">Задача</label>
+                </div>
+                <div class="col-sm-8 col-md-6 col-lg-5 col-xl-4">
+                    <select name="task_id" id="task_filter" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <option value="">Все задачи</option>
+                        {% for task in tasks %}
+                            <option value="{{ task.id }}" {% if selected_task_id and selected_task_id|string == task.id|string %}selected{% endif %}>
+                                {{ task.id }} - {{ task.name if task.name else 'Без названия' }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-auto">
+                    <noscript><button type="submit" class="btn btn-sm btn-primary">Применить</button></noscript>
+                </div>
+            </form>
+        </div>
     </div>
 
-    <div class="card flat-card shadow-soft">
+    <div class="card flat-card shadow-soft record-list">
         <div class="list-group list-group-flush">
             {% for code in codes %}
-                <div class="list-group-item d-flex justify-content-between align-items-center">
-                    <div class="text-decoration-none flex-grow-1 small">
-                        {% if not code.viewed_by_teacher %}
-                            <span class="badge bg-warning text-dark me-1">NEW</span>
-                        {% endif %}
-                        <span class="mx-1"><i class="fas fa-code"></i> <a href="/?id={{ code.id }}" target="_blank">{{ code.id }}</a></span>
-                        {% if code.user_id %}
-                            <span class="mx-1"><i class="fas fa-user"></i> <a href="{{ user_url }}{{ code.user_id }}" target="_blank">{{ code.user_id }}</a></span>
-                        {% endif %}
-                        {% if code.task %}
-                            <span class="mx-1"><i class="fas fa-tasks"></i> {{ code.task.name }}</span>
-                        {% endif %}
-                    </div>
-                    <div>
-                        <span class="text-muted small pe-1"><i class="fas fa-calendar-alt"></i> {{ code.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
-                        {% if code.lang == 'ipynb' %}
-                            <a href="/solutions/download/{{ code.id }}" class="btn btn-info btn-sm" download>
-                                <i class="fas fa-download"></i> .ipynb
-                            </a>
-                        {% endif %}
-                        {% if code.task %}
-                            <a href="{{ task_url.format(task_id=code.task_id, course_id=code.course_id, user_id=code.user_id) }}" class="btn btn-primary btn-sm" target="_blank">
-                                <i class="fas fa-link"></i> К задаче
-                            </a>
-                        {% endif %}
-                        {% if not code.viewed_by_teacher %}
-                            <a href="/solutions/mark_viewed/{{ code.id }}" class="btn btn-outline-success btn-sm ms-1">
-                                <i class="fas fa-check"></i> Просмотрено
-                            </a>
-                        {% else %}
-                            <a href="/solutions/mark_unviewed/{{ code.id }}" class="btn btn-outline-secondary btn-sm ms-1">
-                                <i class="fas fa-undo"></i>
-                            </a>
-                        {% endif %}
+                <div class="list-group-item">
+                    <div class="entity-row">
+                        <div class="entity-main">
+                            <div class="entity-title">
+                                {% if not code.viewed_by_teacher %}
+                                    <span class="badge bg-warning text-dark">NEW</span>
+                                {% endif %}
+                                <span><i class="fas fa-code"></i> <a href="/?id={{ code.id }}" target="_blank">#{{ code.id }}</a></span>
+                                {% if code.user_id %}
+                                    <span><i class="fas fa-user"></i> <a href="{{ user_url }}{{ code.user_id }}" target="_blank">{{ code.user_id }}</a></span>
+                                {% endif %}
+                            </div>
+                            <div class="entity-task">
+                                {% if code.task %}
+                                    <i class="fas fa-tasks"></i> {{ code.task.name }}
+                                {% else %}
+                                    Без привязки к задаче
+                                {% endif %}
+                            </div>
+                            <div class="entity-meta">
+                                <span><i class="fas fa-calendar-alt"></i> {{ code.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                                <span><i class="fas fa-file-code"></i> {{ code.lang }}</span>
+                            </div>
+                        </div>
+                        <div class="entity-actions">
+                            {% if code.lang == 'ipynb' %}
+                                <a href="/solutions/download/{{ code.id }}" class="btn btn-info btn-sm" download>
+                                    <i class="fas fa-download"></i> .ipynb
+                                </a>
+                            {% endif %}
+                            {% if code.task %}
+                                <a href="{{ task_url.format(task_id=code.task_id, course_id=code.course_id, user_id=code.user_id) }}" class="btn btn-primary btn-sm" target="_blank">
+                                    <i class="fas fa-link"></i> К задаче
+                                </a>
+                            {% endif %}
+                            {% if not code.viewed_by_teacher %}
+                                <a href="/solutions/mark_viewed/{{ code.id }}" class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-check"></i> Просмотрено
+                                </a>
+                            {% else %}
+                                <a href="/solutions/mark_unviewed/{{ code.id }}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-undo"></i>
+                                </a>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
+            {% else %}
+                <div class="list-group-item text-muted">По текущему фильтру нет записей.</div>
             {% endfor %}
         </div>
     </div>
 
-    <div class="d-flex justify-content-between align-items-center mt-3">
-        <div></div>
-        <div>
-            {% if has_prev %}
-                <a class="btn btn-sm btn-outline-secondary" href="/solutions?filter={{ filter_mode }}&page={{ page - 1 }}">Назад</a>
-            {% endif %}
-            <span class="mx-2 small text-muted">Стр. {{ page }}</span>
-            {% if has_next %}
-                <a class="btn btn-sm btn-outline-secondary" href="/solutions?filter={{ filter_mode }}&page={{ page + 1 }}">Вперед</a>
-            {% endif %}
-        </div>
+    <div class="d-flex justify-content-end align-items-center mt-3 gap-2">
+        {% if has_prev %}
+            <a class="btn btn-sm btn-outline-secondary" href="/solutions?filter={{ filter_mode }}&page={{ page - 1 }}{% if selected_task_id %}&task_id={{ selected_task_id }}{% endif %}">Назад</a>
+        {% endif %}
+        <span class="small text-muted">Стр. {{ page }}</span>
+        {% if has_next %}
+            <a class="btn btn-sm btn-outline-secondary" href="/solutions?filter={{ filter_mode }}&page={{ page + 1 }}{% if selected_task_id %}&task_id={{ selected_task_id }}{% endif %}">Вперед</a>
+        {% endif %}
     </div>
 {% endblock %}

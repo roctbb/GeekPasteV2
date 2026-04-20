@@ -1,5 +1,14 @@
 FROM docker:27-cli AS docker_cli
 
+FROM node:20-alpine AS assets_builder
+
+WORKDIR /app
+
+COPY package.json package-lock.json /app/
+COPY scripts/build_vendor_assets.cjs /app/scripts/build_vendor_assets.cjs
+
+RUN npm ci && npm run build:vendor
+
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -19,6 +28,7 @@ COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY . /app
+COPY --from=assets_builder /app/static/vendor /app/static/vendor
 
 RUN mkdir -p /app/executions /app/zip_archives
 

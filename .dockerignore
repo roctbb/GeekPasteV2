@@ -9,6 +9,8 @@ __pycache__/
 .DS_Store
 .env
 venv/
+node_modules/
+static/vendor/
 database.sqlite
 executions/
 zip_archives/
