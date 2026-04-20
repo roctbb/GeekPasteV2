@@ -10,6 +10,9 @@
     <title>GeekPaste</title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/simplemde/latest/simplemde.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
           integrity="sha512-Kc323vGBEqzTmouAECnVceyQqyqdsSiqLQISBL29aUW4U/M7pSPA/gEUZQqv1cwx4OnYxTxve5UMg5GT6L4JJg=="
           crossorigin="anonymous" referrerpolicy="no-referrer"/>
@@ -38,24 +41,34 @@
 
 
 </head>
-<body>
+<body class="app-body">
 
-<nav class="navbar bg-light">
+<nav class="navbar main-nav">
     <div class="container">
         <a href="/" class="navbar-brand lead">
             <img src="/static/icons8-code-100.png" alt="Logo" style="height: 27px;"
                  class="d-inline-block align-text-top me-1">
-            GeekPaste
+            GeekPaste V2
         </a>
+        {% if session.get('user_id') %}
+            <div class="d-flex gap-2">
+                <a href="/my/submissions" class="btn btn-sm btn-outline-secondary">Мои сдачи</a>
+                {% if session.get('role') in ['teacher', 'admin'] %}
+                    <a href="/solutions" class="btn btn-sm btn-outline-secondary">Решения</a>
+                    <a href="/tasks" class="btn btn-sm btn-outline-secondary">Задачи</a>
+                    <a href="/warnings" class="btn btn-sm btn-outline-secondary">Флаги</a>
+                {% endif %}
+            </div>
+        {% endif %}
     </div>
 </nav>
 
-<div class="container mt-3">
+<div class="container main-container mt-3">
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             {% for category, message in messages %}
-                <div class="alert alert-{{ category }}" role="alert">
+                <div class="alert alert-{{ category }} shadow-soft" role="alert">
                     {{ message }}
                 </div>
             {% endfor %}

@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-    <div class="card flat-card">
+    <div class="card flat-card shadow-soft">
         <div class="card-body" style="padding: 0;">
             <button class="btn btn-flat btn-success btn-sm ms-1 my-1" id="copy-code" data-clipboard-target="#code"
                     data-bs-toggle="popover" data-bs-placement="right" data-bs-content="Скопировано">
@@ -14,6 +14,12 @@
                 <a href="/zip?id={{ code.id }}"
                    class="btn btn-flat btn-light btn-sm mt-0">
                     ZIP
+                </a>
+            {% endif %}
+            {% if code.lang == 'github' and github_meta and github_meta.repo_url %}
+                <a href="{{ github_meta.repo_url }}" target="_blank"
+                   class="btn btn-flat btn-light btn-sm mt-0">
+                    <i class="fab fa-github"></i> Repo
                 </a>
             {% endif %}
             {% if code.lang == 'ipynb' and (session['role'] == 'teacher' or session['role'] == 'admin') %}
@@ -58,10 +64,19 @@
             </span>
             {% if code.lang == 'ipynb' %}
                 <div id="code"></div>
-            {% elif code.lang == 'zip' %}
+            {% elif code.lang == 'zip' or code.lang == 'github' %}
+                {% if code.lang == 'github' and github_meta %}
+                    <div class="px-2 py-2 small text-muted border-top">
+                        <i class="fab fa-github"></i>
+                        {{ github_meta.resolved_repo or github_meta.repo_url }}
+                        {% if github_meta.ref %}
+                            · ветка/ref: {{ github_meta.ref }}
+                        {% endif %}
+                    </div>
+                {% endif %}
                 {% for code_part in code.code %}
                     <div class=" py-1"><strong class="mx-1">{{ code_part.name }}</strong></div>
-                    <pre class="m-0 flat-pre"><code id='code' class="p-2 py-3">{{ code_part.content }}</code></pre>
+                    <pre class="m-0 flat-pre"><code {% if loop.first %}id='code'{% endif %} class="p-2 py-3">{{ code_part.content }}</code></pre>
                 {% endfor %}
             {% else %}
                 <pre class="m-0 flat-pre"><code id='code' class="{{ code.lang }} p-2 py-3">{{ code.code }}</code></pre>
@@ -70,7 +85,7 @@
     </div>
 
     {% if code.task %}
-        <div class="card flat-card mt-3">
+        <div class="card flat-card shadow-soft mt-3">
             {% if code.check_state == 'not checked' %}
                 <div class="card-header bg-warning text-dark  py-1 px-3">
                     <strong>Решение проверяется... <i class="fas fa-spinner float-end header-icon"></i></strong>
@@ -106,6 +121,51 @@
                     <a style="border: 1px solid #ddd;"
                        href="/?task_id={{ code.task.id }}&course_id={{ code.course_id }}"
                        class="btn btn-light btn-flat btn-sm mt-0 m-2 mx-3">Отправить снова?</a>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+
+
+    {% if attempts and attempts|length > 1 %}
+        <div class="card flat-card shadow-soft mt-3">
+            <div class="card-header py-2 px-3">
+                <strong>История попыток</strong>
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-center gap-2">
+                    <div class="text-muted small">
+                        Всего попыток: <strong>{{ attempts|length }}</strong>
+                    </div>
+                    <form method="GET" action="/" class="d-flex align-items-center gap-2">
+                        <input type="hidden" name="id" value="{{ code.id }}">
+                        <label for="compare_to" class="small text-muted m-0">Сравнить с:</label>
+                        <select id="compare_to" name="compare_to" class="form-select form-select-sm" onchange="this.form.submit()">
+                            {% for attempt in attempts %}
+                                {% if attempt.id != code.id %}
+                                    <option value="{{ attempt.id }}" {{ 'selected' if compare_attempt and compare_attempt.id == attempt.id else '' }}>
+                                        #{{ attempt.id }} · {{ attempt.created_at.strftime('%d.%m.%Y %H:%M') }}
+                                    </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        <noscript>
+                            <button type="submit" class="btn btn-sm btn-outline-primary">Показать diff</button>
+                        </noscript>
+                    </form>
+                </div>
+
+                <div class="attempt-list mt-3">
+                    {% for attempt in attempts %}
+                        <a href="/?id={{ attempt.id }}" class="attempt-item {{ 'current' if attempt.id == code.id else '' }}">
+                            <span class="attempt-item-id">#{{ attempt.id }}</span>
+                            <span class="attempt-item-date">{{ attempt.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                        </a>
+                    {% endfor %}
+                </div>
+
+                {% if attempts_diff %}
+                    <pre class="m-0 flat-pre diff-pre mt-3"><code class="p-2 py-3 txt">{{ attempts_diff }}</code></pre>
                 {% endif %}
             </div>
         </div>

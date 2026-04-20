@@ -3,6 +3,13 @@
 {% block content %}
 
     {% if not has_error %}
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="m-0">{{ task.name if task else 'Новая отправка кода' }}</h5>
+            {% if task %}
+                <span class="badge bg-light text-dark border">Задача #{{ task.id }}</span>
+            {% endif %}
+        </div>
+
         {% if gpt_limit_info %}
             <div class="alert alert-info">
                 <strong>Лимит GPT-сдач:</strong> использовано {{ gpt_limit_info.current_count }} из {{ gpt_limit_info.limit }}
@@ -12,7 +19,7 @@
             </div>
         {% endif %}
 
-        <div class="card flat-card">
+        <div class="card flat-card shadow-soft">
             <div class="card-body">
                 <form method="POST" enctype="multipart/form-data">
                     {% if prefered_lang == 'ipynb' %}
@@ -30,6 +37,7 @@
                             <div>
                                 <a href="/?lang=zip" class="btn-sm btn-secondary btn my-2">Сдать архив</a>
                                 <a href="/?lang=ipynb" class="btn-sm btn-secondary btn my-2">Сдать тетрадку</a>
+                                <a href="/?lang=github" class="btn-sm btn-secondary btn my-2">Сдать GitHub</a>
                             </div>
                         {% endif %}
 
@@ -65,6 +73,18 @@
 
 
                     {% endif %}
+
+                    <div class="form-group me-2 mt-3 pt-3 border-top">
+                        <label for="github_repo_url" class="text-muted">Или ссылка на GitHub-репозиторий</label>
+                        <input class="form-control my-1"
+                               id="github_repo_url"
+                               name="github_repo_url"
+                               type="url"
+                               placeholder="https://github.com/owner/repo или .../tree/branch">
+                        <div class="small text-muted">
+                            Поддерживаются публичные репозитории. Для задач отправка через GitHub проверяется через GPT.
+                        </div>
+                    </div>
 
                     <button type="submit" class="btn btn-primary mt-2">Сохранить</button>
                 </form>

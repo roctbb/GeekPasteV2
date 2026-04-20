@@ -1,4 +1,6 @@
 # coding: utf8
+import difflib
+import json
 from io import BytesIO
 
 from flask import *
@@ -84,11 +86,27 @@ def get_gpt_rate_limit_info(user_id, task_id, task=None):
 def submit():
     lang = request.form.get('lang')
     code = request.form.get('code')
+    github_repo_url = (request.form.get('github_repo_url') or '').strip()
     task_id = request.args.get('task_id')
     course_id = request.args.get('course_id')
     zip_content = None
+    task = None
 
     client_ip = request.remote_addr
+
+    def _return_to_submit_form(default_lang=None):
+        if task_id and course_id:
+            return redirect('/?task_id={}&course_id={}'.format(task_id, course_id))
+        if task_id:
+            return redirect('/?task_id={}'.format(task_id))
+        if default_lang:
+            return redirect(f'/?lang={default_lang}')
+        return redirect('/')
+
+    if task_id:
+        task = Task.query.filter_by(id=task_id).first()
+        if not task:
+            abort(404)
 
     if 'file' in request.files:
         file = request.files['file']
@@ -100,41 +118,43 @@ def submit():
 
             if len(content) > 200000000:
                 flash("Слишком большой файл.", "danger")
-                if task_id and course_id:
-                    return redirect('/?task_id={}&course_id={}'.format(task_id, course_id))
-                return redirect('/?lang=zip')
+                return _return_to_submit_form(default_lang='zip')
 
             code = extract_data_from_zipfile(content)
             if not code:
                 flash("Не удалось прочитать архив.", "danger")
-                if task_id and course_id:
-                    return redirect('/?task_id={}&course_id={}'.format(task_id, course_id))
-                return redirect('/?lang=zip')
+                return _return_to_submit_form(default_lang='zip')
 
         if file.filename.endswith('.ipynb'):
             code = file.read().decode('utf-8')
             lang = "ipynb"
 
-    if not code.strip():
+    if github_repo_url:
+        if task and task.check_type != 'gpt':
+            flash("Ссылка на GitHub поддерживается только для задач с проверкой через нейросеть (GPT).", "danger")
+            return _return_to_submit_form(default_lang='github')
+        try:
+            code = extract_data_from_github_repository(github_repo_url)
+            lang = "github"
+        except GitHubRepositoryError as e:
+            flash(str(e), "danger")
+            return _return_to_submit_form(default_lang='github')
+
+    if not code or not str(code).strip():
         flash("Введите код.", "danger")
-        return redirect('/')
+        return _return_to_submit_form()
 
-    if not lang or lang not in LANGS + ['ipynb', 'zip']:
+    if not lang or lang not in LANGS + ['ipynb', 'zip', 'github']:
         flash("Выберите язык.", "danger")
-        return redirect('/')
+        return _return_to_submit_form()
 
-    # Проверяем существование задачи и лимиты для GPT-задач
-    if task_id:
-        task = Task.query.filter_by(id=task_id).first()
-        if not task:
-            abort(404)
-
+    if task:
         # Проверка лимита для GPT-задач
         if task.check_type == 'gpt':
             allowed, current_count, limit = check_gpt_rate_limit(session['user_id'], task_id, task)
             if not allowed:
                 flash(f"Превышен лимит сдач для этой задачи ({limit} в час). Попробуйте позже.", "danger")
-                return redirect('/?task_id={}&course_id={}'.format(task_id, course_id))
+                return _return_to_submit_form()
 
     id = save_code(code, lang, client_ip, user_id=session['user_id'], task_id=task_id, course_id=course_id)
     if lang == 'zip' and zip_content:
@@ -183,6 +203,123 @@ def is_teacher():
 
 def is_author(code):
     return code.user_id == session['user_id']
+
+
+def _submission_to_diff_text(code):
+    if not code:
+        return ''
+
+    raw_code = code.code or ''
+
+    if code.lang == 'zip':
+        try:
+            files = json.loads(raw_code)
+        except Exception:
+            return raw_code
+
+        lines = []
+        for file_item in files:
+            file_name = file_item.get('name') or 'unknown'
+            lines.append(f"# FILE: {file_name}")
+            if file_item.get('is-binary'):
+                lines.append(f"[BINARY FILE] {file_item.get('content', '')}")
+            else:
+                lines.append(file_item.get('content') or '')
+            lines.append('')
+
+        return '\n'.join(lines).strip()
+
+    if code.lang == 'github':
+        try:
+            payload = json.loads(raw_code)
+            files = payload.get('files', [])
+            repo_label = payload.get('resolved_repo') or payload.get('repo_url') or 'unknown'
+            ref = payload.get('ref') or 'unknown'
+        except Exception:
+            return raw_code
+
+        lines = [f"# GITHUB: {repo_label} ({ref})", ""]
+        for file_item in files:
+            file_name = file_item.get('name') or 'unknown'
+            lines.append(f"# FILE: {file_name}")
+            if file_item.get('is-binary'):
+                lines.append(f"[BINARY FILE] {file_item.get('content', '')}")
+            else:
+                lines.append(file_item.get('content') or '')
+            lines.append('')
+
+        return '\n'.join(lines).strip()
+
+    if code.lang == 'ipynb':
+        extracted_code = extract_code_from_ipynb(raw_code)
+        return extracted_code or raw_code
+
+    return raw_code
+
+
+def _build_attempts_context(code, compare_to_id=None):
+    if not code or not code.task_id or not code.user_id:
+        return [], None, None
+
+    attempts = (Code.query
+                .filter_by(task_id=code.task_id, user_id=code.user_id)
+                .order_by(Code.created_at.asc(), Code.id.asc())
+                .all())
+
+    if len(attempts) <= 1:
+        return attempts, None, None
+
+    current_attempt_idx = next((idx for idx, attempt in enumerate(attempts) if attempt.id == code.id), None)
+    if current_attempt_idx is None:
+        return attempts, None, None
+
+    compare_attempt = None
+    if compare_to_id:
+        compare_attempt = next((attempt for attempt in attempts
+                                if attempt.id == compare_to_id and attempt.id != code.id), None)
+
+    if compare_attempt is None and current_attempt_idx > 0:
+        compare_attempt = attempts[current_attempt_idx - 1]
+
+    if compare_attempt is None:
+        return attempts, None, None
+
+    compare_text = _submission_to_diff_text(compare_attempt).splitlines()
+    current_text = _submission_to_diff_text(code).splitlines()
+
+    diff_lines = list(difflib.unified_diff(
+        compare_text,
+        current_text,
+        fromfile=f'Попытка {compare_attempt.id}',
+        tofile=f'Попытка {code.id}',
+        lineterm=''
+    ))
+
+    if not diff_lines:
+        return attempts, compare_attempt, 'Изменений не найдено.'
+
+    return attempts, compare_attempt, '\n'.join(diff_lines)
+
+
+def _queue_mass_recheck(task_id):
+    code_ids = [code_id for code_id, in db.session.query(Code.id).filter_by(task_id=task_id).all()]
+    if not code_ids:
+        return 0
+
+    (Code.query
+     .filter_by(task_id=task_id)
+     .update({
+        Code.check_state: 'not checked',
+        Code.check_points: 0,
+        Code.check_comments: None,
+        Code.checked_at: None
+    }, synchronize_session=False))
+    db.session.commit()
+
+    for code_id in code_ids:
+        check_task.delay(code_id)
+
+    return len(code_ids)
 
 
 @app.route('/warnings', methods=['GET'])
@@ -249,15 +386,45 @@ def index():
             flash("Нет доступа. Это приватный код.", "danger")
         else:
             similarities = []
+            attempts = []
+            compare_attempt = None
+            attempts_diff = None
+            github_meta = None
             if session.get('user_id') and is_teacher():
                 similarities = code.get_similar_codes_sorted()
+                compare_to_id = request.args.get('compare_to')
+                attempts, compare_attempt, attempts_diff = _build_attempts_context(code, compare_to_id)
             elif not session.get('user_id') or not is_author(code):
                 add_view(code)
+            else:
+                compare_to_id = request.args.get('compare_to')
+                attempts, compare_attempt, attempts_diff = _build_attempts_context(code, compare_to_id)
 
             if code.lang == 'zip':
                 code.code = json.loads(code.code)
+            elif code.lang == 'github':
+                try:
+                    github_payload = json.loads(code.code)
+                    code.code = github_payload.get('files', [])
+                    github_meta = {
+                        'repo_url': github_payload.get('repo_url'),
+                        'resolved_repo': github_payload.get('resolved_repo'),
+                        'ref': github_payload.get('ref')
+                    }
+                except Exception:
+                    pass
 
-            return render_template('code.html', code=code, similarities=similarities, user_url=USER_URL, task_url=TASK_URL)
+            return render_template(
+                'code.html',
+                code=code,
+                similarities=similarities,
+                user_url=USER_URL,
+                task_url=TASK_URL,
+                attempts=attempts,
+                compare_attempt=compare_attempt,
+                attempts_diff=attempts_diff,
+                github_meta=github_meta
+            )
 
     # For creating new pastes, require login
     if not session.get('user_id'):
@@ -587,7 +754,30 @@ def tasks_update(task_id):
     _fill_task(task)
     db.session.commit()
     flash(f'Задача #{task.id} обновлена.', 'success')
+
+    if 'mass_recheck' in request.form:
+        total = _queue_mass_recheck(task.id)
+        if total:
+            flash(f'Запущена массовая перепроверка: {total} решений по задаче #{task.id}.', 'info')
+        else:
+            flash(f'Для задачи #{task.id} пока нет решений для перепроверки.', 'warning')
+
     return redirect('/tasks')
+
+
+@app.route('/tasks/<int:task_id>/recheck_all', methods=['POST'])
+@login_required
+def tasks_recheck_all(task_id):
+    if not is_teacher():
+        abort(403)
+
+    task = Task.query.get_or_404(task_id)
+    total = _queue_mass_recheck(task.id)
+    if total:
+        flash(f'Запущена массовая перепроверка: {total} решений по задаче #{task.id}.', 'info')
+    else:
+        flash(f'Для задачи #{task.id} пока нет решений для перепроверки.', 'warning')
+    return redirect(request.referrer or '/tasks')
 
 
 @app.route('/tasks/<int:task_id>/delete', methods=['POST'])

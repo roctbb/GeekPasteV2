@@ -6,6 +6,7 @@ import random
 import datetime
 import zipfile
 import os
+from urllib.parse import urlparse, unquote
 
 from sqlalchemy import *
 from models import *
@@ -88,6 +89,120 @@ def load_original_zip_archive(code_id):
     except Exception as e:
         print(f"Failed to load original ZIP for {code_id}: {e}")
         return None
+
+
+class GitHubRepositoryError(Exception):
+    pass
+
+
+def _parse_github_repository_url(repo_url):
+    cleaned_url = (repo_url or '').strip()
+    if not cleaned_url:
+        raise GitHubRepositoryError("Укажите ссылку на репозиторий GitHub.")
+
+    if cleaned_url.startswith('git@github.com:'):
+        cleaned_url = 'https://github.com/' + cleaned_url.split(':', 1)[1]
+    if not cleaned_url.startswith(('http://', 'https://')):
+        cleaned_url = 'https://' + cleaned_url
+
+    parsed = urlparse(cleaned_url)
+    if parsed.netloc.lower() not in ('github.com', 'www.github.com'):
+        raise GitHubRepositoryError("Поддерживаются только ссылки на github.com.")
+
+    path_parts = [part for part in parsed.path.strip('/').split('/') if part]
+    if len(path_parts) < 2:
+        raise GitHubRepositoryError("Некорректная ссылка на репозиторий GitHub.")
+
+    owner = path_parts[0]
+    repo = path_parts[1]
+    if repo.endswith('.git'):
+        repo = repo[:-4]
+
+    if not owner or not repo:
+        raise GitHubRepositoryError("Некорректная ссылка на репозиторий GitHub.")
+
+    ref = None
+    if len(path_parts) >= 4 and path_parts[2] == 'tree':
+        ref = unquote(path_parts[3])
+
+    normalized_url = f"https://github.com/{owner}/{repo}"
+    return owner, repo, ref, normalized_url
+
+
+def extract_data_from_github_repository(repo_url, max_archive_size=50 * 1024 * 1024):
+    owner, repo, explicit_ref, normalized_url = _parse_github_repository_url(repo_url)
+
+    metadata_headers = {
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'GeekPasteV2'
+    }
+
+    try:
+        metadata_response = requests.get(
+            f'https://api.github.com/repos/{owner}/{repo}',
+            headers=metadata_headers,
+            timeout=20
+        )
+    except requests.RequestException:
+        raise GitHubRepositoryError("Не удалось подключиться к GitHub. Попробуйте позже.")
+
+    if metadata_response.status_code == 404:
+        raise GitHubRepositoryError("Репозиторий не найден или недоступен.")
+    if metadata_response.status_code == 403 and 'rate limit' in metadata_response.text.lower():
+        raise GitHubRepositoryError("Превышен лимит GitHub API. Попробуйте позже.")
+    if not metadata_response.ok:
+        raise GitHubRepositoryError("Не удалось получить метаданные репозитория.")
+
+    repo_data = metadata_response.json()
+    if repo_data.get('private'):
+        raise GitHubRepositoryError("Поддерживаются только публичные репозитории GitHub.")
+
+    resolved_ref = explicit_ref or repo_data.get('default_branch') or 'main'
+    archive_headers = {'User-Agent': 'GeekPasteV2'}
+
+    archive_urls = [
+        f'https://codeload.github.com/{owner}/{repo}/zip/refs/heads/{resolved_ref}',
+        f'https://codeload.github.com/{owner}/{repo}/zip/{resolved_ref}',
+    ]
+
+    archive_response = None
+    for archive_url in archive_urls:
+        try:
+            candidate = requests.get(archive_url, headers=archive_headers, timeout=40)
+        except requests.RequestException:
+            continue
+        if candidate.ok:
+            archive_response = candidate
+            break
+
+    if not archive_response:
+        raise GitHubRepositoryError("Не удалось скачать архив репозитория.")
+
+    archive_bytes = archive_response.content
+    if not archive_bytes:
+        raise GitHubRepositoryError("GitHub вернул пустой архив.")
+    if len(archive_bytes) > max_archive_size:
+        raise GitHubRepositoryError("Репозиторий слишком большой для загрузки.")
+
+    files_json = extract_data_from_zipfile(archive_bytes)
+    if not files_json:
+        raise GitHubRepositoryError("Не удалось извлечь файлы из репозитория.")
+
+    try:
+        files = json.loads(files_json)
+    except Exception:
+        raise GitHubRepositoryError("Ошибка при разборе файлов репозитория.")
+
+    if not files:
+        raise GitHubRepositoryError("В репозитории не найдено подходящих файлов для проверки.")
+
+    payload = {
+        'repo_url': normalized_url,
+        'resolved_repo': f'{owner}/{repo}',
+        'ref': resolved_ref,
+        'files': files
+    }
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def get_all_codes(lang=None):
@@ -326,6 +441,16 @@ def parse_gpt_answer(answer):
 def check_task_with_gpt(task, code):
     if code.lang == 'zip':
         student_code = '\n\n'.join([f'Файл {part["name"]}\n\n{part["content"]}' for part in json.loads(code.code)])
+    elif code.lang == 'github':
+        try:
+            github_payload = json.loads(code.code)
+            files = github_payload.get('files', [])
+            repo_label = github_payload.get('resolved_repo') or github_payload.get('repo_url') or 'unknown'
+            ref = github_payload.get('ref') or 'unknown'
+            files_text = '\n\n'.join([f'Файл {part["name"]}\n\n{part["content"]}' for part in files])
+            student_code = f'GitHub repository: {repo_label} (branch/ref: {ref})\n\n{files_text}'
+        except Exception:
+            student_code = code.code
     elif code.lang == 'ipynb':
         student_code = f'Файл solution.ipynb\n\n{code.code}'
     else:

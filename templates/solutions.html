@@ -35,45 +35,47 @@
         </form>
     </div>
 
-    <div class="list-group">
-        {% for code in codes %}
-            <div class="list-group-item d-flex justify-content-between align-items-center">
-                <div class="text-decoration-none flex-grow-1 small">
-                    {% if not code.viewed_by_teacher %}
-                        <span class="badge bg-warning text-dark me-1">NEW</span>
-                    {% endif %}
-                    <span class="mx-1"><i class="fas fa-code"></i> <a href="/?id={{ code.id }}" target="_blank">{{ code.id }}</a></span>
-                    {% if code.user_id %}
-                        <span class="mx-1"><i class="fas fa-user"></i> <a href="{{ user_url }}{{ code.user_id }}" target="_blank">{{ code.user_id }}</a></span>
-                    {% endif %}
-                    {% if code.task %}
-                        <span class="mx-1"><i class="fas fa-tasks"></i> {{ code.task.name }}</span>
-                    {% endif %}
+    <div class="card flat-card shadow-soft">
+        <div class="list-group list-group-flush">
+            {% for code in codes %}
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div class="text-decoration-none flex-grow-1 small">
+                        {% if not code.viewed_by_teacher %}
+                            <span class="badge bg-warning text-dark me-1">NEW</span>
+                        {% endif %}
+                        <span class="mx-1"><i class="fas fa-code"></i> <a href="/?id={{ code.id }}" target="_blank">{{ code.id }}</a></span>
+                        {% if code.user_id %}
+                            <span class="mx-1"><i class="fas fa-user"></i> <a href="{{ user_url }}{{ code.user_id }}" target="_blank">{{ code.user_id }}</a></span>
+                        {% endif %}
+                        {% if code.task %}
+                            <span class="mx-1"><i class="fas fa-tasks"></i> {{ code.task.name }}</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <span class="text-muted small pe-1"><i class="fas fa-calendar-alt"></i> {{ code.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+                        {% if code.lang == 'ipynb' %}
+                            <a href="/solutions/download/{{ code.id }}" class="btn btn-info btn-sm" download>
+                                <i class="fas fa-download"></i> .ipynb
+                            </a>
+                        {% endif %}
+                        {% if code.task %}
+                            <a href="{{ task_url.format(task_id=code.task_id, course_id=code.course_id, user_id=code.user_id) }}" class="btn btn-primary btn-sm" target="_blank">
+                                <i class="fas fa-link"></i> К задаче
+                            </a>
+                        {% endif %}
+                        {% if not code.viewed_by_teacher %}
+                            <a href="/solutions/mark_viewed/{{ code.id }}" class="btn btn-outline-success btn-sm ms-1">
+                                <i class="fas fa-check"></i> Просмотрено
+                            </a>
+                        {% else %}
+                            <a href="/solutions/mark_unviewed/{{ code.id }}" class="btn btn-outline-secondary btn-sm ms-1">
+                                <i class="fas fa-undo"></i>
+                            </a>
+                        {% endif %}
+                    </div>
                 </div>
-                <div>
-                    <span class="text-muted small pe-1"><i class="fas fa-calendar-alt"></i> {{ code.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
-                    {% if code.lang == 'ipynb' %}
-                        <a href="/solutions/download/{{ code.id }}" class="btn btn-info btn-sm" download>
-                            <i class="fas fa-download"></i> .ipynb
-                        </a>
-                    {% endif %}
-                    {% if code.task %}
-                        <a href="{{ task_url.format(task_id=code.task_id, course_id=code.course_id, user_id=code.user_id) }}" class="btn btn-primary btn-sm" target="_blank">
-                            <i class="fas fa-link"></i> К задаче
-                        </a>
-                    {% endif %}
-                    {% if not code.viewed_by_teacher %}
-                        <a href="/solutions/mark_viewed/{{ code.id }}" class="btn btn-outline-success btn-sm ms-1">
-                            <i class="fas fa-check"></i> Просмотрено
-                        </a>
-                    {% else %}
-                        <a href="/solutions/mark_unviewed/{{ code.id }}" class="btn btn-outline-secondary btn-sm ms-1">
-                            <i class="fas fa-undo"></i>
-                        </a>
-                    {% endif %}
-                </div>
-            </div>
-        {% endfor %}
+            {% endfor %}
+        </div>
     </div>
 
     <div class="d-flex justify-content-between align-items-center mt-3">
