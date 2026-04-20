@@ -12,6 +12,7 @@ from telegram_notifier import send_telegram_message
 import jwt
 from config import USER_URL, TASK_URL, AUTH_URL, DEFAULT_GPT_RATE_LIMIT, LANGS, JWT_SECRET
 from urllib.parse import quote
+from sqlalchemy import or_
 
 
 def check_gpt_rate_limit(user_id, task_id, task=None):
@@ -329,22 +330,51 @@ def _queue_mass_recheck(task_id):
     return len(code_ids)
 
 
+def _parse_page_arg(arg_name='page', default=1):
+    try:
+        page = int(request.args.get(arg_name, default))
+        if page < 1:
+            page = default
+    except Exception:
+        page = default
+    return page
+
+
 @app.route('/warnings', methods=['GET'])
 @login_required
 def warnings():
     if not is_teacher():
         abort(403)
 
+    page = _parse_page_arg('page', 1)
+    per_page = 50
     warning_type = request.args.get('type', 'similarity')  # similarity or ai
 
     if warning_type == 'ai':
-        codes = Code.query.filter_by(has_ai_warning=True).order_by(Code.created_at.desc()).all()
+        base_query = Code.query.filter_by(has_ai_warning=True)
     else:
-        codes = Code.query.filter_by(has_similarity_warning=True).order_by(Code.created_at.desc()).all()
+        base_query = Code.query.filter_by(has_similarity_warning=True)
 
-    codes = list(filter(lambda c: not c.task_id or c.check_points == c.task.points, codes))
+    query = (base_query
+             .outerjoin(Task)
+             .filter(or_(Code.task_id.is_(None), Code.check_points == Task.points))
+             .order_by(Code.created_at.desc()))
 
-    return render_template('similarity_warnings.html', codes=codes, user_url=USER_URL, task_url=TASK_URL, warning_type=warning_type)
+    total = query.count()
+    codes = query.offset((page - 1) * per_page).limit(per_page).all()
+    has_prev = page > 1
+    has_next = page * per_page < total
+
+    return render_template('similarity_warnings.html',
+                           codes=codes,
+                           user_url=USER_URL,
+                           task_url=TASK_URL,
+                           warning_type=warning_type,
+                           page=page,
+                           has_prev=has_prev,
+                           has_next=has_next,
+                           total=total,
+                           per_page=per_page)
 
 
 @app.route('/warnings/uncheck/<code_id>', methods=['GET'])
@@ -363,6 +393,9 @@ def uncheck_warning(code_id):
             code.has_similarity_warning = False
         db.session.commit()
 
+    page = request.args.get('page')
+    if page and page.isdigit():
+        return redirect(f'/warnings?type={warning_type}&page={page}')
     return redirect(f'/warnings?type={warning_type}')
 
 
@@ -393,12 +426,23 @@ def index():
             flash("Нет доступа. Это приватный код.", "danger")
         else:
             similarities = []
+            similarities_page = _parse_page_arg('similarities_page', 1)
+            similarities_per_page = 20
+            similarities_total = 0
+            similarities_has_prev = False
+            similarities_has_next = False
             attempts = []
             compare_attempt = None
             attempts_diff = None
             github_meta = None
             if session.get('user_id') and is_teacher():
-                similarities = code.get_similar_codes_sorted()
+                all_similarities = code.get_similar_codes_sorted()
+                similarities_total = len(all_similarities)
+                start_idx = (similarities_page - 1) * similarities_per_page
+                end_idx = start_idx + similarities_per_page
+                similarities = all_similarities[start_idx:end_idx]
+                similarities_has_prev = similarities_page > 1
+                similarities_has_next = similarities_page * similarities_per_page < similarities_total
                 compare_to_id = request.args.get('compare_to')
                 attempts, compare_attempt, attempts_diff = _build_attempts_context(code, compare_to_id)
             elif not session.get('user_id') or not is_author(code):
@@ -430,7 +474,11 @@ def index():
                 attempts=attempts,
                 compare_attempt=compare_attempt,
                 attempts_diff=attempts_diff,
-                github_meta=github_meta
+                github_meta=github_meta,
+                similarities_page=similarities_page,
+                similarities_has_prev=similarities_has_prev,
+                similarities_has_next=similarities_has_next,
+                similarities_total=similarities_total
             )
 
     # For creating new pastes, require login
@@ -536,12 +584,7 @@ def solutions():
     if not is_teacher():
         abort(403)
 
-    try:
-        page = int(request.args.get('page', 1))
-        if page < 1:
-            page = 1
-    except Exception:
-        page = 1
+    page = _parse_page_arg('page', 1)
 
     filter_mode = request.args.get('filter', 'unviewed')  # 'all' or 'unviewed'
     task_id = request.args.get('task_id')  # filter by task
@@ -621,12 +664,7 @@ def mark_solution_unviewed(code_id):
 @app.route('/my/submissions', methods=['GET'])
 @login_required
 def my_submissions():
-    try:
-        page = int(request.args.get('page', 1))
-        if page < 1:
-            page = 1
-    except Exception:
-        page = 1
+    page = _parse_page_arg('page', 1)
 
     per_page = 50
     query = Code.query.filter_by(user_id=session['user_id']).order_by(Code.created_at.desc())
@@ -711,8 +749,20 @@ def gpt_rate_limit_api():
 def tasks_list():
     if not is_teacher():
         abort(403)
-    tasks = Task.query.order_by(Task.id.desc()).all()
-    return render_template('tasks.html', tasks=tasks, langs=LANGS, edit_task=None)
+    page = _parse_page_arg('page', 1)
+    per_page = 50
+    query = Task.query.order_by(Task.id.desc())
+    total = query.count()
+    tasks = query.offset((page - 1) * per_page).limit(per_page).all()
+    return render_template('tasks.html',
+                           tasks=tasks,
+                           langs=LANGS,
+                           edit_task=None,
+                           page=page,
+                           has_prev=page > 1,
+                           has_next=page * per_page < total,
+                           total=total,
+                           per_page=per_page)
 
 
 @app.route('/tasks/<int:task_id>', methods=['GET'])
@@ -720,9 +770,21 @@ def tasks_list():
 def tasks_edit(task_id):
     if not is_teacher():
         abort(403)
+    page = _parse_page_arg('page', 1)
+    per_page = 50
     edit_task = Task.query.get_or_404(task_id)
-    tasks = Task.query.order_by(Task.id.desc()).all()
-    return render_template('tasks.html', tasks=tasks, langs=LANGS, edit_task=edit_task)
+    query = Task.query.order_by(Task.id.desc())
+    total = query.count()
+    tasks = query.offset((page - 1) * per_page).limit(per_page).all()
+    return render_template('tasks.html',
+                           tasks=tasks,
+                           langs=LANGS,
+                           edit_task=edit_task,
+                           page=page,
+                           has_prev=page > 1,
+                           has_next=page * per_page < total,
+                           total=total,
+                           per_page=per_page)
 
 
 def _fill_task(task):
@@ -749,7 +811,7 @@ def tasks_create():
     db.session.add(task)
     db.session.commit()
     flash(f'Задача #{task.id} создана.', 'success')
-    return redirect('/tasks')
+    return redirect(request.referrer or '/tasks')
 
 
 @app.route('/tasks/<int:task_id>', methods=['POST'])
@@ -769,7 +831,7 @@ def tasks_update(task_id):
         else:
             flash(f'Для задачи #{task.id} пока нет решений для перепроверки.', 'warning')
 
-    return redirect('/tasks')
+    return redirect(request.referrer or '/tasks')
 
 
 @app.route('/tasks/<int:task_id>/recheck_all', methods=['POST'])
@@ -795,11 +857,11 @@ def tasks_delete(task_id):
     task = Task.query.get_or_404(task_id)
     if task.solutions:
         flash(f'Нельзя удалить задачу #{task_id}: есть {len(task.solutions)} решений.', 'danger')
-        return redirect('/tasks')
+        return redirect(request.referrer or '/tasks')
     db.session.delete(task)
     db.session.commit()
     flash(f'Задача #{task_id} удалена.', 'success')
-    return redirect('/tasks')
+    return redirect(request.referrer or '/tasks')
 
 
 

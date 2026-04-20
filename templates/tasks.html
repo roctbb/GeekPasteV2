@@ -3,7 +3,16 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h4 class="m-0">База задач</h4>
-    <span class="text-muted small">Всего задач: {{ tasks|length }}</span>
+    <div>
+        <span class="text-muted small me-3">Всего задач: {{ total }}</span>
+        {% if has_prev %}
+            <a class="btn btn-sm btn-outline-secondary" href="/tasks?page={{ page - 1 }}">Назад</a>
+        {% endif %}
+        <span class="mx-2 small text-muted">Стр. {{ page }}</span>
+        {% if has_next %}
+            <a class="btn btn-sm btn-outline-secondary" href="/tasks?page={{ page + 1 }}">Вперед</a>
+        {% endif %}
+    </div>
 </div>
 
 <div class="card flat-card shadow-soft mb-4">
@@ -34,7 +43,7 @@
                     <td>{{ t.gpt_rate_limit if t.gpt_rate_limit is not none else 'по умолч.' }}</td>
                     <td>{{ '✓' if t.bypass_similarity_check else '' }}</td>
                     <td class="text-nowrap">
-                        <a href="/tasks/{{ t.id }}" class="btn btn-sm btn-outline-primary">✎</a>
+                        <a href="/tasks/{{ t.id }}?page={{ page }}" class="btn btn-sm btn-outline-primary">✎</a>
                         <form method="POST" action="/tasks/{{ t.id }}/recheck_all" class="d-inline" onsubmit="return confirm('Запустить массовую перепроверку по задаче {{ t.id }}?')">
                             <button class="btn btn-sm btn-outline-warning" title="Массовая перепроверка">↻</button>
                         </form>
@@ -53,7 +62,7 @@
     <div class="card-body">
         <h5 class="mb-3">{{ 'Редактирование задачи #' ~ edit_task.id if edit_task else 'Новая задача' }}</h5>
 
-        <form method="POST" action="{{ '/tasks/' ~ edit_task.id if edit_task else '/tasks' }}">
+        <form method="POST" action="{{ ('/tasks/' ~ edit_task.id ~ '?page=' ~ page) if edit_task else '/tasks?page=' ~ page }}">
             <div class="row g-2 mb-2">
                 <div class="col-md-1">
                     <label class="form-label">ID</label>
@@ -115,7 +124,7 @@
             </div>
             <button class="btn btn-sm btn-primary">{{ 'Сохранить' if edit_task else 'Создать' }}</button>
             {% if edit_task %}
-                <a href="/tasks" class="btn btn-sm btn-secondary">Отмена</a>
+                <a href="/tasks?page={{ page }}" class="btn btn-sm btn-secondary">Отмена</a>
             {% endif %}
         </form>
     </div>

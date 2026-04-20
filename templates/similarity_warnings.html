@@ -2,16 +2,29 @@
 {% block content %}
     <ul class="nav nav-tabs mb-3">
         <li class="nav-item">
-            <a class="nav-link {% if warning_type == 'similarity' %}active{% endif %}" href="/warnings?type=similarity">
+            <a class="nav-link {% if warning_type == 'similarity' %}active{% endif %}" href="/warnings?type=similarity&page=1">
                 <i class="fas fa-clone"></i> Списывание
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {% if warning_type == 'ai' %}active{% endif %}" href="/warnings?type=ai">
+            <a class="nav-link {% if warning_type == 'ai' %}active{% endif %}" href="/warnings?type=ai&page=1">
                 <i class="fas fa-robot"></i> Использование AI
             </a>
         </li>
     </ul>
+
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="small text-muted">Записей: {{ total }}</span>
+        <div>
+            {% if has_prev %}
+                <a class="btn btn-sm btn-outline-secondary" href="/warnings?type={{ warning_type }}&page={{ page - 1 }}">Назад</a>
+            {% endif %}
+            <span class="mx-2 small text-muted">Стр. {{ page }}</span>
+            {% if has_next %}
+                <a class="btn btn-sm btn-outline-secondary" href="/warnings?type={{ warning_type }}&page={{ page + 1 }}">Вперед</a>
+            {% endif %}
+        </div>
+    </div>
 
     <div class="card flat-card shadow-soft">
         <div class="list-group list-group-flush">
@@ -65,12 +78,22 @@
                         <a href="{{ task_url.format(task_id=code.task_id, course_id=code.course_id, user_id=code.user_id) }}" class="btn btn-danger btn-sm ml-1"><i
                                 class="fas fa-ban"></i> Оценить</a>
                         {% endif %}
-                        <a href="/warnings/uncheck/{{ code.id }}?type={{ warning_type }}" class="btn btn-success btn-sm ml-1"><i
+                        <a href="/warnings/uncheck/{{ code.id }}?type={{ warning_type }}&page={{ page }}" class="btn btn-success btn-sm ml-1"><i
                                 class="fas fa-exclamation-circle"></i> Сброс</a>
 
                     </div>
                 </div>
             {% endfor %}
         </div>
+    </div>
+
+    <div class="d-flex justify-content-end align-items-center mt-3">
+        {% if has_prev %}
+            <a class="btn btn-sm btn-outline-secondary" href="/warnings?type={{ warning_type }}&page={{ page - 1 }}">Назад</a>
+        {% endif %}
+        <span class="mx-2 small text-muted">Стр. {{ page }}</span>
+        {% if has_next %}
+            <a class="btn btn-sm btn-outline-secondary" href="/warnings?type={{ warning_type }}&page={{ page + 1 }}">Вперед</a>
+        {% endif %}
     </div>
 {% endblock %}
