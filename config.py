@@ -3,6 +3,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+def env_bool(name, default=False):
+    raw = os.getenv(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "y", "on"}
+
 LANGS = ['cpp', 'python', 'java', 'cs', 'html', 'css', 'js', 'json', 'xml', 'swift', 'php', 'sql']
 IGNORED_PARTS = ['.idea', 'venv', 'pycache', '.replit', 'node_modules', 'vendor', '.git', 'build', '.pro.user', '__MACOSX', '.DS_Store']
 
@@ -11,7 +17,7 @@ SIMILARITY_LEVEL = int(os.getenv('SIMILARITY_LEVEL', 75))
 MAX_SIMILAR_CODES = int(os.getenv('MAX_SIMILAR_CODES', 8))
 CONNECTION_STRING = os.getenv('CONNECTION_STRING', 'postgresql+psycopg2://username:password@localhost:5432/mydatabase')
 CELERY_BROKER = os.getenv('CELERY_BROKER', 'redis://localhost:6379/0')
-DEBUG = bool(os.getenv('DEBUG', False))
+DEBUG = env_bool('DEBUG', False)
 PORT = int(os.getenv('PORT', 8084))
 SECRET = os.getenv('SECRET', 'key')
 GEEKCLASS_HOST = os.getenv('GEEKCLASS_HOST', 'https://codingprojects.ru')

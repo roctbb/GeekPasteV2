@@ -175,6 +175,24 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
 
         try:
             callback_headers = {'Authorization': f'Bearer {_make_callback_service_token()}'}
-            requests.post(callback_url, json=result, headers=callback_headers, timeout=10)
+            app.logger.info(
+                "external_check_callback_start callback_id=%s job_id=%s status=%s callback_url=%s",
+                callback_id,
+                result.get('job_id'),
+                result.get('status'),
+                callback_url,
+            )
+            callback_resp = requests.post(callback_url, json=result, headers=callback_headers, timeout=10)
+            app.logger.info(
+                "external_check_callback_done callback_id=%s job_id=%s status_code=%s",
+                callback_id,
+                result.get('job_id'),
+                callback_resp.status_code,
+            )
         except Exception as e:
-            print(f'Callback failed: {e}')
+            app.logger.exception(
+                "external_check_callback_failed callback_id=%s job_id=%s error=%s",
+                callback_id,
+                result.get('job_id'),
+                str(e),
+            )
