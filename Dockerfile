@@ -6,6 +6,7 @@ WORKDIR /app
 
 COPY package.json package-lock.json /app/
 COPY scripts/build_vendor_assets.cjs /app/scripts/build_vendor_assets.cjs
+COPY scripts/vendor/socket.io.min.js /app/scripts/vendor/socket.io.min.js
 
 RUN npm ci && npm run build:vendor
 
