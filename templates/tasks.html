@@ -4,149 +4,110 @@
 <div class="page-head">
     <div>
         <h4 class="page-head-title">База задач</h4>
-        <div class="page-head-meta">Всего задач: {{ total }}</div>
+        <div class="page-head-meta">Найдено: {{ total }}</div>
     </div>
     <div class="page-head-actions">
+        <a href="{{ new_task_url }}" class="btn btn-sm btn-primary">
+            <i class="fas fa-plus"></i> Новая задача
+        </a>
         {% if has_prev %}
-            <a class="btn btn-sm btn-outline-secondary" href="/tasks?page={{ page - 1 }}">Назад</a>
+            <a class="btn btn-sm btn-outline-secondary" href="{{ prev_page_url }}">Назад</a>
         {% endif %}
         <span class="small text-muted">Стр. {{ page }}</span>
         {% if has_next %}
-            <a class="btn btn-sm btn-outline-secondary" href="/tasks?page={{ page + 1 }}">Вперед</a>
+            <a class="btn btn-sm btn-outline-secondary" href="{{ next_page_url }}">Вперед</a>
         {% endif %}
     </div>
 </div>
 
-<div class="tasks-layout">
-    <div class="card flat-card shadow-soft mb-3 mb-xl-0">
-        <div class="table-responsive">
-            <table class="table table-sm task-table mb-0">
-                <thead>
+<div class="card flat-card shadow-soft compact-filter mb-3">
+    <div class="card-body py-2">
+        <form method="GET" action="/tasks" class="row g-2 align-items-center">
+            <div class="col-sm-8 col-md-6 col-lg-5 col-xl-4">
+                <input type="text"
+                       class="form-control form-control-sm"
+                       name="q"
+                       value="{{ search_query }}"
+                       placeholder="Поиск по ID, названию, языку, типу проверки, GPT модели">
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-sm btn-outline-primary">Найти</button>
+            </div>
+            {% if search_query %}
+                <div class="col-auto">
+                    <a href="/tasks" class="btn btn-sm btn-outline-secondary">Сбросить</a>
+                </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="card flat-card shadow-soft">
+    <div class="table-responsive">
+        <table class="table table-sm task-table mb-0">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Название</th>
+                <th>Язык</th>
+                <th>Баллы</th>
+                <th>Проверка</th>
+                <th>Плагиат</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for t in tasks %}
                 <tr>
-                    <th>ID</th>
-                    <th>Название</th>
-                    <th>Язык</th>
-                    <th>Баллы</th>
-                    <th>Проверка</th>
-                    <th>Плагиат</th>
-                    <th></th>
-                </tr>
-                </thead>
-                <tbody>
-                {% for t in tasks %}
-                    <tr>
-                        <td>{{ t.id }}</td>
-                        <td class="task-name-cell">{{ t.name or '—' }}</td>
-                        <td>{{ t.lang or '—' }}</td>
-                        <td>{{ t.points if t.points is not none else '—' }}</td>
-                        <td>
-                            <span class="badge bg-light text-dark">{{ t.check_type or '—' }}</span>
-                            {% if t.check_type == 'gpt' %}
-                                <div class="task-compact-note">
-                                    {{ t.gpt_model or 'model: по умолч.' }} · {{ t.gpt_rate_limit if t.gpt_rate_limit is not none else 'лимит: по умолч.' }}
-                                </div>
-                            {% endif %}
-                        </td>
-                        <td>
-                            {% if t.bypass_similarity_check %}
-                                <span class="badge text-bg-warning">выкл.</span>
-                            {% else %}
-                                <span class="badge bg-light text-dark">вкл.</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-nowrap">
-                            <a href="/tasks/{{ t.id }}?page={{ page }}" class="btn btn-sm btn-outline-primary" title="Редактировать">
-                                <i class="fas fa-pen"></i>
-                            </a>
-                            <form method="POST" action="/tasks/{{ t.id }}/recheck_all" class="d-inline" onsubmit="return confirm('Запустить массовую перепроверку по задаче {{ t.id }}?')">
-                                <button class="btn btn-sm btn-outline-warning" title="Массовая перепроверка"><i class="fas fa-rotate-right"></i></button>
-                            </form>
-                            <form method="POST" action="/tasks/{{ t.id }}/delete" class="d-inline" onsubmit="return confirm('Удалить задачу {{ t.id }}?')">
-                                <button class="btn btn-sm btn-outline-danger" title="Удалить"><i class="fas fa-xmark"></i></button>
-                            </form>
-                        </td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <div class="card flat-card shadow-soft task-form-card">
-        <div class="card-body">
-            <h5 class="mb-3">{{ 'Редактирование задачи #' ~ edit_task.id if edit_task else 'Новая задача' }}</h5>
-
-            <form method="POST" action="{{ ('/tasks/' ~ edit_task.id ~ '?page=' ~ page) if edit_task else '/tasks?page=' ~ page }}">
-                <div class="row g-2 mb-2">
-                    <div class="col-sm-3">
-                        <label class="form-label">ID</label>
-                        <input type="number" name="id" class="form-control form-control-sm" value="{{ edit_task.id if edit_task else '' }}" placeholder="авто">
-                    </div>
-                    <div class="col-sm-9">
-                        <label class="form-label">Название</label>
-                        <input type="text" name="name" class="form-control form-control-sm" value="{{ edit_task.name or '' if edit_task else '' }}">
-                    </div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-sm-4">
-                        <label class="form-label">Язык</label>
-                        <select name="lang" class="form-select form-select-sm">
-                            <option value="">—</option>
-                            {% for l in langs + ['zip', 'ipynb', 'github'] %}
-                                <option value="{{ l }}" {{ 'selected' if edit_task and edit_task.lang == l else '' }}>{{ l }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-sm-4">
-                        <label class="form-label">Баллы</label>
-                        <input type="number" name="points" class="form-control form-control-sm" value="{{ edit_task.points if edit_task and edit_task.points is not none else '' }}">
-                    </div>
-                    <div class="col-sm-4">
-                        <label class="form-label">Тип проверки</label>
-                        <select name="check_type" class="form-select form-select-sm">
-                            {% for ct in ['tests', 'gpt'] %}
-                                <option value="{{ ct }}" {{ 'selected' if edit_task and edit_task.check_type == ct else '' }}>{{ ct }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-sm-7">
-                        <label class="form-label">GPT модель</label>
-                        <input type="text" name="gpt_model" class="form-control form-control-sm" value="{{ edit_task.gpt_model or '' if edit_task else '' }}">
-                    </div>
-                    <div class="col-sm-5">
-                        <label class="form-label">GPT лимит/час</label>
-                        <input type="number" name="gpt_rate_limit" class="form-control form-control-sm" value="{{ edit_task.gpt_rate_limit if edit_task and edit_task.gpt_rate_limit is not none else '' }}" placeholder="по умолч.">
-                    </div>
-                </div>
-                <div class="row g-2 mb-2">
-                    <div class="col-12">
-                        <div class="form-check">
-                            <input type="checkbox" name="bypass_similarity_check" class="form-check-input" id="bypass" {{ 'checked' if edit_task and edit_task.bypass_similarity_check else '' }}>
-                            <label class="form-check-label" for="bypass">Пропуск проверки на списывание</label>
-                        </div>
-                    </div>
-                    {% if edit_task %}
-                        <div class="col-12">
-                            <div class="form-check">
-                                <input type="checkbox" name="mass_recheck" class="form-check-input" id="mass_recheck">
-                                <label class="form-check-label" for="mass_recheck">После сохранения запустить массовую перепроверку</label>
+                    <td>{{ t.id }}</td>
+                    <td class="task-name-cell">{{ t.name or '—' }}</td>
+                    <td>{{ t.lang or '—' }}</td>
+                    <td>{{ t.points if t.points is not none else '—' }}</td>
+                    <td>
+                        <span class="badge bg-light text-dark">{{ t.check_type or '—' }}</span>
+                        {% if t.check_type == 'gpt' %}
+                            <div class="task-compact-note">
+                                {{ t.gpt_model or 'model: по умолч.' }} · {{ t.gpt_rate_limit if t.gpt_rate_limit is not none else 'лимит: по умолч.' }}
                             </div>
-                        </div>
-                    {% endif %}
-                </div>
-                <div class="mb-2">
-                    <label class="form-label">Текст задачи (Markdown)</label>
-                    <textarea name="text" class="form-control form-control-sm" rows="9">{{ edit_task.text or '' if edit_task else '' }}</textarea>
-                </div>
-                <button class="btn btn-sm btn-primary">{{ 'Сохранить' if edit_task else 'Создать' }}</button>
-                {% if edit_task %}
-                    <a href="/tasks?page={{ page }}" class="btn btn-sm btn-secondary">Отмена</a>
-                {% endif %}
-            </form>
-        </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if t.bypass_similarity_check %}
+                            <span class="badge text-bg-warning">выкл.</span>
+                        {% else %}
+                            <span class="badge bg-light text-dark">вкл.</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-nowrap">
+                        <a href="/tasks/{{ t.id }}/edit?next={{ current_list_url_encoded }}" class="btn btn-sm btn-outline-primary" title="Редактировать">
+                            <i class="fas fa-pen"></i>
+                        </a>
+                        <form method="POST" action="/tasks/{{ t.id }}/recheck_all" class="d-inline" onsubmit="return confirm('Запустить массовую перепроверку по задаче {{ t.id }}?')">
+                            <button class="btn btn-sm btn-outline-warning" title="Массовая перепроверка"><i class="fas fa-rotate-right"></i></button>
+                        </form>
+                        <form method="POST" action="/tasks/{{ t.id }}/delete" class="d-inline" onsubmit="return confirm('Удалить задачу {{ t.id }}?')">
+                            <button class="btn btn-sm btn-outline-danger" title="Удалить"><i class="fas fa-xmark"></i></button>
+                        </form>
+                    </td>
+                </tr>
+            {% else %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-3">Ничего не найдено.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
     </div>
+</div>
+
+<div class="d-flex justify-content-end align-items-center mt-3 gap-2">
+    {% if has_prev %}
+        <a class="btn btn-sm btn-outline-secondary" href="{{ prev_page_url }}">Назад</a>
+    {% endif %}
+    <span class="small text-muted">Стр. {{ page }}</span>
+    {% if has_next %}
+        <a class="btn btn-sm btn-outline-secondary" href="{{ next_page_url }}">Вперед</a>
+    {% endif %}
 </div>
 
 {% endblock %}

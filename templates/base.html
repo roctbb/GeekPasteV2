@@ -30,18 +30,34 @@
 
 <nav class="navbar main-nav">
     <div class="container">
-        <a href="/" class="navbar-brand lead">
+        <a href="/" class="navbar-brand">
             <img src="/static/icons8-code-100.png" alt="Logo" style="height: 27px;"
-                 class="d-inline-block align-text-top me-1">
+                 class="d-inline-block me-1">
             GeekPaste V2
         </a>
         {% if session.get('user_id') %}
             <div class="d-flex gap-2">
-                <a href="/my/submissions" class="btn btn-sm btn-outline-secondary">Мои сдачи</a>
+                <a href="/my/submissions"
+                   class="btn btn-sm btn-outline-secondary {% if request.path.startswith('/my/submissions') %}active{% endif %}"
+                   {% if request.path.startswith('/my/submissions') %}aria-current="page"{% endif %}>
+                    Мои сдачи
+                </a>
                 {% if session.get('role') in ['teacher', 'admin'] %}
-                    <a href="/solutions" class="btn btn-sm btn-outline-secondary">Решения</a>
-                    <a href="/tasks" class="btn btn-sm btn-outline-secondary">Задачи</a>
-                    <a href="/warnings" class="btn btn-sm btn-outline-secondary">Флаги</a>
+                    <a href="/solutions"
+                       class="btn btn-sm btn-outline-secondary {% if request.path.startswith('/solutions') %}active{% endif %}"
+                       {% if request.path.startswith('/solutions') %}aria-current="page"{% endif %}>
+                        Решения
+                    </a>
+                    <a href="/tasks"
+                       class="btn btn-sm btn-outline-secondary {% if request.path.startswith('/tasks') %}active{% endif %}"
+                       {% if request.path.startswith('/tasks') %}aria-current="page"{% endif %}>
+                        Задачи
+                    </a>
+                    <a href="/warnings"
+                       class="btn btn-sm btn-outline-secondary {% if request.path.startswith('/warnings') %}active{% endif %}"
+                       {% if request.path.startswith('/warnings') %}aria-current="page"{% endif %}>
+                        Флаги
+                    </a>
                 {% endif %}
             </div>
         {% endif %}

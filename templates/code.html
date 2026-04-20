@@ -101,7 +101,7 @@
                     <strong>Ошибка выполнения <i class="fas fa-gears float-end header-icon"></i></strong>
                 </div>
             {% elif code.check_state == 'partially done' %}
-                <div class="card-header bg-info text-white  py-1 px-3">
+                <div class="card-header bg-info text-dark py-1 px-3">
                     <strong>Частичное решение <i class="fas fa-battery-1 float-end header-icon"></i></strong>
                 </div>
             {% else %}
@@ -128,7 +128,7 @@
 
 
     {% if attempts and attempts|length > 1 %}
-        <div class="card flat-card shadow-soft mt-3">
+        <div class="card flat-card shadow-soft mt-3 attempts-card">
             <div class="card-header py-2 px-3">
                 <strong>История попыток</strong>
             </div>
@@ -140,7 +140,7 @@
                     <form method="GET" action="/" class="d-flex align-items-center gap-2">
                         <input type="hidden" name="id" value="{{ code.id }}">
                         <label for="compare_to" class="small text-muted m-0">Сравнить с:</label>
-                        <select id="compare_to" name="compare_to" class="form-select form-select-sm" onchange="this.form.submit()">
+                        <select id="compare_to" name="compare_to" class="form-select form-select-sm attempts-compare-select" onchange="this.form.submit()">
                             {% for attempt in attempts %}
                                 {% if attempt.id != code.id %}
                                     <option value="{{ attempt.id }}" {{ 'selected' if compare_attempt and compare_attempt.id == attempt.id else '' }}>
@@ -165,7 +165,7 @@
                 </div>
 
                 {% if attempts_diff %}
-                    <pre class="m-0 flat-pre diff-pre mt-3"><code class="p-2 py-3 txt">{{ attempts_diff }}</code></pre>
+                    <pre class="m-0 flat-pre diff-pre mt-3"><code class="p-2 py-3 txt nohighlight">{{ attempts_diff }}</code></pre>
                 {% endif %}
             </div>
         </div>

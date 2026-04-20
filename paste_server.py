@@ -751,40 +751,98 @@ def tasks_list():
         abort(403)
     page = _parse_page_arg('page', 1)
     per_page = 50
-    query = Task.query.order_by(Task.id.desc())
+    search_query = (request.args.get('q') or '').strip()
+
+    query = Task.query
+    if search_query:
+        like_query = f'%{search_query}%'
+        filters = [
+            Task.name.ilike(like_query),
+            Task.lang.ilike(like_query),
+            Task.check_type.ilike(like_query),
+            Task.gpt_model.ilike(like_query),
+        ]
+        if search_query.isdigit():
+            filters.append(Task.id == int(search_query))
+        query = query.filter(or_(*filters))
+
+    query = query.order_by(Task.id.desc())
     total = query.count()
     tasks = query.offset((page - 1) * per_page).limit(per_page).all()
+
+    current_list_url = f'/tasks?page={page}'
+    if search_query:
+        current_list_url += f'&q={quote(search_query)}'
+
+    def _page_url(target_page):
+        url = f'/tasks?page={target_page}'
+        if search_query:
+            url += f'&q={quote(search_query)}'
+        return url
+
     return render_template('tasks.html',
                            tasks=tasks,
-                           langs=LANGS,
-                           edit_task=None,
                            page=page,
                            has_prev=page > 1,
                            has_next=page * per_page < total,
                            total=total,
-                           per_page=per_page)
+                           per_page=per_page,
+                           search_query=search_query,
+                           new_task_url=f"/tasks/new?next={quote(current_list_url, safe='')}",
+                           prev_page_url=_page_url(page - 1),
+                           next_page_url=_page_url(page + 1),
+                           current_list_url=current_list_url,
+                           current_list_url_encoded=quote(current_list_url, safe=''))
 
 
 @app.route('/tasks/<int:task_id>', methods=['GET'])
 @login_required
+def tasks_edit_legacy(task_id):
+    if not is_teacher():
+        abort(403)
+    next_url = (request.args.get('next') or '').strip()
+    if not (next_url.startswith('/tasks') and '\n' not in next_url and '\r' not in next_url):
+        page = _parse_page_arg('page', 1)
+        search_query = (request.args.get('q') or '').strip()
+        next_url = f'/tasks?page={page}'
+        if search_query:
+            next_url += f'&q={quote(search_query)}'
+
+    return redirect(f"/tasks/{task_id}/edit?next={quote(next_url, safe='')}")
+
+
+def _safe_next_tasks_url(raw_value):
+    if not raw_value:
+        return None
+    decoded = raw_value.strip()
+    if decoded.startswith('/tasks') and '\n' not in decoded and '\r' not in decoded:
+        return decoded
+    return None
+
+
+@app.route('/tasks/new', methods=['GET'])
+@login_required
+def tasks_new():
+    if not is_teacher():
+        abort(403)
+    next_url = _safe_next_tasks_url(request.args.get('next')) or '/tasks'
+    return render_template('task_form.html',
+                           task=None,
+                           langs=LANGS,
+                           next_url=next_url)
+
+
+@app.route('/tasks/<int:task_id>/edit', methods=['GET'])
+@login_required
 def tasks_edit(task_id):
     if not is_teacher():
         abort(403)
-    page = _parse_page_arg('page', 1)
-    per_page = 50
-    edit_task = Task.query.get_or_404(task_id)
-    query = Task.query.order_by(Task.id.desc())
-    total = query.count()
-    tasks = query.offset((page - 1) * per_page).limit(per_page).all()
-    return render_template('tasks.html',
-                           tasks=tasks,
+    task = Task.query.get_or_404(task_id)
+    next_url = _safe_next_tasks_url(request.args.get('next')) or '/tasks'
+    return render_template('task_form.html',
+                           task=task,
                            langs=LANGS,
-                           edit_task=edit_task,
-                           page=page,
-                           has_prev=page > 1,
-                           has_next=page * per_page < total,
-                           total=total,
-                           per_page=per_page)
+                           next_url=next_url)
 
 
 def _fill_task(task):
@@ -811,7 +869,8 @@ def tasks_create():
     db.session.add(task)
     db.session.commit()
     flash(f'Задача #{task.id} создана.', 'success')
-    return redirect(request.referrer or '/tasks')
+    next_url = _safe_next_tasks_url(request.form.get('next')) or '/tasks'
+    return redirect(next_url)
 
 
 @app.route('/tasks/<int:task_id>', methods=['POST'])
@@ -831,7 +890,8 @@ def tasks_update(task_id):
         else:
             flash(f'Для задачи #{task.id} пока нет решений для перепроверки.', 'warning')
 
-    return redirect(request.referrer or '/tasks')
+    next_url = _safe_next_tasks_url(request.form.get('next')) or '/tasks'
+    return redirect(next_url)
 
 
 @app.route('/tasks/<int:task_id>/recheck_all', methods=['POST'])

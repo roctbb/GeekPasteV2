@@ -34,11 +34,11 @@
                         <div class="entity-main">
                             <div class="entity-title">
                                 {% if warning_type == 'similarity' %}
-                                    <span class="badge {% if code.has_critical_similarity_warning %}bg-danger{% else %}bg-warning{% endif %}">
+                                    <span class="badge {% if code.has_critical_similarity_warning %}bg-danger{% else %}bg-warning text-dark{% endif %}">
                                         <i class="fas fa-clone"></i> {{ code.similar_codes | length }}
                                     </span>
                                 {% else %}
-                                    <span class="badge {% if code.ai_confidence == 'high' %}bg-danger{% elif code.ai_confidence == 'medium' %}bg-warning{% else %}bg-info{% endif %}">
+                                    <span class="badge {% if code.ai_confidence == 'high' %}bg-danger{% elif code.ai_confidence == 'medium' %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}">
                                         <i class="fas fa-robot"></i> {{ code.ai_confidence or 'low' }}
                                     </span>
                                 {% endif %}
