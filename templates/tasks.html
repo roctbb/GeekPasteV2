@@ -20,24 +20,23 @@
     </div>
 </div>
 
-<div class="card flat-card shadow-soft compact-filter mb-3">
+<div class="card flat-card shadow-soft compact-filter tasks-filter-card mb-3">
     <div class="card-body py-2">
-        <form method="GET" action="/tasks" class="row g-2 align-items-center">
-            <div class="col-sm-8 col-md-6 col-lg-5 col-xl-4">
+        <form method="GET" action="/tasks" class="task-search-form">
+            <div class="task-search-main">
+                <i class="fas fa-search task-search-icon" aria-hidden="true"></i>
                 <input type="text"
-                       class="form-control form-control-sm"
+                       class="form-control task-search-input"
                        name="q"
                        value="{{ search_query }}"
                        placeholder="Поиск по ID, названию, языку, типу проверки, GPT модели">
             </div>
-            <div class="col-auto">
+            <div class="task-search-actions">
                 <button type="submit" class="btn btn-sm btn-outline-primary">Найти</button>
-            </div>
-            {% if search_query %}
-                <div class="col-auto">
+                {% if search_query %}
                     <a href="/tasks" class="btn btn-sm btn-outline-secondary">Сбросить</a>
-                </div>
-            {% endif %}
+                {% endif %}
+            </div>
         </form>
     </div>
 </div>

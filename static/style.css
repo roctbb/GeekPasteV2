@@ -142,13 +142,30 @@ a:hover {
 }
 
 input,
-select,
 textarea {
     box-shadow: none !important;
     border: 1px solid var(--border-strong) !important;
     color: var(--text-main) !important;
     font-size: 0.97rem !important;
-    background: #ffffff !important;
+    background-color: #ffffff !important;
+}
+
+select {
+    box-shadow: none !important;
+    border: 1px solid var(--border-strong) !important;
+    color: var(--text-main) !important;
+    font-size: 0.97rem !important;
+    background-color: #ffffff !important;
+}
+
+.form-select {
+    appearance: none;
+    padding-right: 2.25rem;
+    background-color: #ffffff !important;
+    background-image: var(--bs-form-select-bg-img, url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e")) !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 16px 12px !important;
 }
 
 input:focus,
@@ -578,6 +595,55 @@ textarea:focus {
     margin-bottom: 0;
 }
 
+.tasks-filter-card .card-body {
+    padding-top: 0.72rem !important;
+    padding-bottom: 0.95rem !important;
+}
+
+.task-search-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.task-search-main {
+    position: relative;
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.task-search-icon {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 0.86rem;
+    pointer-events: none;
+}
+
+.task-search-input {
+    width: 100%;
+    min-height: 38px;
+    border-radius: 10px;
+    padding-left: 2rem;
+}
+
+.task-search-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.task-search-actions .btn {
+    min-height: 38px;
+    padding: 0 0.9rem;
+    display: inline-flex;
+    align-items: center;
+}
+
 .attempt-list {
     display: flex;
     flex-wrap: wrap;
@@ -784,6 +850,19 @@ label.text-muted,
 
     .record-list .list-group-item {
         padding: 11px 10px;
+    }
+
+    .task-search-form {
+        flex-wrap: wrap;
+    }
+
+    .task-search-main {
+        flex-basis: 100%;
+    }
+
+    .task-search-actions {
+        width: 100%;
+        justify-content: flex-end;
     }
 
     .entity-row {
