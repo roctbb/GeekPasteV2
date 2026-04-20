@@ -130,6 +130,9 @@ def submit():
             lang = "ipynb"
 
     if github_repo_url:
+        if task and task.lang != 'github':
+            flash("Ссылка на GitHub разрешена только для задач с типом сдачи github.", "danger")
+            return _return_to_submit_form(default_lang='github')
         if task and task.check_type != 'gpt':
             flash("Ссылка на GitHub поддерживается только для задач с проверкой через нейросеть (GPT).", "danger")
             return _return_to_submit_form(default_lang='github')
@@ -139,6 +142,10 @@ def submit():
         except GitHubRepositoryError as e:
             flash(str(e), "danger")
             return _return_to_submit_form(default_lang='github')
+
+    if task and task.lang == 'github' and not github_repo_url:
+        flash("Для этой задачи нужно отправить ссылку на GitHub-репозиторий.", "danger")
+        return _return_to_submit_form(default_lang='github')
 
     if not code or not str(code).strip():
         flash("Введите код.", "danger")
