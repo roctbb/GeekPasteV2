@@ -35,6 +35,16 @@ function copyDir(srcRel, dstRel) {
   fs.cpSync(src, dst, { recursive: true });
 }
 
+function copyRepoFile(srcRel, dstRel) {
+  const src = path.join(root, srcRel);
+  const dst = path.join(vendorRoot, dstRel);
+  if (!fs.existsSync(src)) {
+    throw new Error(`Missing repo file: ${srcRel}`);
+  }
+  ensureDir(path.dirname(dst));
+  fs.copyFileSync(src, dst);
+}
+
 function copyNotebookJs() {
   const candidates = [
     "notebookjs/dist/notebook.min.js",
@@ -68,6 +78,7 @@ function build() {
   copyFile("@highlightjs/cdn-assets/highlight.min.js", "highlight/highlight.min.js");
 
   copyNotebookJs();
+  copyRepoFile("scripts/vendor/socket.io.min.js", "socketio/socket.io.min.js");
 
   console.log(`Vendor assets were built at ${vendorRoot}`);
 }
