@@ -1,0 +1,110 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: geekpaste
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      CONNECTION_STRING: postgresql+psycopg2://postgres:postgres@postgres:5432/geekpaste
+      CELERY_BROKER: redis://redis:6379/0
+      REDIS_URL: redis://redis:6379/0
+      FLASK_APP: paste_server.py
+      ZIP_ARCHIVES_DIR: /data/zip_archives
+      DOCKER_TRANSFER_MODE: cp
+    command: ["bash", "-lc", "flask db upgrade"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - zip_archives_data:/data/zip_archives
+      - /var/run/docker.sock:/var/run/docker.sock
+      - executions_data:/app/executions
+    restart: "no"
+
+  web:
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      CONNECTION_STRING: postgresql+psycopg2://postgres:postgres@postgres:5432/geekpaste
+      CELERY_BROKER: redis://redis:6379/0
+      REDIS_URL: redis://redis:6379/0
+      PORT: "8084"
+      FLASK_APP: paste_server.py
+      ZIP_ARCHIVES_DIR: /data/zip_archives
+      DOCKER_TRANSFER_MODE: cp
+    command: ["gunicorn", "--bind", "0.0.0.0:8084", "--workers", "2", "--timeout", "120", "paste_server:app"]
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - zip_archives_data:/data/zip_archives
+      - /var/run/docker.sock:/var/run/docker.sock
+      - executions_data:/app/executions
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      CONNECTION_STRING: postgresql+psycopg2://postgres:postgres@postgres:5432/geekpaste
+      CELERY_BROKER: redis://redis:6379/0
+      REDIS_URL: redis://redis:6379/0
+      FLASK_APP: paste_server.py
+      ZIP_ARCHIVES_DIR: /data/zip_archives
+      DOCKER_TRANSFER_MODE: cp
+    command: ["celery", "-A", "paste_celery.celery", "worker", "--loglevel=info", "--queues", "paste_queue"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - zip_archives_data:/data/zip_archives
+      - /var/run/docker.sock:/var/run/docker.sock
+      - executions_data:/app/executions
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  zip_archives_data:
+  executions_data:

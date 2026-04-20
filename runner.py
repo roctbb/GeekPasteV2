@@ -3,6 +3,7 @@ import os
 import uuid
 import shutil
 import importlib
+from config import IGNORED_PARTS
 
 
 class ExecutionException(Exception):
@@ -14,6 +15,8 @@ class SolutionException(Exception):
 
 
 class ExecutionContainer:
+    _docker_checked = False
+
     def __init__(self, language, template_path, code):
         try:
             self.container_id = None
@@ -21,6 +24,9 @@ class ExecutionContainer:
             self.language = language
             self.code = code
             self.session_id = str(uuid.uuid4())
+            self._template_ignored_parts = set(IGNORED_PARTS) | {"__pycache__"}
+            self._pip_cache_volume = os.getenv("DOCKER_PIP_CACHE_VOLUME", "geekpaste_pip_cache")
+            self._docker_transfer_mode = os.getenv("DOCKER_TRANSFER_MODE", "bind").strip().lower()
 
             self.check()
 
@@ -48,7 +54,7 @@ class ExecutionContainer:
 
     def clear_execution_folder(self):
         if self.path:
-            shutil.rmtree(self.path)
+            shutil.rmtree(self.path, ignore_errors=True)
 
     def create_execution_folder(self, template_path):
         os.makedirs(self.path, exist_ok=True)
@@ -60,6 +66,8 @@ class ExecutionContainer:
 
         if template_path and os.path.isdir(template_path):
             for item in os.listdir(template_path):
+                if item in self._template_ignored_parts:
+                    continue
                 s = os.path.join(template_path, item)
                 d = os.path.join(self.path, item)
                 if os.path.isdir(s):
@@ -76,22 +84,46 @@ class ExecutionContainer:
                 file.write(self.code)
 
     def check(self):
+        if self.__class__._docker_checked:
+            return
         try:
             subprocess.run(["docker", "info"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            self.__class__._docker_checked = True
         except subprocess.CalledProcessError:
             raise ExecutionException("Error connecting to Docker.")
 
     def prepare(self):
         try:
             container_image = "python:3.11" if self.language == "python" else "gcc:latest"
-            subprocess.run(["docker", "pull", container_image], check=True)
+            run_command = ["docker", "run", "-d", "--pull", "missing"]
+            if self.language == "python":
+                run_command.extend(["-v", f"{self._pip_cache_volume}:/root/.cache/pip"])
+            if self._docker_transfer_mode == "bind":
+                volume_binding = f"{self.path}:/code"
+                run_command.extend(["-v", volume_binding])
+            run_command.extend([container_image, "sleep", "infinity"])
 
-            volume_binding = f"{self.path}:/code"
             container_id = subprocess.run(
-                ["docker", "run", "-d", "-v", volume_binding, container_image, "sleep", "infinity"],
+                run_command,
                 check=True,
                 stdout=subprocess.PIPE
             ).stdout.decode().strip()
+
+            if self._docker_transfer_mode == "cp":
+                subprocess.run(
+                    ["docker", "exec", container_id, "mkdir", "-p", "/code"],
+                    check=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
+                subprocess.run(
+                    ["docker", "cp", f"{self.path}/.", f"{container_id}:/code"],
+                    check=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
+            elif self._docker_transfer_mode != "bind":
+                raise ExecutionException(f"Unsupported DOCKER_TRANSFER_MODE: {self._docker_transfer_mode}")
 
         except Exception as e:
             raise ExecutionException("Error creating container.")
@@ -103,7 +135,11 @@ class ExecutionContainer:
 
             if self.language == "python" and os.path.exists(os.path.join(self.path, 'requirements.txt')):
                 subprocess.run(
-                    ["docker", "exec", self.container_id, "pip", "install", "-r", "/code/requirements.txt"],
+                    [
+                        "docker", "exec", self.container_id, "pip", "install",
+                        "--disable-pip-version-check", "--prefer-binary",
+                        "-r", "/code/requirements.txt"
+                    ],
                     check=True
                 )
 
@@ -121,8 +157,8 @@ class ExecutionContainer:
 
     def kill(self):
         if self.container_id:
-            subprocess.run(["docker", "kill", self.container_id])
-            subprocess.run(["docker", "rm", self.container_id])
+            subprocess.run(["docker", "kill", self.container_id], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["docker", "rm", self.container_id], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
     def run(self, input_data, time_limit=1):
         if self.language == "python":

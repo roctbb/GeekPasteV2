@@ -3,3 +3,7 @@ venv
 .idea
 database.sqlite
 executions
+zip_archives
+__pycache__/
+**/__pycache__/
+.DS_Store

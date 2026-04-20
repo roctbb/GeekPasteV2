@@ -2,6 +2,7 @@ Flask
 SQLAlchemy
 python-dotenv
 Flask-Migrate
+gunicorn
 celery
 psycopg2-binary
 tqdm

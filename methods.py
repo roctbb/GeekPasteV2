@@ -5,6 +5,7 @@ import string
 import random
 import datetime
 import zipfile
+import os
 
 from sqlalchemy import *
 from models import *
@@ -38,6 +39,55 @@ def save_code(code, lang, client_ip, id=None, user_id=None, task_id=None, course
     db.session.commit()
 
     return id
+
+
+def _get_zip_archives_dir():
+    base_dir = os.getenv("ZIP_ARCHIVES_DIR", "zip_archives")
+    storage_dir = os.path.abspath(base_dir)
+    os.makedirs(storage_dir, exist_ok=True)
+    return storage_dir
+
+
+def _get_zip_archive_path(code_id):
+    return os.path.join(_get_zip_archives_dir(), f"{code_id}.zip")
+
+
+def save_original_zip_archive(code_id, archive_bytes):
+    if not code_id or not archive_bytes:
+        return False
+
+    archive_path = _get_zip_archive_path(code_id)
+    tmp_path = f"{archive_path}.tmp"
+
+    try:
+        with open(tmp_path, "wb") as f:
+            f.write(archive_bytes)
+        os.replace(tmp_path, archive_path)
+        return True
+    except Exception as e:
+        print(f"Failed to save original ZIP for {code_id}: {e}")
+        try:
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+        except Exception:
+            pass
+        return False
+
+
+def load_original_zip_archive(code_id):
+    if not code_id:
+        return None
+
+    archive_path = _get_zip_archive_path(code_id)
+    if not os.path.exists(archive_path):
+        return None
+
+    try:
+        with open(archive_path, "rb") as f:
+            return f.read()
+    except Exception as e:
+        print(f"Failed to load original ZIP for {code_id}: {e}")
+        return None
 
 
 def get_all_codes(lang=None):

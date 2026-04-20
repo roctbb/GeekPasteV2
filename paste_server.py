@@ -86,6 +86,7 @@ def submit():
     code = request.form.get('code')
     task_id = request.args.get('task_id')
     course_id = request.args.get('course_id')
+    zip_content = None
 
     client_ip = request.remote_addr
 
@@ -95,6 +96,7 @@ def submit():
         if file.filename.endswith('.zip'):
             lang = "zip"
             content = file.read()
+            zip_content = content
 
             if len(content) > 200000000:
                 flash("Слишком большой файл.", "danger")
@@ -135,6 +137,8 @@ def submit():
                 return redirect('/?task_id={}&course_id={}'.format(task_id, course_id))
 
     id = save_code(code, lang, client_ip, user_id=session['user_id'], task_id=task_id, course_id=course_id)
+    if lang == 'zip' and zip_content:
+        save_original_zip_archive(id, zip_content)
 
     # Notify if too many submissions for the same task in the last hour (>5)
     try:
@@ -312,7 +316,8 @@ def download_archive():
         elif code.task and not code.available_without_auth and not (session.get('user_id') and (is_teacher() or is_author(code))):
             flash("Нет доступа. Это приватный код.", "danger")
         else:
-            response = make_response(rebuild_zip(code))
+            original_zip = load_original_zip_archive(code.id)
+            response = make_response(original_zip if original_zip is not None else rebuild_zip(code))
             response.headers['Content-Type'] = 'application/zip'
             response.headers['Content-Disposition'] = f'attachment; filename=paste_{code.id}.zip'
 

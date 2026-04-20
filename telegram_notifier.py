@@ -12,7 +12,7 @@ if TELEGRAM_PROXY:
     from telebot import apihelper
     apihelper.proxy = {'https': TELEGRAM_PROXY}
 
-bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN, parse_mode=None)
+bot = telebot.TeleBot(TELEGRAM_BOT_TOKEN, parse_mode=None) if TELEGRAM_BOT_TOKEN else None
 
 
 def send_telegram_message(text: str):
@@ -22,7 +22,7 @@ def send_telegram_message(text: str):
     """
     if not TELEGRAM_ENABLED:
         return
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID or not telebot:
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID or not telebot or not bot:
         return
     try:
         bot.send_message(TELEGRAM_CHAT_ID, text)
