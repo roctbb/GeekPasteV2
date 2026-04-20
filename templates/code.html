@@ -85,44 +85,66 @@
     </div>
 
     {% if code.task %}
-        <div class="card flat-card shadow-soft mt-3">
-            {% if code.check_state == 'not checked' %}
-                <div class="card-header bg-warning text-dark  py-1 px-3">
-                    <strong>Решение проверяется... <i class="fas fa-spinner float-end header-icon"></i></strong>
-
-                    <script>
-                        setTimeout(function () {
-                            location.reload();
-                        }, 3000);
-                    </script>
+        {% set initial_state = code.check_state or 'not checked' %}
+        <div class="card flat-card shadow-soft mt-3 submission-status-card"
+             id="submission-status-card"
+             data-code-id="{{ code.id }}"
+             data-check-type="{{ code.task.check_type }}"
+             data-current-state="{{ initial_state }}">
+            {% if initial_state == 'not checked' %}
+                <div class="card-header bg-warning text-dark py-1 px-3" id="submission-status-header">
+                    <strong>
+                        <span id="submission-status-title">Решение проверяется...</span>
+                        <i id="submission-status-icon" class="fas fa-spinner fa-spin float-end header-icon"></i>
+                    </strong>
                 </div>
-            {% elif 'error' in code.check_state %}
-                <div class="card-header bg-danger text-white  py-1 px-3">
-                    <strong>Ошибка выполнения <i class="fas fa-gears float-end header-icon"></i></strong>
+            {% elif 'error' in initial_state %}
+                <div class="card-header bg-danger text-white py-1 px-3" id="submission-status-header">
+                    <strong>
+                        <span id="submission-status-title">Ошибка выполнения</span>
+                        <i id="submission-status-icon" class="fas fa-gears float-end header-icon"></i>
+                    </strong>
                 </div>
-            {% elif code.check_state == 'partially done' %}
-                <div class="card-header bg-info text-dark py-1 px-3">
-                    <strong>Частичное решение <i class="fas fa-battery-1 float-end header-icon"></i></strong>
+            {% elif initial_state == 'partially done' %}
+                <div class="card-header bg-info text-dark py-1 px-3" id="submission-status-header">
+                    <strong>
+                        <span id="submission-status-title">Частичное решение</span>
+                        <i id="submission-status-icon" class="fas fa-battery-quarter float-end header-icon"></i>
+                    </strong>
                 </div>
             {% else %}
-                <div class="card-header bg-success text-white py-1 px-3">
-                    <strong>Решение принято <i class="fas fa-check float-end header-icon"></i></strong>
+                <div class="card-header bg-success text-white py-1 px-3" id="submission-status-header">
+                    <strong>
+                        <span id="submission-status-title">Решение принято</span>
+                        <i id="submission-status-icon" class="fas fa-check float-end header-icon"></i>
+                    </strong>
                 </div>
             {% endif %}
             <div class="card-body p-0 position-relative gray">
-                <span class="top-badge badge bg-primary float-end">Очков: {{ code.check_points }}</span>
+                <span class="top-badge badge bg-primary float-end" id="submission-status-points">Очков: {{ code.check_points or 0 }}</span>
                 {% if code.task.check_type == 'tests' %}
-                    <pre class="m-0 flat-pre"><code class="p-2 py-3 txt">{{ code.check_comments }}</code></pre>
+                    <pre class="m-0 flat-pre" id="submission-status-comments-pre"><code class="p-2 py-3 txt" id="submission-status-comments-text">{{ code.check_comments or '' }}</code></pre>
+                    <div class="p-3 txt d-none" id="submission-status-comments-html"></div>
                 {% else %}
-                    <div class="p-3 txt">{{ code.check_comments | safe | markdown }}</div>
+                    <pre class="m-0 flat-pre d-none" id="submission-status-comments-pre"><code class="p-2 py-3 txt" id="submission-status-comments-text"></code></pre>
+                    <div class="p-3 txt" id="submission-status-comments-html">{{ (code.check_comments or '') | safe | markdown }}</div>
                 {% endif %}
 
-                {% if code.check_state != 'done' and code.check_state != 'not checked' %}
-                    <a style="border: 1px solid #ddd;"
-                       href="/?task_id={{ code.task.id }}&course_id={{ code.course_id }}"
-                       class="btn btn-light btn-flat btn-sm mt-0 m-2 mx-3">Отправить снова?</a>
-                {% endif %}
+                <a style="border: 1px solid #ddd; {% if initial_state == 'done' or initial_state == 'not checked' %}display: none;{% endif %}"
+                   href="/?task_id={{ code.task.id }}&course_id={{ code.course_id }}"
+                   id="submission-resubmit-link"
+                   class="btn btn-light btn-flat btn-sm mt-0 m-2 mx-3">Отправить снова?</a>
             </div>
+        </div>
+
+        <div id="kahoot-success-overlay" class="kahoot-success-overlay" aria-hidden="true">
+            <div class="kahoot-success-backdrop"></div>
+            <div class="kahoot-success-center">
+                <div class="kahoot-success-badge">ЗАЧЕТ</div>
+                <div class="kahoot-success-title">Решение принято</div>
+                <div class="kahoot-success-subtitle">Мощно! Продолжаем в том же темпе.</div>
+            </div>
+            <div id="kahoot-confetti-layer" class="kahoot-confetti-layer"></div>
         </div>
     {% endif %}
 
@@ -209,24 +231,190 @@
         </ul>
     {% endif %}
 
-
+    {% if code.task %}
+        <script src="/socket.io/socket.io.js"></script>
+    {% endif %}
     <script>
-        new ClipboardJS('#copy-code')
+        function escapeHtml(value) {
+            return (value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function getSubmissionMeta(state) {
+            var normalized = (state || 'not checked').toLowerCase();
+            if (normalized === 'not checked') {
+                return {
+                    title: 'Решение проверяется...',
+                    icon: 'fa-spinner fa-spin',
+                    headerClass: 'bg-warning text-dark'
+                };
+            }
+            if (normalized.indexOf('error') !== -1) {
+                return {
+                    title: 'Ошибка выполнения',
+                    icon: 'fa-gears',
+                    headerClass: 'bg-danger text-white'
+                };
+            }
+            if (normalized === 'partially done') {
+                return {
+                    title: 'Частичное решение',
+                    icon: 'fa-battery-quarter',
+                    headerClass: 'bg-info text-dark'
+                };
+            }
+            if (normalized === 'done') {
+                return {
+                    title: 'Решение принято',
+                    icon: 'fa-check',
+                    headerClass: 'bg-success text-white'
+                };
+            }
+            return {
+                title: 'Решение проверяется...',
+                icon: 'fa-spinner fa-spin',
+                headerClass: 'bg-warning text-dark'
+            };
+        }
+
         document.addEventListener('DOMContentLoaded', function () {
             var popoverTriggerEl = document.querySelector('#copy-code');
-            var popover = new bootstrap.Popover(popoverTriggerEl);
+            if (popoverTriggerEl) {
+                var popover = new bootstrap.Popover(popoverTriggerEl);
+                popoverTriggerEl.addEventListener('shown.bs.popover', function () {
+                    setTimeout(function () {
+                        popover.hide();
+                    }, 1000);
+                });
+            }
 
-            popoverTriggerEl.addEventListener('shown.bs.popover', function () {
-                setTimeout(function () {
-                    popover.hide();
-                }, 1000); // Время в миллисекундах (2000 ms = 2 секунды)
-            });
+            {% if code.lang == 'ipynb' %}
+                var notebook = nb.parse(JSON.parse({{ code.code | tojson }}));
+                var rendered = notebook.render();
+                document.getElementById("code").appendChild(rendered);
+            {% endif %}
+
+            {% if code.task %}
+                var socketConfig = {{ {
+                    'codeId': code.id,
+                    'checkType': code.task.check_type,
+                    'initialState': (code.check_state or 'not checked')
+                } | tojson }};
+                var currentState = socketConfig.initialState;
+                var successAnimationPlayed = currentState === 'done';
+                var statusHeader = document.getElementById('submission-status-header');
+                var statusTitle = document.getElementById('submission-status-title');
+                var statusIcon = document.getElementById('submission-status-icon');
+                var statusPoints = document.getElementById('submission-status-points');
+                var commentsPre = document.getElementById('submission-status-comments-pre');
+                var commentsText = document.getElementById('submission-status-comments-text');
+                var commentsHtml = document.getElementById('submission-status-comments-html');
+                var resubmitLink = document.getElementById('submission-resubmit-link');
+
+                function renderSubmissionStatus(payload, animateSuccess) {
+                    if (!payload) {
+                        return;
+                    }
+
+                    var previousState = currentState || 'not checked';
+                    var nextState = payload.check_state || 'not checked';
+                    currentState = nextState;
+                    if (nextState === 'not checked') {
+                        successAnimationPlayed = false;
+                    }
+
+                    var meta = getSubmissionMeta(nextState);
+                    statusHeader.className = 'card-header py-1 px-3 ' + meta.headerClass;
+                    statusTitle.textContent = meta.title;
+                    statusIcon.className = 'fas ' + meta.icon + ' float-end header-icon';
+                    statusPoints.textContent = 'Очков: ' + (payload.check_points || 0);
+
+                    if (socketConfig.checkType === 'tests') {
+                        commentsPre.classList.remove('d-none');
+                        commentsHtml.classList.add('d-none');
+                        commentsText.textContent = payload.check_comments || '';
+                    } else {
+                        commentsPre.classList.add('d-none');
+                        commentsHtml.classList.remove('d-none');
+                        if (payload.check_comments_html) {
+                            commentsHtml.innerHTML = payload.check_comments_html;
+                        } else {
+                            commentsHtml.innerHTML = '<p>' + escapeHtml(payload.check_comments || '') + '</p>';
+                        }
+                    }
+
+                    var allowResubmit = nextState !== 'done' && nextState !== 'not checked';
+                    resubmitLink.style.display = allowResubmit ? 'inline-block' : 'none';
+
+                    if (animateSuccess && previousState !== 'done' && nextState === 'done' && !successAnimationPlayed) {
+                        successAnimationPlayed = true;
+                        launchKahootSuccess();
+                    }
+                }
+
+                function launchKahootSuccess() {
+                    var overlay = document.getElementById('kahoot-success-overlay');
+                    var confettiLayer = document.getElementById('kahoot-confetti-layer');
+                    if (!overlay || !confettiLayer) {
+                        return;
+                    }
+
+                    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                        overlay.classList.add('is-active');
+                        setTimeout(function () {
+                            overlay.classList.remove('is-active');
+                        }, 1300);
+                        return;
+                    }
+
+                    confettiLayer.innerHTML = '';
+                    for (var i = 0; i < 72; i++) {
+                        var particle = document.createElement('span');
+                        var hue = Math.floor(Math.random() * 360);
+                        var left = Math.random() * 100;
+                        var delay = Math.random() * 0.3;
+                        var duration = 0.8 + Math.random() * 1.35;
+                        var drift = (Math.random() * 180) - 90;
+                        particle.className = 'kahoot-confetti';
+                        particle.style.left = left + 'vw';
+                        particle.style.backgroundColor = 'hsl(' + hue + ', 88%, 58%)';
+                        particle.style.animationDelay = delay + 's';
+                        particle.style.animationDuration = duration + 's';
+                        particle.style.setProperty('--drift', drift + 'px');
+                        confettiLayer.appendChild(particle);
+                    }
+
+                    overlay.classList.add('is-active');
+                    setTimeout(function () {
+                        overlay.classList.remove('is-active');
+                        confettiLayer.innerHTML = '';
+                    }, 2600);
+                }
+
+                renderSubmissionStatus({
+                    check_state: socketConfig.initialState,
+                    check_points: {{ code.check_points or 0 }},
+                    check_comments: {{ (code.check_comments or '') | tojson }}
+                }, false);
+
+                if (window.io) {
+                    var socket = io({
+                        query: {code_id: socketConfig.codeId},
+                        transports: ['websocket', 'polling']
+                    });
+
+                    socket.on('submission_status_updated', function (payload) {
+                        if (!payload || payload.code_id !== socketConfig.codeId) {
+                            return;
+                        }
+                        renderSubmissionStatus(payload, true);
+                    });
+                }
+            {% endif %}
         });
-
-        {% if code.lang == 'ipynb' %}
-            var notebook = nb.parse(JSON.parse({{ code.code | tojson }}));
-            var rendered = notebook.render();
-            document.getElementById("code").appendChild(rendered);
-        {% endif %}
     </script>
 {% endblock %}

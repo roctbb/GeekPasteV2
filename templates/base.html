@@ -8,6 +8,10 @@
     <!-- CSRF Token -->
 
     <title>GeekPaste</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+          rel="stylesheet">
 
     <link rel="stylesheet" href="/static/vendor/simplemde/simplemde.min.css">
     <link rel="stylesheet" href="/static/vendor/fontawesome/css/all.min.css">
@@ -28,15 +32,13 @@
 </head>
 <body class="app-body">
 
-<nav class="navbar main-nav">
+<nav class="navbar main-nav sticky-top">
     <div class="container">
         <a href="/" class="navbar-brand">
-            <img src="/static/icons8-code-100.png" alt="Logo" style="height: 27px;"
-                 class="d-inline-block me-1">
-            GeekPaste V2
+            Geek<span class="brand-accent">Paste</span> V2
         </a>
         {% if session.get('user_id') %}
-            <div class="d-flex gap-2">
+            <div class="d-flex align-items-center gap-2">
                 <a href="/my/submissions"
                    class="btn btn-sm btn-outline-secondary {% if request.path.startswith('/my/submissions') %}active{% endif %}"
                    {% if request.path.startswith('/my/submissions') %}aria-current="page"{% endif %}>
@@ -64,7 +66,7 @@
     </div>
 </nav>
 
-<div class="container main-container mt-3">
+<div class="container main-container ge-fade-in mt-3">
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}

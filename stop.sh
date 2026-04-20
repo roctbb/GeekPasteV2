@@ -1,4 +1,4 @@
 #!/bin/bash
 
-pkill -f paste_server
+pkill -f "gunicorn.*paste_server:app"
 pkill -f paste_celery

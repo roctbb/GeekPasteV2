@@ -4,6 +4,7 @@ from flask import Flask, request, session, abort
 from models import db
 from config import *
 from flask_migrate import Migrate
+from flask_socketio import SocketIO
 import jwt
 from markdown import markdown
 from markupsafe import Markup
@@ -18,6 +19,12 @@ migrate = Migrate(app, db)
 
 # Redis client for rate limiting
 redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    message_queue=REDIS_URL,
+    async_mode="threading",
+)
 
 from flask import session, redirect, url_for
 from functools import wraps

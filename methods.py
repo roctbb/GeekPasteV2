@@ -13,6 +13,7 @@ from models import *
 from config import *
 import requests
 import jwt
+from markdown import markdown as render_markdown
 from runner import TestExecutor, SolutionException, ExecutionException
 from telegram_notifier import send_telegram_message
 from ai_detector import analyze_code_for_ai_usage, get_ai_detection_prompt_addition
@@ -214,6 +215,31 @@ def get_all_codes(lang=None):
 def add_view(code):
     code.views += 1
     db.session.commit()
+
+
+def build_submission_status_payload(code):
+    if not code:
+        return {}
+
+    check_state = code.check_state or 'not checked'
+    check_type = code.task.check_type if code.task else None
+    check_comments = code.check_comments or ''
+
+    payload = {
+        'code_id': code.id,
+        'check_state': check_state,
+        'check_points': code.check_points or 0,
+        'check_comments': check_comments,
+        'check_type': check_type,
+        'checked_at': code.checked_at.isoformat() if code.checked_at else None,
+        'is_terminal': check_state != 'not checked',
+        'is_success': check_state == 'done',
+    }
+
+    if check_type and check_type != 'tests':
+        payload['check_comments_html'] = render_markdown(check_comments)
+
+    return payload
 
 
 def save_similarity(new_code, similar_code, percent, send_notification=True):

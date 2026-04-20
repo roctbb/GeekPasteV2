@@ -4,6 +4,7 @@ import json
 from io import BytesIO
 
 from flask import *
+from flask_socketio import join_room, emit
 from paste_celery import *
 from methods import *
 from manage import *
@@ -13,6 +14,12 @@ import jwt
 from config import USER_URL, TASK_URL, AUTH_URL, DEFAULT_GPT_RATE_LIMIT, LANGS, JWT_SECRET
 from urllib.parse import quote
 from sqlalchemy import or_
+
+SOCKET_SUBMISSION_ROOM_PREFIX = "submission:"
+
+
+def _submission_room(code_id):
+    return f"{SOCKET_SUBMISSION_ROOM_PREFIX}{code_id}"
 
 
 def check_gpt_rate_limit(user_id, task_id, task=None):
@@ -206,11 +213,41 @@ def submit():
 
 
 def is_teacher():
-    return session['role'] in ['teacher', 'admin']
+    return session.get('role') in ['teacher', 'admin']
 
 
 def is_author(code):
-    return code.user_id == session['user_id']
+    return code and code.user_id == session.get('user_id')
+
+
+def _can_access_code_realtime(code):
+    if not code:
+        return False
+
+    if code.available_without_auth:
+        return True
+
+    if not session.get('user_id'):
+        return False
+
+    if code.task and not (is_teacher() or is_author(code)):
+        return False
+
+    return True
+
+
+@socketio.on('connect')
+def handle_socket_connect():
+    code_id = (request.args.get('code_id') or '').strip()
+    if not code_id:
+        return False
+
+    code = get_code(code_id)
+    if not _can_access_code_realtime(code):
+        return False
+
+    join_room(_submission_room(code_id))
+    emit('submission_status_updated', build_submission_status_payload(code))
 
 
 def _submission_to_diff_text(code):
@@ -325,6 +362,14 @@ def _queue_mass_recheck(task_id):
     db.session.commit()
 
     for code_id in code_ids:
+        socketio.emit('submission_status_updated', {
+            'code_id': code_id,
+            'check_state': 'not checked',
+            'check_points': 0,
+            'check_comments': '',
+            'is_terminal': False,
+            'is_success': False,
+        }, room=_submission_room(code_id))
         check_task.delay(code_id)
 
     return len(code_ids)
@@ -706,6 +751,7 @@ def recheck_task():
     code.check_comments = None
     code.checked_at = None
     db.session.commit()
+    socketio.emit('submission_status_updated', build_submission_status_payload(code), room=_submission_room(code.id))
 
     # Запускаем проверку заново
     check_task.delay(code_id)
@@ -979,4 +1025,4 @@ def external_check():
 
 
 if __name__ == '__main__':
-    app.run(debug=DEBUG, port=PORT)
+    socketio.run(app, debug=DEBUG, port=PORT)

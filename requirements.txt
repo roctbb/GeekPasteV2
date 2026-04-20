@@ -2,6 +2,8 @@ Flask
 SQLAlchemy
 python-dotenv
 Flask-Migrate
+Flask-SocketIO
+simple-websocket
 gunicorn
 celery
 psycopg2-binary

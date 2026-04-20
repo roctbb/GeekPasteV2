@@ -34,4 +34,4 @@ RUN mkdir -p /app/executions /app/zip_archives
 
 EXPOSE 8084
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8084", "--workers", "2", "--timeout", "120", "paste_server:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8084", "--worker-class", "gthread", "--threads", "8", "--workers", "1", "--timeout", "120", "paste_server:app"]

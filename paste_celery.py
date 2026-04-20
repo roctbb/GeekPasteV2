@@ -5,7 +5,7 @@ from celery import Celery
 import checker
 from config import *
 from methods import *
-from manage import app
+from manage import app, socketio
 from datetime import datetime
 
 celery = Celery('app', broker=CELERY_BROKER)
@@ -17,6 +17,23 @@ celery.conf.worker_prefetch_multiplier = 1  # Reduce prefetching
 def _make_callback_service_token():
     payload = {'service': 'geekpaste', 'iat': int(time.time())}
     return jwt.encode(payload, JWT_SECRET, algorithm='HS256')
+
+
+def _submission_room(code_id):
+    return f"submission:{code_id}"
+
+
+def _emit_submission_status(code):
+    if not code:
+        return
+    try:
+        socketio.emit(
+            'submission_status_updated',
+            build_submission_status_payload(code),
+            room=_submission_room(code.id),
+        )
+    except Exception as e:
+        app.logger.warning("socket_emit_failed code_id=%s error=%s", getattr(code, 'id', None), str(e))
 
 
 
@@ -87,6 +104,7 @@ def check_task(id):
 
         code.checked_at = datetime.now()
         db.session.commit()
+        _emit_submission_status(code)
 
         if SUBMIT_URL and code.course_id:
             requests.post(SUBMIT_URL, json={
