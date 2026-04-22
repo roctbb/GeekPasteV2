@@ -216,8 +216,113 @@ def is_teacher():
     return session.get('role') in ['teacher', 'admin']
 
 
+def is_admin():
+    return session.get('role') == 'admin'
+
+
 def is_author(code):
     return code and code.user_id == session.get('user_id')
+
+
+def _short_text(value, limit=220):
+    text = '' if value is None else str(value)
+    return text if len(text) <= limit else text[:limit - 3] + '...'
+
+
+def _normalize_celery_task_item(task_item):
+    if not isinstance(task_item, dict):
+        return None
+
+    source = task_item.get('request') if isinstance(task_item.get('request'), dict) else task_item
+    if not isinstance(source, dict):
+        return None
+
+    argsrepr = source.get('argsrepr')
+    if argsrepr is None:
+        raw_args = source.get('args')
+        if isinstance(raw_args, str):
+            argsrepr = raw_args
+        elif raw_args is None:
+            argsrepr = ''
+        else:
+            argsrepr = json.dumps(raw_args, ensure_ascii=False)
+
+    kwargsrepr = source.get('kwargsrepr')
+    if kwargsrepr is None:
+        raw_kwargs = source.get('kwargs')
+        if isinstance(raw_kwargs, str):
+            kwargsrepr = raw_kwargs
+        elif raw_kwargs is None:
+            kwargsrepr = ''
+        else:
+            kwargsrepr = json.dumps(raw_kwargs, ensure_ascii=False)
+
+    return {
+        'id': source.get('id') or '',
+        'name': source.get('name') or '',
+        'args': _short_text(argsrepr),
+        'kwargs': _short_text(kwargsrepr),
+        'eta': task_item.get('eta') or source.get('eta') or '',
+        'time_start': source.get('time_start') or '',
+        'hostname': source.get('hostname') or '',
+    }
+
+
+def _normalize_celery_task_list(task_list):
+    normalized = []
+    for task_item in task_list or []:
+        task_data = _normalize_celery_task_item(task_item)
+        if task_data:
+            normalized.append(task_data)
+    return normalized
+
+
+def _collect_celery_queue_snapshot():
+    inspector = celery.control.inspect(timeout=1.5)
+
+    active_raw = inspector.active() or {}
+    reserved_raw = inspector.reserved() or {}
+    scheduled_raw = inspector.scheduled() or {}
+    stats_raw = inspector.stats() or {}
+
+    worker_names = sorted(set(active_raw.keys()) | set(reserved_raw.keys()) | set(scheduled_raw.keys()) | set(stats_raw.keys()))
+    workers = []
+    total_active = 0
+    total_reserved = 0
+    total_scheduled = 0
+
+    for worker_name in worker_names:
+        active = _normalize_celery_task_list(active_raw.get(worker_name))
+        reserved = _normalize_celery_task_list(reserved_raw.get(worker_name))
+        scheduled = _normalize_celery_task_list(scheduled_raw.get(worker_name))
+        worker_stats = stats_raw.get(worker_name) or {}
+        pool = worker_stats.get('pool') or {}
+
+        total_active += len(active)
+        total_reserved += len(reserved)
+        total_scheduled += len(scheduled)
+
+        workers.append({
+            'name': worker_name,
+            'active_count': len(active),
+            'reserved_count': len(reserved),
+            'scheduled_count': len(scheduled),
+            'pool_max_concurrency': pool.get('max-concurrency'),
+            'active': active,
+            'reserved': reserved,
+            'scheduled': scheduled,
+        })
+
+    return {
+        'fetched_at': datetime.utcnow().isoformat() + 'Z',
+        'worker_count': len(workers),
+        'totals': {
+            'active': total_active,
+            'reserved': total_reserved,
+            'scheduled': total_scheduled,
+        },
+        'workers': workers,
+    }
 
 
 def _can_access_code_realtime(code):
@@ -790,6 +895,18 @@ def gpt_rate_limit_api():
     })
 
 
+@app.route('/api/admin/celery_queue', methods=['GET'])
+@login_required
+def admin_celery_queue_api():
+    if not is_admin():
+        abort(403)
+
+    try:
+        return jsonify(_collect_celery_queue_snapshot())
+    except Exception as e:
+        return jsonify({'error': f'Не удалось получить состояние Celery: {str(e)}'}), 503
+
+
 @app.route('/tasks', methods=['GET'])
 @login_required
 def tasks_list():
@@ -826,6 +943,14 @@ def tasks_list():
             url += f'&q={quote(search_query)}'
         return url
 
+    celery_queue_snapshot = None
+    celery_queue_error = None
+    if is_admin():
+        try:
+            celery_queue_snapshot = _collect_celery_queue_snapshot()
+        except Exception as e:
+            celery_queue_error = str(e)
+
     return render_template('tasks.html',
                            tasks=tasks,
                            page=page,
@@ -838,7 +963,9 @@ def tasks_list():
                            prev_page_url=_page_url(page - 1),
                            next_page_url=_page_url(page + 1),
                            current_list_url=current_list_url,
-                           current_list_url_encoded=quote(current_list_url, safe=''))
+                           current_list_url_encoded=quote(current_list_url, safe=''),
+                           celery_queue_snapshot=celery_queue_snapshot,
+                           celery_queue_error=celery_queue_error)
 
 
 @app.route('/tasks/<int:task_id>', methods=['GET'])

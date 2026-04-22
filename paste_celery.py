@@ -1,6 +1,7 @@
 import requests
 import time
 import jwt
+import os
 from celery import Celery
 import checker
 from config import *
@@ -12,6 +13,17 @@ celery = Celery('app', broker=CELERY_BROKER)
 celery.conf.task_default_queue = 'paste_queue'
 celery.conf.worker_max_tasks_per_child = 100 # Restart worker after 1000 tasks
 celery.conf.worker_prefetch_multiplier = 1  # Reduce prefetching
+celery.conf.task_track_started = True
+
+# Reliability mode for delivery from Redis broker:
+# - late ack: task is acked only after successful execution
+# - reject_on_worker_lost: requeue task if worker process dies mid-task
+# - visibility_timeout: prevent early redelivery of long-running checks
+celery.conf.task_acks_late = True
+celery.conf.task_reject_on_worker_lost = True
+celery.conf.broker_transport_options = {
+    'visibility_timeout': int(os.getenv('CELERY_VISIBILITY_TIMEOUT', '7200'))
+}
 
 
 def _make_callback_service_token():
