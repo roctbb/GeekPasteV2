@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="page-head">
+    <div>
+        <h4 class="page-head-title">Статус системы</h4>
+        <div class="page-head-meta">Текущая загрузка Celery worker-ов</div>
+    </div>
+    <div class="page-head-actions">
+        <a href="/tasks" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> К задачам
+        </a>
+    </div>
+</div>
+
+<div class="card flat-card shadow-soft mb-3" id="celery-queue-card">
+    <div class="card-header py-2 px-3 d-flex justify-content-between align-items-center">
+        <strong><i class="fas fa-list-check"></i> Celery: состояние очереди</strong>
+        <div class="d-flex align-items-center gap-2">
+            <span class="small text-muted" id="celery-last-update"></span>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="celery-refresh-btn">
+                <i class="fas fa-rotate-right"></i> Обновить
+            </button>
+        </div>
+    </div>
+    <div class="card-body py-2">
+        <div id="celery-queue-error" class="alert alert-warning py-2 px-3 mb-2 d-none"></div>
+        <div class="d-flex flex-wrap gap-2 mb-2" id="celery-summary"></div>
+        <div class="table-responsive">
+            <table class="table table-sm task-table mb-0">
+                <thead>
+                <tr>
+                    <th>Worker</th>
+                    <th>Active</th>
+                    <th>Reserved</th>
+                    <th>Scheduled</th>
+                    <th>Pool</th>
+                    <th>Текущие задачи</th>
+                </tr>
+                </thead>
+                <tbody id="celery-workers-body">
+                <tr>
+                    <td colspan="6" class="text-muted">Загрузка...</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card flat-card shadow-soft mb-3" id="recent-checks-card">
+    <div class="card-header py-2 px-3 d-flex justify-content-between align-items-center">
+        <strong><i class="fas fa-clock-rotate-left"></i> Последние проверки</strong>
+        <span class="small text-muted" id="recent-checks-last-update"></span>
+    </div>
+    <div class="card-body py-2">
+        <div id="recent-checks-error" class="alert alert-warning py-2 px-3 mb-2 d-none"></div>
+        <div class="table-responsive">
+            <table class="table table-sm task-table mb-0">
+                <thead>
+                <tr>
+                    <th>Время</th>
+                    <th>Тип</th>
+                    <th>Результат</th>
+                    <th>Задача / код</th>
+                    <th>Детали</th>
+                </tr>
+                </thead>
+                <tbody id="recent-checks-body">
+                <tr>
+                    <td colspan="5" class="text-muted">Загрузка...</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var queueApiUrl = '/api/admin/celery_queue';
+        var recentChecksApiUrl = '/api/admin/recent_checks?limit=50';
+        var refreshBtn = document.getElementById('celery-refresh-btn');
+        var lastUpdateEl = document.getElementById('celery-last-update');
+        var summaryEl = document.getElementById('celery-summary');
+        var workersBodyEl = document.getElementById('celery-workers-body');
+        var errorEl = document.getElementById('celery-queue-error');
+        var recentChecksLastUpdateEl = document.getElementById('recent-checks-last-update');
+        var recentChecksBodyEl = document.getElementById('recent-checks-body');
+        var recentChecksErrorEl = document.getElementById('recent-checks-error');
+        var refreshTimer = null;
+
+        function escapeHtml(value) {
+            return (value || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function formatIsoTime(value) {
+            if (!value) {
+                return '—';
+            }
+            var dt = new Date(value);
+            if (Number.isNaN(dt.getTime())) {
+                return value;
+            }
+            return dt.toLocaleTimeString('ru-RU');
+        }
+
+        function renderTaskItem(task) {
+            if (!task) {
+                return '';
+            }
+            var parts = [];
+            if (task.id) {
+                parts.push('<span class="font-monospace">#' + escapeHtml(task.id) + '</span>');
+            }
+            if (task.name) {
+                parts.push('<span>' + escapeHtml(task.name) + '</span>');
+            }
+            if (task.args) {
+                parts.push('<span class="text-muted">args: ' + escapeHtml(task.args) + '</span>');
+            }
+            if (task.eta) {
+                parts.push('<span class="text-muted">eta: ' + escapeHtml(task.eta) + '</span>');
+            }
+            return '<li class="small mb-1">' + parts.join(' · ') + '</li>';
+        }
+
+        function renderTaskGroup(label, tasks) {
+            if (!tasks || !tasks.length) {
+                return '';
+            }
+            var items = tasks.map(renderTaskItem).join('');
+            return '<div class="mb-2"><div class="small fw-semibold">' + label + ' (' + tasks.length + ')</div><ul class="mb-0 ps-3">' + items + '</ul></div>';
+        }
+
+        function renderSummary(snapshot) {
+            var totals = (snapshot && snapshot.totals) || {};
+            var workerCount = snapshot && snapshot.worker_count ? snapshot.worker_count : 0;
+            summaryEl.innerHTML = ''
+                + '<span class="badge bg-light text-dark">Workers: ' + workerCount + '</span>'
+                + '<span class="badge bg-warning text-dark">Active: ' + (totals.active || 0) + '</span>'
+                + '<span class="badge bg-info text-dark">Reserved: ' + (totals.reserved || 0) + '</span>'
+                + '<span class="badge bg-primary">Scheduled: ' + (totals.scheduled || 0) + '</span>';
+        }
+
+        function renderWorkers(snapshot) {
+            var workers = (snapshot && snapshot.workers) || [];
+            if (!workers.length) {
+                workersBodyEl.innerHTML = '<tr><td colspan="6" class="text-muted">Нет ответов от Celery workers.</td></tr>';
+                return;
+            }
+
+            workersBodyEl.innerHTML = workers.map(function (worker, idx) {
+                var detailsId = 'celery-worker-details-' + idx;
+                var tasksHtml = ''
+                    + renderTaskGroup('Active', worker.active)
+                    + renderTaskGroup('Reserved', worker.reserved)
+                    + renderTaskGroup('Scheduled', worker.scheduled);
+
+                if (!tasksHtml) {
+                    tasksHtml = '<span class="text-muted small">Пусто</span>';
+                } else {
+                    tasksHtml = '<details id="' + detailsId + '"><summary class="small">Показать</summary><div class="mt-2">' + tasksHtml + '</div></details>';
+                }
+
+                return ''
+                    + '<tr>'
+                    + '<td class="font-monospace small">' + escapeHtml(worker.name || 'unknown') + '</td>'
+                    + '<td>' + (worker.active_count || 0) + '</td>'
+                    + '<td>' + (worker.reserved_count || 0) + '</td>'
+                    + '<td>' + (worker.scheduled_count || 0) + '</td>'
+                    + '<td>' + (worker.pool_max_concurrency || '—') + '</td>'
+                    + '<td>' + tasksHtml + '</td>'
+                    + '</tr>';
+            }).join('');
+        }
+
+        function setError(text) {
+            if (!text) {
+                errorEl.classList.add('d-none');
+                errorEl.textContent = '';
+                return;
+            }
+            errorEl.classList.remove('d-none');
+            errorEl.textContent = text;
+        }
+
+        function renderSnapshot(snapshot) {
+            renderSummary(snapshot);
+            renderWorkers(snapshot);
+            lastUpdateEl.textContent = 'Обновлено: ' + formatIsoTime(snapshot && snapshot.fetched_at);
+        }
+
+        async function refreshQueueState() {
+            refreshBtn.disabled = true;
+            try {
+                var response = await fetch(queueApiUrl, {credentials: 'same-origin'});
+                var payload = await response.json();
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Ошибка загрузки');
+                }
+                setError(null);
+                renderSnapshot(payload);
+            } catch (error) {
+                setError(error && error.message ? error.message : 'Не удалось обновить очередь Celery.');
+            } finally {
+                refreshBtn.disabled = false;
+            }
+        }
+
+        refreshBtn.addEventListener('click', function () {
+            refreshQueueState();
+            refreshRecentChecks();
+        });
+
+        function getCheckTypeLabel(type) {
+            if (type === 'similarity_check') {
+                return 'Плагиат';
+            }
+            if (type === 'code_check') {
+                return 'Проверка кода';
+            }
+            if (type === 'external_api_check') {
+                return 'External API';
+            }
+            return type || '—';
+        }
+
+        function getStatusBadge(status) {
+            var normalized = String(status || '').toLowerCase();
+            var cls = 'bg-light text-dark';
+            if (normalized === 'done' || normalized === 'success' || normalized === 'clean') {
+                cls = 'bg-success';
+            } else if (normalized === 'partially done' || normalized === 'warning') {
+                cls = 'bg-warning text-dark';
+            } else if (normalized.indexOf('error') !== -1 || normalized === 'failed') {
+                cls = 'bg-danger';
+            } else if (normalized === 'queued' || normalized === 'not checked') {
+                cls = 'bg-secondary';
+            }
+            return '<span class="badge ' + cls + '">' + escapeHtml(status || '—') + '</span>';
+        }
+
+        function setRecentChecksError(text) {
+            if (!text) {
+                recentChecksErrorEl.classList.add('d-none');
+                recentChecksErrorEl.textContent = '';
+                return;
+            }
+            recentChecksErrorEl.classList.remove('d-none');
+            recentChecksErrorEl.textContent = text;
+        }
+
+        function renderRecentChecks(snapshot) {
+            var events = (snapshot && snapshot.events) || [];
+            recentChecksLastUpdateEl.textContent = 'Обновлено: ' + formatIsoTime(snapshot && snapshot.fetched_at);
+
+            if (!events.length) {
+                recentChecksBodyEl.innerHTML = '<tr><td colspan="5" class="text-muted">Пока нет данных о проверках.</td></tr>';
+                return;
+            }
+
+            recentChecksBodyEl.innerHTML = events.map(function (event) {
+                var meta = [];
+                if (event.task_id) {
+                    meta.push('task #' + escapeHtml(event.task_id));
+                }
+                if (event.code_id) {
+                    meta.push('code #' + escapeHtml(event.code_id));
+                }
+                if (event.user_id) {
+                    meta.push('uid ' + escapeHtml(event.user_id));
+                }
+                if (event.callback_id) {
+                    meta.push('callback ' + escapeHtml(event.callback_id));
+                }
+
+                var details = [];
+                if (event.matches_count !== undefined) {
+                    details.push('совпадений: ' + escapeHtml(event.matches_count));
+                }
+                if (event.check_type) {
+                    details.push('тип: ' + escapeHtml(event.check_type));
+                }
+                if (event.lang) {
+                    details.push('язык: ' + escapeHtml(event.lang));
+                }
+                if (event.points !== undefined && event.points !== null) {
+                    var pointsLine = String(event.points);
+                    if (event.max_points !== undefined && event.max_points !== null) {
+                        pointsLine += '/' + String(event.max_points);
+                    }
+                    details.push('баллы: ' + escapeHtml(pointsLine));
+                }
+                if (event.comment) {
+                    details.push(escapeHtml(event.comment));
+                }
+                if (event.comments) {
+                    details.push(escapeHtml(event.comments));
+                }
+
+                return ''
+                    + '<tr>'
+                    + '<td class="small text-nowrap">' + escapeHtml(formatIsoTime(event.timestamp)) + '</td>'
+                    + '<td class="small">' + escapeHtml(getCheckTypeLabel(event.type)) + '</td>'
+                    + '<td>' + getStatusBadge(event.status) + '</td>'
+                    + '<td class="small">' + (meta.length ? meta.join(' · ') : '—') + '</td>'
+                    + '<td class="small">' + (details.length ? details.join('<br>') : '—') + '</td>'
+                    + '</tr>';
+            }).join('');
+        }
+
+        async function refreshRecentChecks() {
+            try {
+                var response = await fetch(recentChecksApiUrl, {credentials: 'same-origin'});
+                var payload = await response.json();
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Ошибка загрузки');
+                }
+                setRecentChecksError(null);
+                renderRecentChecks(payload);
+            } catch (error) {
+                setRecentChecksError(error && error.message ? error.message : 'Не удалось обновить список проверок.');
+            }
+        }
+
+        refreshQueueState();
+        refreshRecentChecks();
+        refreshTimer = setInterval(function () {
+            if (!document.hidden) {
+                refreshQueueState();
+                refreshRecentChecks();
+            }
+        }, 7000);
+    });
+</script>
+
+{% endblock %}
