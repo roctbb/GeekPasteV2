@@ -91,7 +91,8 @@
         var refreshTimer = null;
 
         function escapeHtml(value) {
-            return (value || '')
+            var text = value === null || value === undefined ? '' : String(value);
+            return text
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
