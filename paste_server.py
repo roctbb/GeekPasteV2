@@ -16,6 +16,7 @@ from urllib.parse import quote
 from sqlalchemy import or_
 
 SOCKET_SUBMISSION_ROOM_PREFIX = "submission:"
+SYSTEM_RECENT_CHECKS_KEY = "system:recent_checks"
 
 
 def _submission_room(code_id):
@@ -322,6 +323,24 @@ def _collect_celery_queue_snapshot():
             'scheduled': total_scheduled,
         },
         'workers': workers,
+    }
+
+
+def _collect_recent_checks_snapshot(limit=40):
+    raw_items = redis_client.lrange(SYSTEM_RECENT_CHECKS_KEY, 0, max(limit - 1, 0))
+    events = []
+    for raw_item in raw_items:
+        try:
+            event = json.loads(raw_item)
+        except Exception:
+            continue
+        if isinstance(event, dict):
+            events.append(event)
+
+    return {
+        'fetched_at': datetime.utcnow().isoformat() + 'Z',
+        'count': len(events),
+        'events': events,
     }
 
 
@@ -907,6 +926,32 @@ def admin_celery_queue_api():
         return jsonify({'error': f'Не удалось получить состояние Celery: {str(e)}'}), 503
 
 
+@app.route('/api/admin/recent_checks', methods=['GET'])
+@login_required
+def admin_recent_checks_api():
+    if not is_admin():
+        abort(403)
+
+    try:
+        limit = int(request.args.get('limit', '40'))
+    except Exception:
+        limit = 40
+    limit = max(1, min(limit, 100))
+
+    try:
+        return jsonify(_collect_recent_checks_snapshot(limit))
+    except Exception as e:
+        return jsonify({'error': f'Не удалось получить список проверок: {str(e)}'}), 503
+
+
+@app.route('/system/status', methods=['GET'])
+@login_required
+def system_status():
+    if not is_admin():
+        abort(403)
+    return render_template('system_status.html')
+
+
 @app.route('/tasks', methods=['GET'])
 @login_required
 def tasks_list():
@@ -943,14 +988,6 @@ def tasks_list():
             url += f'&q={quote(search_query)}'
         return url
 
-    celery_queue_snapshot = None
-    celery_queue_error = None
-    if is_admin():
-        try:
-            celery_queue_snapshot = _collect_celery_queue_snapshot()
-        except Exception as e:
-            celery_queue_error = str(e)
-
     return render_template('tasks.html',
                            tasks=tasks,
                            page=page,
@@ -963,9 +1000,7 @@ def tasks_list():
                            prev_page_url=_page_url(page - 1),
                            next_page_url=_page_url(page + 1),
                            current_list_url=current_list_url,
-                           current_list_url_encoded=quote(current_list_url, safe=''),
-                           celery_queue_snapshot=celery_queue_snapshot,
-                           celery_queue_error=celery_queue_error)
+                           current_list_url_encoded=quote(current_list_url, safe=''))
 
 
 @app.route('/tasks/<int:task_id>', methods=['GET'])
