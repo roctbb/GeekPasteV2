@@ -7,6 +7,11 @@
         <div class="page-head-meta">Найдено: {{ total }}</div>
     </div>
     <div class="page-head-actions">
+        {% if session.get('role') == 'admin' %}
+            <a href="/system/status" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-gauge-high"></i> Статус системы
+            </a>
+        {% endif %}
         <a href="{{ new_task_url }}" class="btn btn-sm btn-primary">
             <i class="fas fa-plus"></i> Новая задача
         </a>
@@ -40,46 +45,6 @@
         </form>
     </div>
 </div>
-
-{% if session.get('role') == 'admin' %}
-<div class="card flat-card shadow-soft mb-3" id="celery-queue-card">
-    <div class="card-header py-2 px-3 d-flex justify-content-between align-items-center">
-        <strong><i class="fas fa-list-check"></i> Celery: состояние очереди</strong>
-        <div class="d-flex align-items-center gap-2">
-            <span class="small text-muted" id="celery-last-update"></span>
-            <button type="button" class="btn btn-sm btn-outline-secondary" id="celery-refresh-btn">
-                <i class="fas fa-rotate-right"></i> Обновить
-            </button>
-        </div>
-    </div>
-    <div class="card-body py-2">
-        <div id="celery-queue-error"
-             class="alert alert-warning py-2 px-3 mb-2 {% if not celery_queue_error %}d-none{% endif %}">
-            {{ celery_queue_error or '' }}
-        </div>
-        <div class="d-flex flex-wrap gap-2 mb-2" id="celery-summary"></div>
-        <div class="table-responsive">
-            <table class="table table-sm task-table mb-0">
-                <thead>
-                <tr>
-                    <th>Worker</th>
-                    <th>Active</th>
-                    <th>Reserved</th>
-                    <th>Scheduled</th>
-                    <th>Pool</th>
-                    <th>Текущие задачи</th>
-                </tr>
-                </thead>
-                <tbody id="celery-workers-body">
-                <tr>
-                    <td colspan="6" class="text-muted">Загрузка...</td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-{% endif %}
 
 <div class="card flat-card shadow-soft">
     <div class="table-responsive">
@@ -148,165 +113,5 @@
         <a class="btn btn-sm btn-outline-secondary" href="{{ next_page_url }}">Вперед</a>
     {% endif %}
 </div>
-
-{% if session.get('role') == 'admin' %}
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var queueApiUrl = '/api/admin/celery_queue';
-        var refreshBtn = document.getElementById('celery-refresh-btn');
-        var lastUpdateEl = document.getElementById('celery-last-update');
-        var summaryEl = document.getElementById('celery-summary');
-        var workersBodyEl = document.getElementById('celery-workers-body');
-        var errorEl = document.getElementById('celery-queue-error');
-        var initialSnapshot = {{ celery_queue_snapshot | tojson if celery_queue_snapshot is not none else 'null' }};
-        var initialError = {{ celery_queue_error | tojson if celery_queue_error else 'null' }};
-        var refreshTimer = null;
-
-        function escapeHtml(value) {
-            return (value || '')
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
-
-        function formatIsoTime(value) {
-            if (!value) {
-                return '—';
-            }
-            var dt = new Date(value);
-            if (Number.isNaN(dt.getTime())) {
-                return value;
-            }
-            return dt.toLocaleTimeString('ru-RU');
-        }
-
-        function renderTaskItem(task) {
-            if (!task) {
-                return '';
-            }
-            var parts = [];
-            if (task.id) {
-                parts.push('<span class="font-monospace">#' + escapeHtml(task.id) + '</span>');
-            }
-            if (task.name) {
-                parts.push('<span>' + escapeHtml(task.name) + '</span>');
-            }
-            if (task.args) {
-                parts.push('<span class="text-muted">args: ' + escapeHtml(task.args) + '</span>');
-            }
-            if (task.eta) {
-                parts.push('<span class="text-muted">eta: ' + escapeHtml(task.eta) + '</span>');
-            }
-            return '<li class="small mb-1">' + parts.join(' · ') + '</li>';
-        }
-
-        function renderTaskGroup(label, tasks) {
-            if (!tasks || !tasks.length) {
-                return '';
-            }
-            var items = tasks.map(renderTaskItem).join('');
-            return '<div class="mb-2"><div class="small fw-semibold">' + label + ' (' + tasks.length + ')</div><ul class="mb-0 ps-3">' + items + '</ul></div>';
-        }
-
-        function renderSummary(snapshot) {
-            var totals = (snapshot && snapshot.totals) || {};
-            var workerCount = snapshot && snapshot.worker_count ? snapshot.worker_count : 0;
-            summaryEl.innerHTML = ''
-                + '<span class="badge bg-light text-dark">Workers: ' + workerCount + '</span>'
-                + '<span class="badge bg-warning text-dark">Active: ' + (totals.active || 0) + '</span>'
-                + '<span class="badge bg-info text-dark">Reserved: ' + (totals.reserved || 0) + '</span>'
-                + '<span class="badge bg-primary">Scheduled: ' + (totals.scheduled || 0) + '</span>';
-        }
-
-        function renderWorkers(snapshot) {
-            var workers = (snapshot && snapshot.workers) || [];
-            if (!workers.length) {
-                workersBodyEl.innerHTML = '<tr><td colspan="6" class="text-muted">Нет ответов от Celery workers.</td></tr>';
-                return;
-            }
-
-            workersBodyEl.innerHTML = workers.map(function (worker, idx) {
-                var detailsId = 'celery-worker-details-' + idx;
-                var tasksHtml = ''
-                    + renderTaskGroup('Active', worker.active)
-                    + renderTaskGroup('Reserved', worker.reserved)
-                    + renderTaskGroup('Scheduled', worker.scheduled);
-
-                if (!tasksHtml) {
-                    tasksHtml = '<span class="text-muted small">Пусто</span>';
-                } else {
-                    tasksHtml = '<details id="' + detailsId + '"><summary class="small">Показать</summary><div class="mt-2">' + tasksHtml + '</div></details>';
-                }
-
-                return ''
-                    + '<tr>'
-                    + '<td class="font-monospace small">' + escapeHtml(worker.name || 'unknown') + '</td>'
-                    + '<td>' + (worker.active_count || 0) + '</td>'
-                    + '<td>' + (worker.reserved_count || 0) + '</td>'
-                    + '<td>' + (worker.scheduled_count || 0) + '</td>'
-                    + '<td>' + (worker.pool_max_concurrency || '—') + '</td>'
-                    + '<td>' + tasksHtml + '</td>'
-                    + '</tr>';
-            }).join('');
-        }
-
-        function setError(text) {
-            if (!text) {
-                errorEl.classList.add('d-none');
-                errorEl.textContent = '';
-                return;
-            }
-            errorEl.classList.remove('d-none');
-            errorEl.textContent = text;
-        }
-
-        function renderSnapshot(snapshot) {
-            renderSummary(snapshot);
-            renderWorkers(snapshot);
-            lastUpdateEl.textContent = 'Обновлено: ' + formatIsoTime(snapshot && snapshot.fetched_at);
-        }
-
-        async function refreshQueueState() {
-            refreshBtn.disabled = true;
-            try {
-                var response = await fetch(queueApiUrl, {credentials: 'same-origin'});
-                var payload = await response.json();
-                if (!response.ok) {
-                    throw new Error(payload && payload.error ? payload.error : 'Ошибка загрузки');
-                }
-                setError(null);
-                renderSnapshot(payload);
-            } catch (error) {
-                setError(error && error.message ? error.message : 'Не удалось обновить очередь Celery.');
-            } finally {
-                refreshBtn.disabled = false;
-            }
-        }
-
-        refreshBtn.addEventListener('click', function () {
-            refreshQueueState();
-        });
-
-        if (initialSnapshot) {
-            renderSnapshot(initialSnapshot);
-        } else {
-            renderSummary(null);
-            renderWorkers(null);
-        }
-
-        if (initialError) {
-            setError(initialError);
-        }
-
-        refreshTimer = setInterval(function () {
-            if (!document.hidden) {
-                refreshQueueState();
-            }
-        }, 7000);
-    });
-</script>
-{% endif %}
 
 {% endblock %}

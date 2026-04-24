@@ -2,11 +2,12 @@ import requests
 import time
 import jwt
 import os
+import json
 from celery import Celery
 import checker
 from config import *
 from methods import *
-from manage import app, socketio
+from manage import app, socketio, redis_client
 from datetime import datetime
 
 celery = Celery('app', broker=CELERY_BROKER)
@@ -24,6 +25,8 @@ celery.conf.task_reject_on_worker_lost = True
 celery.conf.broker_transport_options = {
     'visibility_timeout': int(os.getenv('CELERY_VISIBILITY_TIMEOUT', '7200'))
 }
+SYSTEM_RECENT_CHECKS_KEY = 'system:recent_checks'
+SYSTEM_RECENT_CHECKS_LIMIT = int(os.getenv('SYSTEM_RECENT_CHECKS_LIMIT', '200'))
 
 
 def _make_callback_service_token():
@@ -46,6 +49,25 @@ def _emit_submission_status(code):
         )
     except Exception as e:
         app.logger.warning("socket_emit_failed code_id=%s error=%s", getattr(code, 'id', None), str(e))
+
+
+def _short_text(value, limit=220):
+    text = '' if value is None else str(value)
+    return text if len(text) <= limit else text[:limit - 3] + '...'
+
+
+def _push_system_check_event(event_type, payload):
+    try:
+        event = {
+            'type': event_type,
+            'timestamp': datetime.utcnow().isoformat() + 'Z',
+        }
+        if payload:
+            event.update(payload)
+        redis_client.lpush(SYSTEM_RECENT_CHECKS_KEY, json.dumps(event, ensure_ascii=False))
+        redis_client.ltrim(SYSTEM_RECENT_CHECKS_KEY, 0, max(SYSTEM_RECENT_CHECKS_LIMIT - 1, 0))
+    except Exception as e:
+        app.logger.warning("system_check_event_failed type=%s error=%s", event_type, str(e))
 
 
 
@@ -90,6 +112,14 @@ def save_similarities(id):
 
         code.similarity_checked = True
         db.session.commit()
+        _push_system_check_event('similarity_check', {
+            'status': 'warning' if code.has_similarity_warning else 'clean',
+            'code_id': code.id,
+            'task_id': code.task_id,
+            'user_id': code.user_id,
+            'matches_count': len(found_similarities),
+            'has_similarity_warning': bool(code.has_similarity_warning),
+        })
 
         # Explicitly clean up session to free memory
         db.session.expire_all()
@@ -117,6 +147,16 @@ def check_task(id):
         code.checked_at = datetime.now()
         db.session.commit()
         _emit_submission_status(code)
+        _push_system_check_event('code_check', {
+            'status': code.check_state or '',
+            'code_id': code.id,
+            'task_id': code.task_id,
+            'user_id': code.user_id,
+            'check_type': task.check_type if task else '',
+            'points': code.check_points or 0,
+            'max_points': task.points if task and task.points is not None else None,
+            'comments': _short_text(code.check_comments),
+        })
 
         if SUBMIT_URL and code.course_id:
             requests.post(SUBMIT_URL, json={
@@ -219,6 +259,16 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
                 result.get('job_id'),
                 callback_resp.status_code,
             )
+            _push_system_check_event('external_api_check', {
+                'status': result.get('status') or '',
+                'callback_id': callback_id,
+                'job_id': result.get('job_id'),
+                'check_type': check_type,
+                'lang': lang,
+                'points': result.get('points'),
+                'max_points': result.get('max_points'),
+                'comment': _short_text(result.get('comment')),
+            })
         except Exception as e:
             app.logger.exception(
                 "external_check_callback_failed callback_id=%s job_id=%s error=%s",
@@ -226,3 +276,13 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
                 result.get('job_id'),
                 str(e),
             )
+            _push_system_check_event('external_api_check', {
+                'status': 'error',
+                'callback_id': callback_id,
+                'job_id': result.get('job_id'),
+                'check_type': check_type,
+                'lang': lang,
+                'points': result.get('points'),
+                'max_points': result.get('max_points'),
+                'comment': _short_text(result.get('comment') or str(e)),
+            })

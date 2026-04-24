@@ -1447,3 +1447,21 @@ select:focus,
         font-size: 0.88rem;
     }
 }
+
+/* Keep Bootstrap checkbox/radio visuals intact despite global input overrides. */
+.form-check-input {
+    width: 1em !important;
+    height: 1em !important;
+    border: 1px solid #b6c0cf !important;
+    background-color: #ffffff !important;
+}
+
+.form-check-input:checked {
+    background-color: var(--brand) !important;
+    border-color: var(--brand) !important;
+}
+
+.form-check-input:focus {
+    border-color: #93c5fd !important;
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.14) !important;
+}
