@@ -354,24 +354,23 @@ def send_similarity_summary_notification(main_code, similarities):
 
 
 def check_task_with_tests(task, code):
-    executor = None
     try:
-        executor = TestExecutor(code)
-        points, comments = executor.perform()
+        with TestExecutor(code) as executor:
+            points, comments = executor.perform()
 
-        if points > task.points:
-            raise ExecutionException("Too much points")
+            if points > task.points:
+                raise ExecutionException("Too much points")
 
-        if not points:
-            points = 1
+            if not points:
+                points = 1
 
-        code.check_points = points
-        code.check_comments = comments
+            code.check_points = points
+            code.check_comments = comments
 
-        if code.check_points == task.points:
-            code.check_state = 'done'
-        else:
-            code.check_state = 'partially done'
+            if code.check_points == task.points:
+                code.check_state = 'done'
+            else:
+                code.check_state = 'partially done'
 
     except ExecutionException as e:
         code.check_points = 1
@@ -400,10 +399,6 @@ def check_task_with_tests(task, code):
         code.check_points = 1
         code.check_state = 'solution error'
         code.check_comments = str(e)
-
-    if executor:
-        print("deleting executor")
-        del executor
 
 
 def get_payload(task_text, solution_text, max_points, lang=None, check_ai=False):

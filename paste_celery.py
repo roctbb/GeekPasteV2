@@ -12,8 +12,9 @@ from datetime import datetime
 
 celery = Celery('app', broker=CELERY_BROKER)
 celery.conf.task_default_queue = 'paste_queue'
-celery.conf.worker_max_tasks_per_child = 100 # Restart worker after 1000 tasks
-celery.conf.worker_prefetch_multiplier = 1  # Reduce prefetching
+celery.conf.worker_max_tasks_per_child = 100
+celery.conf.worker_max_memory_per_child = 200_000  # 200 MB, then restart
+celery.conf.worker_prefetch_multiplier = 1
 celery.conf.task_track_started = True
 
 # Reliability mode for delivery from Redis broker:
@@ -94,6 +95,7 @@ def save_similarities(id):
         found_similarities = []
 
         # Process in batches to avoid memory overflow
+        batch_count = 0
         for alternative in query.yield_per(100):
             alternative_code = alternative.code
             if alternative.lang == 'ipynb':
@@ -102,9 +104,13 @@ def save_similarities(id):
             n = checker.similarity(current_code, alternative_code)
 
             if n >= SIMILARITY_LEVEL:
-                # Save similarity without sending individual notification
                 save_similarity(code, alternative, n, send_notification=False)
                 found_similarities.append((alternative, n))
+
+            batch_count += 1
+            if batch_count % 500 == 0:
+                db.session.expire_all()
+                code = get_code(id)  # re-fetch after expire
 
         # Send single summary notification for all similarities
         if found_similarities:
@@ -196,6 +202,7 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
                     from runner import BrainfuckExecutor, SolutionException, ExecutionException
                     executor = BrainfuckExecutor(code)
                     run_fn = executor.run
+                    container = None
                 else:
                     from runner import ExecutionContainer, SolutionException, ExecutionException
                     container = ExecutionContainer(lang, '', code)
@@ -214,8 +221,8 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
                         except (SolutionException, ExecutionException) as e:
                             details.append({'input': t.get('input'), 'error': str(e), 'ok': False})
                 finally:
-                    if lang != 'brainfuck':
-                        del container
+                    if container:
+                        container.cleanup()
                 result.update({'status': 'success', 'points': passed, 'max_points': max_points,
                                 'comment': f'{passed} из {max_points} тестов пройдено', 'details': details})
 

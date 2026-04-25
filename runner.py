@@ -1,5 +1,6 @@
 import subprocess
 import os
+import sys
 import uuid
 import shutil
 import importlib
@@ -46,8 +47,21 @@ class ExecutionContainer:
 
     def __del__(self):
         print("deleting container")
+        self.cleanup()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.cleanup()
+
+    def cleanup(self):
+        if not self.container_id and not self.path:
+            return
         self.kill()
         self.clear_execution_folder()
+        self.container_id = None
+        self.path = None
 
     def get_path(self):
         return os.path.abspath(os.path.join("executions", self.session_id))
@@ -257,13 +271,29 @@ class TestExecutor:
         self.task = code.task
         self.container = ExecutionContainer(code.lang, f"environments/task_{code.task_id}", code.code)
 
-    def __del__(self):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.cleanup()
+
+    def cleanup(self):
+        if not self.container:
+            return
         os.chdir(self.original_path)
-        del self.container
+        self.container.cleanup()
+        mod_name = f"environments.task_{self.code.task_id}.tester"
+        sys.modules.pop(mod_name, None)
+        self.container = None
+
+    def __del__(self):
+        self.cleanup()
 
     def perform(self):
+        mod_name = f"environments.task_{self.code.task_id}.tester"
         try:
-            tester_module = importlib.import_module(f"environments.task_{self.code.task_id}.tester")
+            tester_module = importlib.import_module(mod_name)
+            importlib.reload(tester_module)  # force fresh load
             perform_tests = getattr(tester_module, 'perform_tests')
         except Exception as e:
             raise ExecutionException(f"Error importing tester module: {e}.")
