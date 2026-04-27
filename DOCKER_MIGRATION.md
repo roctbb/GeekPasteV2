@@ -10,12 +10,13 @@ docker compose run --rm migrate
 Then start app services:
 
 ```bash
-docker compose up -d web worker
+docker compose up -d web worker worker_similarity
 ```
 
 Services:
 - `web`: Flask app via Gunicorn on `http://localhost:8084`
-- `worker`: Celery worker
+- `worker`: Celery worker for main checks queue (`paste_queue`)
+- `worker_similarity`: dedicated Celery worker for anti-plagiarism queue (`similarity_queue`, concurrency = 1)
 - `postgres`: PostgreSQL 16 (`localhost:5433` -> container `5432`)
 - `redis`: Redis 7
 
@@ -49,7 +50,7 @@ python3 scripts/migrate_db.py --no-truncate ...
 ## 3. Verify
 
 ```bash
-docker compose logs -f web worker
+docker compose logs -f web worker worker_similarity
 ```
 
 Open `http://localhost:8084`.

@@ -11,7 +11,15 @@ from manage import app, socketio, redis_client
 from datetime import datetime
 
 celery = Celery('app', broker=CELERY_BROKER)
-celery.conf.task_default_queue = 'paste_queue'
+CELERY_MAIN_QUEUE = os.getenv('CELERY_MAIN_QUEUE', 'paste_queue')
+CELERY_SIMILARITY_QUEUE = os.getenv('CELERY_SIMILARITY_QUEUE', 'similarity_queue')
+
+celery.conf.task_default_queue = CELERY_MAIN_QUEUE
+celery.conf.task_routes = {
+    'paste_celery.save_similarities': {'queue': CELERY_SIMILARITY_QUEUE},
+    'paste_celery.check_task': {'queue': CELERY_MAIN_QUEUE},
+    'paste_celery.external_check_task': {'queue': CELERY_MAIN_QUEUE},
+}
 celery.conf.worker_max_tasks_per_child = 100
 celery.conf.worker_max_memory_per_child = 200_000  # 200 MB, then restart
 celery.conf.worker_prefetch_multiplier = 1
@@ -84,10 +92,26 @@ def save_similarities(id):
         if code.task and code.task.bypass_similarity_check:
             return
 
+        raw_code = code.code or ''
+        raw_size = len(raw_code)
+        if raw_size > MAX_SIMILARITY_CODE_SIZE:
+            code.similarity_checked = True
+            db.session.commit()
+            _push_system_check_event('similarity_check', {
+                'status': 'skipped_too_large',
+                'code_id': code.id,
+                'task_id': code.task_id,
+                'user_id': code.user_id,
+                'code_size': raw_size,
+                'code_size_limit': MAX_SIMILARITY_CODE_SIZE,
+            })
+            db.session.expire_all()
+            return
+
         # Use yield_per to avoid loading all records into memory at once
         query = Code.query.filter(Code.user_id.isnot(None), Code.user_id != code.user_id)
 
-        current_code = code.code
+        current_code = raw_code
         if code.lang == 'ipynb':
             current_code = extract_code_from_ipynb(code.code)
 

@@ -15,6 +15,7 @@ IGNORED_PARTS = ['.idea', 'venv', 'pycache', '.replit', 'node_modules', 'vendor'
 APP_URL = os.getenv('APP_URL', 'https://paste.geekclass.ru')
 SIMILARITY_LEVEL = int(os.getenv('SIMILARITY_LEVEL', 75))
 MAX_SIMILAR_CODES = int(os.getenv('MAX_SIMILAR_CODES', 8))
+MAX_SIMILARITY_CODE_SIZE = int(os.getenv('MAX_SIMILARITY_CODE_SIZE', 50000))
 CONNECTION_STRING = os.getenv('CONNECTION_STRING', 'postgresql+psycopg2://username:password@localhost:5432/mydatabase')
 CELERY_BROKER = os.getenv('CELERY_BROKER', 'redis://localhost:6379/0')
 DEBUG = env_bool('DEBUG', False)

@@ -102,6 +102,32 @@ services:
       - executions_data:/app/executions
     restart: unless-stopped
 
+  worker_similarity:
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      CONNECTION_STRING: postgresql+psycopg2://postgres:postgres@postgres:5432/geekpaste
+      CELERY_BROKER: redis://redis:6379/0
+      REDIS_URL: redis://redis:6379/0
+      FLASK_APP: paste_server.py
+      ZIP_ARCHIVES_DIR: /data/zip_archives
+      DOCKER_TRANSFER_MODE: cp
+    command: ["celery", "-A", "paste_celery.celery", "worker", "--loglevel=info", "--queues", "similarity_queue", "--concurrency", "1", "--hostname", "similarity@%h"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - zip_archives_data:/data/zip_archives
+      - /var/run/docker.sock:/var/run/docker.sock
+      - executions_data:/app/executions
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   zip_archives_data:
