@@ -390,7 +390,14 @@
                         return;
                     }
 
-                    stopSlotSpin(getSlotComboByScore(0), true);
+                    for (var i = 0; i < slotReels.length; i++) {
+                        if (slotSpinTimers[i]) {
+                            clearInterval(slotSpinTimers[i]);
+                            slotSpinTimers[i] = null;
+                        }
+                        slotReels[i].classList.remove('is-spinning');
+                    }
+
                     for (var i = 0; i < slotReels.length; i++) {
                         (function (reelIndex) {
                             slotReels[reelIndex].classList.add('is-spinning');
