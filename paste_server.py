@@ -884,6 +884,30 @@ def recheck_task():
     return redirect(f'/?id={code_id}')
 
 
+@app.route('/submission/toggle_public', methods=['POST'])
+@login_required
+def toggle_submission_public_access():
+    code_id = request.args.get('id')
+    code = get_code(code_id)
+
+    if not code:
+        flash("Код не найден.", "danger")
+        return redirect('/')
+
+    if not is_teacher() or not is_author(code):
+        abort(403)
+
+    code.available_without_auth = not bool(code.available_without_auth)
+    db.session.commit()
+
+    if code.available_without_auth:
+        flash("Доступ к посылке открыт без авторизации.", "success")
+    else:
+        flash("Доступ к посылке снова только по авторизации.", "info")
+
+    return redirect(f'/?id={code_id}')
+
+
 @app.route('/api/gpt_rate_limit', methods=['GET'])
 @login_required
 def gpt_rate_limit_api():

@@ -32,6 +32,17 @@
                             <i class="fas fa-user"></i> Профиль
                         </a>
                     {% endif %}
+                    {% if code.user_id == session['user_id'] %}
+                        <form method="POST" action="/submission/toggle_public?id={{ code.id }}" style="display: inline;">
+                            <button type="submit" class="btn btn-flat btn-light btn-sm mt-0">
+                                {% if code.available_without_auth %}
+                                    <i class="fas fa-lock"></i> Закрыть доступ
+                                {% else %}
+                                    <i class="fas fa-unlock"></i> Открыть без авторизации
+                                {% endif %}
+                            </button>
+                        </form>
+                    {% endif %}
                     {% if code.task %}
                         <a href="{{ task_url.format(task_id=code.task_id, course_id=code.course_id, user_id=code.user_id) }}" class="btn btn-flat btn-primary btn-sm mt-0" target="_blank">
                             <i class="fas fa-link"></i> К задаче
@@ -122,14 +133,16 @@
             {% endif %}
             <div class="card-body p-0 position-relative gray">
                 <span class="top-badge badge bg-primary float-end" id="submission-status-points">Очков: {{ code.check_points or 0 }}</span>
-                <div class="submission-slot-wrap" id="submission-slot-wrap">
-                    <div class="submission-slot-machine" id="submission-slot-machine" aria-label="Комбинация ИИ-слотов">
-                        <div class="slot-reel" data-reel-index="0"><img class="slot-logo" alt=""></div>
-                        <div class="slot-reel" data-reel-index="1"><img class="slot-logo" alt=""></div>
-                        <div class="slot-reel" data-reel-index="2"><img class="slot-logo" alt=""></div>
-                        <div class="slot-reel" data-reel-index="3"><img class="slot-logo" alt=""></div>
+                {% if session['role'] == 'teacher' or session['role'] == 'admin' %}
+                    <div class="submission-slot-wrap {% if initial_state != 'not checked' %}d-none{% endif %}" id="submission-slot-wrap">
+                        <div class="submission-slot-machine" id="submission-slot-machine" aria-label="Комбинация ИИ-слотов">
+                            <div class="slot-reel" data-reel-index="0"><img class="slot-logo" alt=""></div>
+                            <div class="slot-reel" data-reel-index="1"><img class="slot-logo" alt=""></div>
+                            <div class="slot-reel" data-reel-index="2"><img class="slot-logo" alt=""></div>
+                            <div class="slot-reel" data-reel-index="3"><img class="slot-logo" alt=""></div>
+                        </div>
                     </div>
-                </div>
+                {% endif %}
                 {% if code.task.check_type == 'tests' %}
                     <pre class="m-0 flat-pre" id="submission-status-comments-pre"><code class="p-2 py-3 txt" id="submission-status-comments-text">{{ code.check_comments or '' }}</code></pre>
                     <div class="p-3 txt d-none" id="submission-status-comments-html"></div>
@@ -338,6 +351,7 @@
                 var commentsText = document.getElementById('submission-status-comments-text');
                 var commentsHtml = document.getElementById('submission-status-comments-html');
                 var resubmitLink = document.getElementById('submission-resubmit-link');
+                var slotWrap = document.getElementById('submission-slot-wrap');
                 var slotMachine = document.getElementById('submission-slot-machine');
                 var slotReels = slotMachine ? Array.prototype.slice.call(slotMachine.querySelectorAll('.slot-reel')) : [];
                 var slotSpinTimers = [];
@@ -444,9 +458,15 @@
                     resubmitLink.style.display = allowResubmit ? 'inline-block' : 'none';
 
                     if (nextState === 'not checked') {
+                        if (slotWrap) {
+                            slotWrap.classList.remove('d-none');
+                        }
                         startSlotSpin();
                     } else {
                         stopSlotSpin(getSlotComboByScore(payload.check_points || 0), false);
+                        if (slotWrap) {
+                            slotWrap.classList.add('d-none');
+                        }
                     }
 
                     if (animateSuccess && previousState !== 'done' && nextState === 'done' && !successAnimationPlayed) {

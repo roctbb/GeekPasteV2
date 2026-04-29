@@ -80,8 +80,8 @@
                         <div class="form-group me-2">
                             <label for="code" class="text-muted">Код</label>
                             <textarea style="font-family: 'DejaVu Sans Mono', 'Consolas', monospace"
-                                      class="form-control my-1"
-                                      id="code" rows="10" name="code"></textarea>
+                                       class="form-control my-1"
+                                       id="code" rows="10" name="code"></textarea>
                         </div>
 
 
@@ -92,4 +92,27 @@
             </div>
         </div>
     {% endif %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var codeEditor = document.getElementById('code');
+            if (!codeEditor) {
+                return;
+            }
+
+            codeEditor.addEventListener('keydown', function (event) {
+                if (event.key !== 'Tab') {
+                    return;
+                }
+
+                event.preventDefault();
+                var start = codeEditor.selectionStart;
+                var end = codeEditor.selectionEnd;
+                var indent = '    ';
+                var value = codeEditor.value;
+
+                codeEditor.value = value.slice(0, start) + indent + value.slice(end);
+                codeEditor.selectionStart = codeEditor.selectionEnd = start + indent.length;
+            });
+        });
+    </script>
 {% endblock %}
