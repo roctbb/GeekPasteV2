@@ -492,7 +492,7 @@ def check_task_with_gpt(task, code):
     }
 
     try:
-        answer = requests.post(GPT_GATEWAY, json=payload)
+        answer = requests.post(GPT_GATEWAY, json=payload, timeout=90)
     except Exception as e:
         code.check_points = 1
         code.check_state = 'execution error'

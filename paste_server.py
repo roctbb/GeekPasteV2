@@ -9,7 +9,6 @@ from paste_celery import *
 from methods import *
 from manage import *
 from datetime import datetime, timedelta
-from telegram_notifier import send_telegram_message
 import jwt
 from config import USER_URL, TASK_URL, AUTH_URL, DEFAULT_GPT_RATE_LIMIT, LANGS, JWT_SECRET
 from urllib.parse import quote
@@ -145,12 +144,14 @@ def submit():
         if task and task.check_type != 'gpt':
             flash("Ссылка на GitHub поддерживается только для задач с проверкой через нейросеть (GPT).", "danger")
             return _return_to_submit_form(default_lang='github')
-        try:
-            code = extract_data_from_github_repository(github_repo_url)
-            lang = "github"
-        except GitHubRepositoryError as e:
-            flash(str(e), "danger")
-            return _return_to_submit_form(default_lang='github')
+        # Используем плейсхолдер — реальная загрузка репозитория выполняется в Celery
+        code = json.dumps({
+            'repo_url': github_repo_url,
+            'resolved_repo': None,
+            'ref': None,
+            'files': [],
+        }, ensure_ascii=False)
+        lang = "github"
 
     if task and task.lang == 'github' and not github_repo_url:
         flash("Для этой задачи нужно отправить ссылку на GitHub-репозиторий.", "danger")
@@ -200,12 +201,15 @@ def submit():
                         f"\nПоследняя отправка: {APP_URL}/?id={id}" +
                         f"{extra_links}"
                     )
-                    send_telegram_message(text)
+                    send_telegram_async.delay(text)
     except Exception:
         pass
 
     save_similarities.delay(id)
-    if task_id:
+    if lang == 'github':
+        # Загрузка репозитория и последующая проверка — в Celery, чтобы не блокировать web
+        fetch_github_and_check.delay(id, github_repo_url, task_id)
+    elif task_id:
         check_task.delay(id)
 
     flash("Теперь код доступен по адресу: https://paste.geekclass.ru/?id=" + str(id), 'success')

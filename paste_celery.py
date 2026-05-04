@@ -201,6 +201,52 @@ def check_task(id):
         db.session.expire_all()
 
 
+@celery.task()
+def send_telegram_async(text):
+    """Send a Telegram notification in background without blocking the web worker."""
+    try:
+        from telegram_notifier import send_telegram_message
+        send_telegram_message(text)
+    except Exception as e:
+        app.logger.warning("send_telegram_async failed error=%s", str(e))
+
+
+@celery.task()
+def fetch_github_and_check(code_id, github_repo_url, task_id):
+    """Fetch GitHub repository in background, update code record, then queue check_task."""
+    with app.app_context():
+        code = get_code(code_id)
+        if not code:
+            return
+
+        try:
+            data = extract_data_from_github_repository(github_repo_url)
+            code.code = data
+            db.session.commit()
+        except Exception as e:
+            error_msg = str(e)
+            app.logger.warning(
+                "fetch_github_and_check failed code_id=%s error=%s",
+                code_id, error_msg,
+            )
+            code.code = json.dumps({
+                'repo_url': github_repo_url,
+                'resolved_repo': None,
+                'ref': None,
+                'files': [],
+            }, ensure_ascii=False)
+            if task_id:
+                code.check_state = 'execution error'
+                code.check_comments = f"Не удалось загрузить репозиторий: {error_msg}"
+            db.session.commit()
+            if task_id:
+                _emit_submission_status(code)
+            return
+
+        if task_id:
+            check_task.delay(code_id)
+
+
 @celery.task(bind=True, max_retries=3)
 def external_check_task(self, code, lang, task_text, check_type, check_config, callback_url, callback_id):
     """Check code/text submitted from GeekAuditor and send result via callback."""
