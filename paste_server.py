@@ -361,7 +361,7 @@ def _can_access_code_realtime(code):
 
 
 @socketio.on('connect')
-def handle_socket_connect():
+def handle_socket_connect(auth=None):
     code_id = (request.args.get('code_id') or '').strip()
     if not code_id:
         return False
