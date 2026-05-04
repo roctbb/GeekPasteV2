@@ -205,6 +205,12 @@ def check_task(id):
 def external_check_task(self, code, lang, task_text, check_type, check_config, callback_url, callback_id):
     """Check code/text submitted from GeekAuditor and send result via callback."""
     with app.app_context():
+        def _limit_text(value, limit):
+            text = '' if value is None else str(value)
+            if len(text) <= limit:
+                return text
+            return text[:limit]
+
         result = {
             'callback_id': callback_id,
             'job_id': self.request.id,
@@ -259,10 +265,22 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
             elif check_type == 'gpt':
                 from methods import get_payload, parse_gpt_answer
                 from config import GPT_KEY, GPT_GATEWAY, GPT_MODEL
-                answer_text = check_config.get('answer', '')
+                raw_task_text = task_text or ''
+                raw_answer_text = check_config.get('answer', '')
+                raw_prompt_extra = check_config.get('prompt', '')
+                task_text_limited = _limit_text(raw_task_text, 12000)
+                answer_text = _limit_text(raw_answer_text, 120000)
+                prompt_extra = _limit_text(raw_prompt_extra, 80000)
                 max_points = check_config.get('max_points', 10)
-                prompt_extra = check_config.get('prompt', '')
-                context = get_payload(task_text + ('\n\nЭталонный ответ: ' + answer_text if answer_text else '') + ('\n\n' + prompt_extra if prompt_extra else ''), code, max_points, lang)
+                app.logger.info(
+                    "external_check_payload_sizes callback_id=%s job_id=%s task_text=%s answer=%s prompt=%s",
+                    callback_id,
+                    self.request.id,
+                    len(raw_task_text),
+                    len(raw_answer_text),
+                    len(raw_prompt_extra),
+                )
+                context = get_payload(task_text_limited + ('\n\nЭталонный ответ: ' + answer_text if answer_text else '') + ('\n\n' + prompt_extra if prompt_extra else ''), code, max_points, lang)
                 input_messages = [{"role": m["role"], "content": m["content"]} for m in context]
                 resp = requests.post(GPT_GATEWAY, json={"token": GPT_KEY, "model": GPT_MODEL, "input": input_messages}, timeout=60)
                 resp.raise_for_status()
@@ -283,11 +301,17 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
                 self.request.retries,
                 str(e),
             )
-            try:
-                self.retry(countdown=10 * (2 ** self.request.retries))
-                return  # retry scheduled, don't send callback
-            except self.MaxRetriesExceededError:
+            error_text = str(e).lower()
+            if 'request timed out' in error_text or 'read timed out' in error_text or 'connect timeout' in error_text:
+                # Upstream timeout is deterministic for oversized/slow requests.
+                # Do not spend retries on the same payload.
                 pass
+            else:
+                try:
+                    self.retry(countdown=10 * (2 ** self.request.retries))
+                    return  # retry scheduled, don't send callback
+                except self.MaxRetriesExceededError:
+                    pass
 
         try:
             callback_headers = {'Authorization': f'Bearer {_make_callback_service_token()}'}
