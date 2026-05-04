@@ -214,7 +214,13 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
             'comment': '',
             'details': []
         }
-        print(check_config, check_type)
+        app.logger.info(
+            "external_check_started callback_id=%s job_id=%s check_type=%s lang=%s",
+            callback_id,
+            self.request.id,
+            check_type,
+            lang,
+        )
         try:
             if check_type == 'tests':
                 tests = check_config.get('tests', [])
@@ -261,6 +267,8 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
                 resp = requests.post(GPT_GATEWAY, json={"token": GPT_KEY, "model": GPT_MODEL, "input": input_messages}, timeout=60)
                 resp.raise_for_status()
                 resp_data = resp.json()
+                if isinstance(resp_data, dict) and resp_data.get('error'):
+                    raise RuntimeError(f"GPT gateway error: {resp_data.get('error')}")
                 message = next(item for item in resp_data['result']['output'] if item['type'] == 'message')
                 gpt_text = message['content'][0]['text']
                 points, comment, _ = parse_gpt_answer(gpt_text)
@@ -268,6 +276,13 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
 
         except Exception as e:
             result['comment'] = str(e)
+            app.logger.exception(
+                "external_check_failed callback_id=%s job_id=%s retry=%s error=%s",
+                callback_id,
+                self.request.id,
+                self.request.retries,
+                str(e),
+            )
             try:
                 self.retry(countdown=10 * (2 ** self.request.retries))
                 return  # retry scheduled, don't send callback
