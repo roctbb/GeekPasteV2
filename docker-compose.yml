@@ -60,7 +60,7 @@ services:
       FLASK_APP: paste_server.py
       ZIP_ARCHIVES_DIR: /data/zip_archives
       DOCKER_TRANSFER_MODE: cp
-    command: ["gunicorn", "--bind", "0.0.0.0:8084", "--worker-class", "gthread", "--threads", "8", "--workers", "1", "--timeout", "120", "paste_server:app"]
+    command: ["gunicorn", "--bind", "0.0.0.0:8084", "--worker-class", "gthread", "--threads", "8", "--workers", "3", "--timeout", "120", "paste_server:app"]
     ports:
       - "8084:8084"
     depends_on:
