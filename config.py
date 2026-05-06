@@ -23,6 +23,7 @@ PORT = int(os.getenv('PORT', 8084))
 SECRET = os.getenv('SECRET', 'key')
 GEEKCLASS_HOST = os.getenv('GEEKCLASS_HOST', 'https://codingprojects.ru')
 JWT_SECRET = os.getenv('JWT_SECRET')
+SOLUTIONS_API_KEY = os.getenv('SOLUTIONS_API_KEY')
 
 SUBMIT_URL = GEEKCLASS_HOST + '/api/geekpaste'
 AUTH_URL = GEEKCLASS_HOST + '/insider/jwt?redirect_url='

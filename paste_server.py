@@ -1,5 +1,6 @@
 # coding: utf8
 import difflib
+import hmac
 import json
 from io import BytesIO
 
@@ -10,7 +11,7 @@ from methods import *
 from manage import *
 from datetime import datetime, timedelta
 import jwt
-from config import USER_URL, TASK_URL, AUTH_URL, DEFAULT_GPT_RATE_LIMIT, LANGS, JWT_SECRET
+from config import USER_URL, TASK_URL, AUTH_URL, DEFAULT_GPT_RATE_LIMIT, LANGS, JWT_SECRET, SOLUTIONS_API_KEY
 from urllib.parse import quote
 from sqlalchemy import or_
 
@@ -430,6 +431,54 @@ def _submission_to_diff_text(code):
     return raw_code
 
 
+def _verify_solutions_api_key():
+    if not SOLUTIONS_API_KEY:
+        return jsonify({'error': 'SOLUTIONS_API_KEY is not configured'}), 503
+
+    auth = request.headers.get('Authorization', '')
+    token = request.headers.get('X-API-Key', '')
+    if auth.startswith('Bearer '):
+        token = auth[7:]
+
+    if not token or not hmac.compare_digest(token, SOLUTIONS_API_KEY):
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    return None
+
+
+def _serialize_solution_for_api(code):
+    task = code.task
+    return {
+        'id': code.id,
+        'lang': code.lang,
+        'solution_text': _submission_to_diff_text(code),
+        'raw_code': code.code,
+        'created_at': code.created_at.isoformat() if code.created_at else None,
+        'user_id': code.user_id,
+        'course_id': code.course_id,
+        'task_id': code.task_id,
+        'check_state': code.check_state,
+        'check_points': code.check_points,
+        'check_comments': code.check_comments,
+        'checked_at': code.checked_at.isoformat() if code.checked_at else None,
+        'similarity_checked': bool(code.similarity_checked),
+        'has_similarity_warning': bool(code.has_similarity_warning),
+        'has_critical_similarity_warning': bool(code.has_critical_similarity_warning),
+        'has_ai_warning': bool(code.has_ai_warning),
+        'ai_warning_reasons': code.ai_warning_reasons,
+        'ai_confidence': code.ai_confidence,
+        'gpt_llm_probability': code.gpt_llm_probability,
+        'task': {
+            'id': task.id,
+            'name': task.name,
+            'lang': task.lang,
+            'points': task.points,
+            'check_type': task.check_type,
+            'text': task.text,
+        } if task else None,
+    }
+
+
 def _build_attempts_context(code, compare_to_id=None):
     if not code or not code.task_id or not code.user_id:
         return [], None, None
@@ -791,6 +840,103 @@ def solutions():
                            filter_mode=filter_mode,
                            tasks=tasks,
                            selected_task_id=task_id)
+
+
+@app.route('/api/solutions', methods=['GET'])
+def solutions_api():
+    auth_error = _verify_solutions_api_key()
+    if auth_error:
+        return auth_error
+
+    page = _parse_page_arg('page', 1)
+    try:
+        per_page = int(request.args.get('per_page', '100'))
+    except Exception:
+        per_page = 100
+    per_page = max(1, min(per_page, 500))
+
+    query = Code.query.filter(Code.task_id.isnot(None))
+
+    check_state = request.args.get('check_state', 'done')
+    if check_state:
+        query = query.filter_by(check_state=check_state)
+
+    task_id = request.args.get('task_id')
+    if task_id:
+        query = query.filter_by(task_id=task_id)
+
+    user_id = request.args.get('user_id')
+    if user_id:
+        query = query.filter_by(user_id=user_id)
+
+    created_after = request.args.get('created_after')
+    if created_after:
+        try:
+            query = query.filter(Code.created_at > datetime.fromisoformat(created_after))
+        except ValueError:
+            return jsonify({'error': 'Invalid created_after. Expected ISO datetime'}), 400
+
+    query = query.order_by(Code.created_at.desc(), Code.id.desc())
+    total = query.count()
+    codes = query.offset((page - 1) * per_page).limit(per_page).all()
+
+    return jsonify({
+        'page': page,
+        'per_page': per_page,
+        'total': total,
+        'has_next': page * per_page < total,
+        'solutions': [_serialize_solution_for_api(code) for code in codes],
+    })
+
+
+@app.route('/api/solutions/<code_id>', methods=['GET'])
+def solution_api(code_id):
+    auth_error = _verify_solutions_api_key()
+    if auth_error:
+        return auth_error
+
+    code = Code.query.filter(Code.id == code_id, Code.task_id.isnot(None)).first()
+    if not code:
+        return jsonify({'error': 'Solution not found'}), 404
+
+    return jsonify(_serialize_solution_for_api(code))
+
+
+@app.route('/api/students/<int:user_id>/solutions', methods=['GET'])
+def student_solutions_api(user_id):
+    auth_error = _verify_solutions_api_key()
+    if auth_error:
+        return auth_error
+
+    page = _parse_page_arg('page', 1)
+    try:
+        per_page = int(request.args.get('per_page', '100'))
+    except Exception:
+        per_page = 100
+    per_page = max(1, min(per_page, 500))
+
+    query = Code.query.filter(Code.task_id.isnot(None), Code.user_id == user_id)
+
+    task_id = request.args.get('task_id')
+    if task_id:
+        query = query.filter_by(task_id=task_id)
+
+    check_state = request.args.get('check_state')
+    if check_state:
+        query = query.filter_by(check_state=check_state)
+
+    query = query.order_by(Code.created_at.desc(), Code.id.desc())
+    total = query.count()
+    codes = query.offset((page - 1) * per_page).limit(per_page).all()
+
+    return jsonify({
+        'user_id': user_id,
+        'page': page,
+        'per_page': per_page,
+        'total': total,
+        'has_next': page * per_page < total,
+        'solutions': [_serialize_solution_for_api(code) for code in codes],
+    })
 
 
 @app.route('/solutions/mark_viewed/<code_id>', methods=['POST', 'GET'])
