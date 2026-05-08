@@ -1361,4 +1361,4 @@ def external_check():
 
 
 if __name__ == '__main__':
-    socketio.run(app, debug=DEBUG, port=PORT)
+    socketio.run(app, host='0.0.0.0', debug=DEBUG, port=PORT)

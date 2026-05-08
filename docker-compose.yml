@@ -60,9 +60,39 @@ services:
       FLASK_APP: paste_server.py
       ZIP_ARCHIVES_DIR: /data/zip_archives
       DOCKER_TRANSFER_MODE: cp
-    command: ["gunicorn", "--bind", "0.0.0.0:8084", "--worker-class", "gthread", "--threads", "8", "--workers", "3", "--timeout", "120", "paste_server:app"]
+    command: ["gunicorn", "--bind", "0.0.0.0:8084", "--worker-class", "gthread", "--threads", "8", "--workers", "3", "--timeout", "120", "--worker-tmp-dir", "/dev/shm", "paste_server:app"]
     ports:
       - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    volumes:
+      - zip_archives_data:/data/zip_archives
+      - /var/run/docker.sock:/var/run/docker.sock
+      - executions_data:/app/executions
+    restart: unless-stopped
+
+  socketio:
+    build:
+      context: .
+    env_file:
+      - .env
+    environment:
+      CONNECTION_STRING: postgresql+psycopg2://postgres:postgres@postgres:5432/geekpaste
+      CELERY_BROKER: redis://redis:6379/0
+      REDIS_URL: redis://redis:6379/0
+      PORT: "8085"
+      FLASK_APP: paste_server.py
+      ZIP_ARCHIVES_DIR: /data/zip_archives
+      DOCKER_TRANSFER_MODE: cp
+      SOCKETIO_ASYNC_MODE: eventlet
+    command: ["python", "socketio_server.py"]
+    ports:
+      - "6085:8085"
     depends_on:
       postgres:
         condition: service_healthy

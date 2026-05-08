@@ -9,6 +9,7 @@ import jwt
 from markdown import markdown
 from markupsafe import Markup
 import redis
+import os
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = CONNECTION_STRING
@@ -23,7 +24,7 @@ socketio = SocketIO(
     app,
     cors_allowed_origins="*",
     message_queue=REDIS_URL,
-    async_mode="threading",
+    async_mode=os.getenv('SOCKETIO_ASYNC_MODE', 'threading'),
 )
 
 from flask import session, redirect, url_for

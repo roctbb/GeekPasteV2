@@ -4,6 +4,7 @@ python-dotenv
 Flask-Migrate
 Flask-SocketIO
 simple-websocket
+eventlet
 gunicorn
 celery
 psycopg2-binary

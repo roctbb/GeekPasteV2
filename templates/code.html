@@ -527,10 +527,10 @@
                     check_comments: {{ (code.check_comments or '') | tojson }}
                 }, false);
 
-                if (window.io) {
+                if (window.io && currentState === 'not checked') {
                     var socket = io({
                         query: {code_id: socketConfig.codeId},
-                        transports: ['websocket', 'polling']
+                        transports: ['websocket']
                     });
 
                     socket.on('submission_status_updated', function (payload) {
@@ -538,6 +538,9 @@
                             return;
                         }
                         renderSubmissionStatus(payload, true);
+                        if (payload.is_terminal) {
+                            socket.disconnect();
+                        }
                     });
                 }
             {% endif %}
