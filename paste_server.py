@@ -90,6 +90,34 @@ def get_gpt_rate_limit_info(user_id, task_id, task=None):
         return 0, limit, 0
 
 
+def _gpt_rate_limit_status_payload(user_id, task_id, course_id=None):
+    task = Task.query.filter_by(id=task_id).first()
+    task_found = task is not None
+    is_gpt_task = bool(task and task.check_type == 'gpt')
+    current_count = 0
+    limit = None
+    time_left = 0
+
+    if task_found:
+        current_count, limit, time_left = get_gpt_rate_limit_info(user_id, task_id, task)
+
+    attempts_exhausted = bool(is_gpt_task and limit is not None and current_count >= limit)
+
+    return {
+        'user_id': user_id,
+        'task_id': task_id,
+        'course_id': course_id,
+        'task_found': task_found,
+        'is_gpt_task': is_gpt_task,
+        'current_count': current_count,
+        'limit': limit,
+        'time_left_seconds': time_left,
+        'can_submit': bool(is_gpt_task and limit is not None and current_count < limit),
+        'attempts_exhausted': attempts_exhausted,
+        'can_buy_extra_attempt': attempts_exhausted,
+    }
+
+
 @app.route('/', methods=['POST'])
 @login_required
 def submit():
@@ -1085,6 +1113,74 @@ def gpt_rate_limit_api():
         'limit': limit,
         'time_left_seconds': time_left,
         'can_submit': current_count < limit
+    })
+
+
+@app.route('/api/gpt_rate_limit/status', methods=['GET'])
+def gpt_rate_limit_status_api():
+    auth_error = _verify_solutions_api_key()
+    if auth_error:
+        return auth_error
+
+    try:
+        user_id = int(request.args.get('user_id'))
+        task_id = int(request.args.get('task_id'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'user_id and task_id are required'}), 400
+
+    course_id = request.args.get('course_id')
+    try:
+        course_id = int(course_id) if course_id is not None else None
+    except ValueError:
+        return jsonify({'error': 'course_id must be an integer'}), 400
+
+    return jsonify(_gpt_rate_limit_status_payload(user_id, task_id, course_id))
+
+
+@app.route('/api/gpt_rate_limit/extra_attempt', methods=['POST'])
+def gpt_rate_limit_extra_attempt_api():
+    auth_error = _verify_solutions_api_key()
+    if auth_error:
+        return auth_error
+
+    data = request.get_json(silent=True) or request.form or request.args
+    try:
+        user_id = int(data.get('user_id'))
+        task_id = int(data.get('task_id'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'user_id and task_id are required'}), 400
+
+    course_id = data.get('course_id')
+    try:
+        course_id = int(course_id) if course_id is not None else None
+    except ValueError:
+        return jsonify({'error': 'course_id must be an integer'}), 400
+
+    status = _gpt_rate_limit_status_payload(user_id, task_id, course_id)
+    if not status['task_found']:
+        return jsonify({**status, 'error': 'Task not found'}), 404
+
+    if not status['is_gpt_task']:
+        return jsonify({**status, 'error': 'This task is not a GPT task'}), 400
+
+    if not status['attempts_exhausted']:
+        return jsonify({**status, 'error': 'Attempts are not exhausted'}), 409
+
+    redis_key = f"gpt_limit:{user_id}:{task_id}"
+    try:
+        ttl = redis_client.ttl(redis_key)
+        redis_client.set(redis_key, max(0, status['limit'] - 1))
+        if ttl and ttl > 0:
+            redis_client.expire(redis_key, ttl)
+    except Exception as e:
+        print(f"Redis error in extra attempt API: {e}")
+        return jsonify({**status, 'error': 'Redis error'}), 500
+
+    updated_status = _gpt_rate_limit_status_payload(user_id, task_id, course_id)
+    return jsonify({
+        **updated_status,
+        'state': 'ok',
+        'extra_attempt_added': True,
     })
 
 
