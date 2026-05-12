@@ -377,6 +377,77 @@ def _collect_recent_checks_snapshot(limit=40):
     }
 
 
+def _parse_gpt_limit_key(redis_key):
+    key = redis_key.decode('utf-8') if isinstance(redis_key, bytes) else str(redis_key)
+    parts = key.split(':')
+    if len(parts) != 3 or parts[0] != 'gpt_limit':
+        return None
+    try:
+        return int(parts[1]), int(parts[2])
+    except (TypeError, ValueError):
+        return None
+
+
+def _collect_exhausted_gpt_limits_snapshot():
+    exhausted = []
+
+    for redis_key in redis_client.scan_iter(match='gpt_limit:*:*', count=200):
+        parsed_key = _parse_gpt_limit_key(redis_key)
+        if not parsed_key:
+            continue
+
+        user_id, task_id = parsed_key
+        task = Task.query.filter_by(id=task_id).first()
+        if not task or task.check_type != 'gpt':
+            continue
+
+        try:
+            current_count = int(redis_client.get(redis_key) or 0)
+        except (TypeError, ValueError):
+            continue
+
+        limit = task.gpt_rate_limit if task.gpt_rate_limit is not None else DEFAULT_GPT_RATE_LIMIT
+        if current_count < limit:
+            continue
+
+        ttl = redis_client.ttl(redis_key)
+        ttl = ttl if ttl and ttl > 0 else 0
+        latest_submission = (
+            Code.query
+            .filter_by(user_id=user_id, task_id=task_id)
+            .order_by(Code.created_at.desc(), Code.id.desc())
+            .first()
+        )
+
+        task_link = None
+        if latest_submission and latest_submission.course_id:
+            task_link = TASK_URL.format(
+                course_id=latest_submission.course_id,
+                task_id=task_id,
+                user_id=user_id
+            )
+
+        exhausted.append({
+            'user_id': user_id,
+            'task_id': task_id,
+            'task_name': task.name,
+            'current_count': current_count,
+            'limit': limit,
+            'time_left_seconds': ttl,
+            'profile_url': f'{USER_URL}{user_id}',
+            'task_url': task_link,
+            'latest_code_id': latest_submission.id if latest_submission else None,
+            'latest_created_at': latest_submission.created_at.isoformat() + 'Z' if latest_submission and latest_submission.created_at else None,
+        })
+
+    exhausted.sort(key=lambda item: (item['time_left_seconds'], item['task_id'], item['user_id']))
+    return {
+        'fetched_at': datetime.utcnow().isoformat() + 'Z',
+        'count': len(exhausted),
+        'items': exhausted,
+    }
+
+
 def _can_access_code_realtime(code):
     if not code:
         return False
@@ -1214,6 +1285,53 @@ def admin_recent_checks_api():
         return jsonify(_collect_recent_checks_snapshot(limit))
     except Exception as e:
         return jsonify({'error': f'Не удалось получить список проверок: {str(e)}'}), 503
+
+
+@app.route('/api/admin/gpt_rate_limits/exhausted', methods=['GET'])
+@login_required
+def admin_exhausted_gpt_limits_api():
+    if not is_admin():
+        abort(403)
+
+    try:
+        return jsonify(_collect_exhausted_gpt_limits_snapshot())
+    except Exception as e:
+        return jsonify({'error': f'Не удалось получить список исчерпанных лимитов: {str(e)}'}), 503
+
+
+@app.route('/api/admin/gpt_rate_limits/reset', methods=['POST'])
+@login_required
+def admin_reset_gpt_limit_api():
+    if not is_admin():
+        abort(403)
+
+    data = request.get_json(silent=True) or request.form or request.args
+    try:
+        user_id = int(data.get('user_id'))
+        task_id = int(data.get('task_id'))
+    except (TypeError, ValueError):
+        return jsonify({'error': 'user_id and task_id are required'}), 400
+
+    task = Task.query.filter_by(id=task_id).first()
+    if not task:
+        return jsonify({'error': 'Task not found'}), 404
+    if task.check_type != 'gpt':
+        return jsonify({'error': 'This task is not a GPT task'}), 400
+
+    redis_key = f"gpt_limit:{user_id}:{task_id}"
+    try:
+        deleted = redis_client.delete(redis_key)
+    except Exception as e:
+        print(f"Redis error in admin GPT limit reset: {e}")
+        return jsonify({'error': 'Redis error'}), 500
+
+    return jsonify({
+        'state': 'ok',
+        'reset': True,
+        'deleted': bool(deleted),
+        'user_id': user_id,
+        'task_id': task_id,
+    })
 
 
 @app.route('/system/status', methods=['GET'])

@@ -48,6 +48,35 @@
     </div>
 </div>
 
+<div class="card flat-card shadow-soft mb-3" id="gpt-limits-card">
+    <div class="card-header py-2 px-3 d-flex justify-content-between align-items-center">
+        <strong><i class="fas fa-gauge-high"></i> Исчерпанные GPT-попытки</strong>
+        <span class="small text-muted" id="gpt-limits-last-update"></span>
+    </div>
+    <div class="card-body py-2">
+        <div id="gpt-limits-error" class="alert alert-warning py-2 px-3 mb-2 d-none"></div>
+        <div class="table-responsive">
+            <table class="table table-sm task-table mb-0">
+                <thead>
+                <tr>
+                    <th>Ученик</th>
+                    <th>Задача</th>
+                    <th>Попытки</th>
+                    <th>Автосброс</th>
+                    <th>Последняя сдача</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody id="gpt-limits-body">
+                <tr>
+                    <td colspan="6" class="text-muted">Загрузка...</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <div class="card flat-card shadow-soft mb-3" id="recent-checks-card">
     <div class="card-header py-2 px-3 d-flex justify-content-between align-items-center">
         <strong><i class="fas fa-clock-rotate-left"></i> Последние проверки</strong>
@@ -80,11 +109,16 @@
     document.addEventListener('DOMContentLoaded', function () {
         var queueApiUrl = '/api/admin/celery_queue';
         var recentChecksApiUrl = '/api/admin/recent_checks?limit=50';
+        var gptLimitsApiUrl = '/api/admin/gpt_rate_limits/exhausted';
+        var gptLimitsResetApiUrl = '/api/admin/gpt_rate_limits/reset';
         var refreshBtn = document.getElementById('celery-refresh-btn');
         var lastUpdateEl = document.getElementById('celery-last-update');
         var summaryEl = document.getElementById('celery-summary');
         var workersBodyEl = document.getElementById('celery-workers-body');
         var errorEl = document.getElementById('celery-queue-error');
+        var gptLimitsLastUpdateEl = document.getElementById('gpt-limits-last-update');
+        var gptLimitsBodyEl = document.getElementById('gpt-limits-body');
+        var gptLimitsErrorEl = document.getElementById('gpt-limits-error');
         var recentChecksLastUpdateEl = document.getElementById('recent-checks-last-update');
         var recentChecksBodyEl = document.getElementById('recent-checks-body');
         var recentChecksErrorEl = document.getElementById('recent-checks-error');
@@ -109,6 +143,35 @@
                 return value;
             }
             return dt.toLocaleTimeString('ru-RU');
+        }
+
+        function formatDateTime(value) {
+            if (!value) {
+                return '—';
+            }
+            var dt = new Date(value);
+            if (Number.isNaN(dt.getTime())) {
+                return value;
+            }
+            return dt.toLocaleString('ru-RU');
+        }
+
+        function formatDuration(seconds) {
+            var total = Number(seconds || 0);
+            if (!total || total < 0) {
+                return '—';
+            }
+            var minutes = Math.floor(total / 60);
+            var restSeconds = total % 60;
+            if (minutes >= 60) {
+                var hours = Math.floor(minutes / 60);
+                var restMinutes = minutes % 60;
+                return hours + ' ч ' + restMinutes + ' мин';
+            }
+            if (minutes > 0) {
+                return minutes + ' мин ' + restSeconds + ' с';
+            }
+            return restSeconds + ' с';
         }
 
         function renderTaskItem(task) {
@@ -216,7 +279,97 @@
 
         refreshBtn.addEventListener('click', function () {
             refreshQueueState();
+            refreshGptLimits();
             refreshRecentChecks();
+        });
+
+        function setGptLimitsError(text) {
+            if (!text) {
+                gptLimitsErrorEl.classList.add('d-none');
+                gptLimitsErrorEl.textContent = '';
+                return;
+            }
+            gptLimitsErrorEl.classList.remove('d-none');
+            gptLimitsErrorEl.textContent = text;
+        }
+
+        function renderGptLimits(snapshot) {
+            var items = (snapshot && snapshot.items) || [];
+            gptLimitsLastUpdateEl.textContent = 'Обновлено: ' + formatIsoTime(snapshot && snapshot.fetched_at);
+
+            if (!items.length) {
+                gptLimitsBodyEl.innerHTML = '<tr><td colspan="6" class="text-muted">Сейчас нет учеников с исчерпанными GPT-попытками.</td></tr>';
+                return;
+            }
+
+            gptLimitsBodyEl.innerHTML = items.map(function (item) {
+                var userHtml = '<a href="' + escapeHtml(item.profile_url) + '" target="_blank">uid ' + escapeHtml(item.user_id) + '</a>';
+                var taskLabel = '#' + escapeHtml(item.task_id);
+                if (item.task_name) {
+                    taskLabel += ' · ' + escapeHtml(item.task_name);
+                }
+                var taskHtml = item.task_url
+                    ? '<a href="' + escapeHtml(item.task_url) + '" target="_blank">' + taskLabel + '</a>'
+                    : taskLabel;
+                var latestHtml = item.latest_code_id
+                    ? '<a href="/?id=' + encodeURIComponent(item.latest_code_id) + '" target="_blank">#' + escapeHtml(item.latest_code_id) + '</a><br><span class="text-muted">' + escapeHtml(formatDateTime(item.latest_created_at)) + '</span>'
+                    : '—';
+                var resetAttrs = ''
+                    + ' data-user-id="' + escapeHtml(item.user_id) + '"'
+                    + ' data-task-id="' + escapeHtml(item.task_id) + '"';
+
+                return ''
+                    + '<tr>'
+                    + '<td class="small">' + userHtml + '</td>'
+                    + '<td class="small">' + taskHtml + '</td>'
+                    + '<td><span class="badge bg-danger">' + escapeHtml(item.current_count) + '/' + escapeHtml(item.limit) + '</span></td>'
+                    + '<td class="small text-nowrap">' + escapeHtml(formatDuration(item.time_left_seconds)) + '</td>'
+                    + '<td class="small">' + latestHtml + '</td>'
+                    + '<td class="text-end"><button type="button" class="btn btn-sm btn-outline-warning gpt-limit-reset-btn"' + resetAttrs + '>Сбросить</button></td>'
+                    + '</tr>';
+            }).join('');
+        }
+
+        async function refreshGptLimits() {
+            try {
+                var response = await fetch(gptLimitsApiUrl, {credentials: 'same-origin'});
+                var payload = await response.json();
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Ошибка загрузки');
+                }
+                setGptLimitsError(null);
+                renderGptLimits(payload);
+            } catch (error) {
+                setGptLimitsError(error && error.message ? error.message : 'Не удалось обновить список лимитов.');
+            }
+        }
+
+        gptLimitsBodyEl.addEventListener('click', async function (event) {
+            var button = event.target.closest('.gpt-limit-reset-btn');
+            if (!button) {
+                return;
+            }
+            button.disabled = true;
+            try {
+                var response = await fetch(gptLimitsResetApiUrl, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        user_id: button.getAttribute('data-user-id'),
+                        task_id: button.getAttribute('data-task-id')
+                    })
+                });
+                var payload = await response.json();
+                if (!response.ok) {
+                    throw new Error(payload && payload.error ? payload.error : 'Ошибка сброса');
+                }
+                setGptLimitsError(null);
+                refreshGptLimits();
+            } catch (error) {
+                setGptLimitsError(error && error.message ? error.message : 'Не удалось сбросить лимит.');
+                button.disabled = false;
+            }
         });
 
         function getCheckTypeLabel(type) {
@@ -331,10 +484,12 @@
         }
 
         refreshQueueState();
+        refreshGptLimits();
         refreshRecentChecks();
         refreshTimer = setInterval(function () {
             if (!document.hidden) {
                 refreshQueueState();
+                refreshGptLimits();
                 refreshRecentChecks();
             }
         }, 7000);
