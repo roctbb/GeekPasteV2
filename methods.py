@@ -15,6 +15,7 @@ import requests
 import jwt
 from markdown import markdown as render_markdown
 from runner import TestExecutor, SolutionException, ExecutionException
+from submission_file_filter import should_ignore_submission_file
 from telegram_notifier import send_telegram_message
 from ai_detector import analyze_code_for_ai_usage, get_ai_detection_prompt_addition
 
@@ -670,18 +671,14 @@ def extract_data_from_zipfile(file):
             for zip_item in zip_ref.infolist():
                 file_name = zip_item.filename
 
+                if zip_item.is_dir():
+                    continue  # Пропускаем папки
+
+                if should_ignore_submission_file(file_name):
+                    continue
+
                 with zip_ref.open(zip_item) as extracted_file:
                     content = extracted_file.read()
-
-                    if zip_item.is_dir():
-                        continue  # Пропускаем папки
-
-                    try:
-                        for part in IGNORED_PARTS:
-                            if part in file_name:
-                                raise Exception("bad name")
-                    except Exception as e:
-                        continue
 
                     if b'\x00' in content:  # Проверяем, является ли файл бинарным
                         file_info.append({

@@ -10,7 +10,45 @@ def env_bool(name, default=False):
     return raw.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 LANGS = ['cpp', 'python', 'java', 'cs', 'html', 'css', 'js', 'json', 'xml', 'swift', 'php', 'sql']
-IGNORED_PARTS = ['.idea', 'venv', 'pycache', '.replit', 'node_modules', 'vendor', '.git', 'build', '.pro.user', '__MACOSX', '.DS_Store']
+
+# Файлы и папки, которые не несут полезного кода ученика и только шумят
+# в просмотре, сравнении решений и GPT-проверке архивов.
+IGNORED_PARTS = [
+    # IDE/editor metadata
+    '.idea', '.qtcreator', '.vscode', '.vs',
+
+    # VCS/service metadata
+    '.git', '.github', '.gitignore', '.gitattributes',
+
+    # Python caches/environments
+    'venv', '.venv', 'env', '.env', '__pycache__', 'pycache',
+    '.mypy_cache', '.pytest_cache', '.ruff_cache', '.tox', '.nox',
+    '.coverage', 'htmlcov',
+
+    # Dependencies/vendor dumps
+    'node_modules', 'vendor',
+
+    # Build/output folders common for C++, Qt/CMake, Python and other tools
+    'build', 'cmake-build-debug', 'cmake-build-release',
+    'cmake-build-relwithdebinfo', 'cmake-build-minsizerel',
+    'debug', 'release', 'dist', 'out', 'bin', 'obj', 'target',
+
+    # OS artifacts
+    '__MACOSX', '.DS_Store', 'Thumbs.db',
+]
+
+IGNORED_FILE_SUFFIXES = [
+    # Qt Creator / qmake / CMake user-local files
+    '.user', '.user.*',
+
+    # Compiled objects, libraries and binaries
+    '.o', '.obj', '.a', '.lib', '.so', '.dylib', '.dll',
+    '.exe', '.out', '.app', '.class', '.pyc', '.pyo',
+
+    # Debug/runtime/generated files
+    '.ilk', '.pdb', '.idb', '.dSYM', '.gcda', '.gcno',
+    '.log', '.tmp', '.temp',
+]
 
 APP_URL = os.getenv('APP_URL', 'https://paste.geekclass.ru')
 SIMILARITY_LEVEL = int(os.getenv('SIMILARITY_LEVEL', 75))
