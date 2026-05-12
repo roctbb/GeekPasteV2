@@ -79,7 +79,29 @@ def _push_system_check_event(event_type, payload):
         app.logger.warning("system_check_event_failed type=%s error=%s", event_type, str(e))
 
 
+def _notify_integrity_update(code):
+    if not SUBMIT_URL or not code or not code.course_id or not code.user_id or not code.task_id:
+        return
 
+    try:
+        academic_integrity = build_academic_integrity_payload(code)
+        requests.post(SUBMIT_URL.rstrip('/') + '/integrity', json={
+            "solution": APP_URL + f"/?id={code.id}",
+            "course_id": code.course_id,
+            "token": generate_jwt(code.user_id, code.task_id),
+            "academic_integrity": academic_integrity,
+            "has_ai_warning": academic_integrity['ai'].get('warning'),
+            "ai_warning_reasons": academic_integrity['ai'].get('reasons'),
+            "ai_confidence": academic_integrity['ai'].get('confidence'),
+            "gpt_llm_probability": academic_integrity['ai'].get('llm_probability'),
+            "similarity_checked": academic_integrity['similarity'].get('checked'),
+            "has_similarity_warning": academic_integrity['similarity'].get('warning'),
+            "has_critical_similarity_warning": academic_integrity['similarity'].get('critical'),
+            "similarity_matches_count": academic_integrity['similarity'].get('matches_count'),
+            "similarity_max_percent": academic_integrity['similarity'].get('max_percent'),
+        }, timeout=10)
+    except Exception as e:
+        app.logger.warning("integrity_callback_failed code_id=%s error=%s", getattr(code, 'id', None), str(e))
 
 @celery.task()
 def save_similarities(id):
@@ -105,6 +127,7 @@ def save_similarities(id):
                 'code_size': raw_size,
                 'code_size_limit': MAX_SIMILARITY_CODE_SIZE,
             })
+            _notify_integrity_update(code)
             db.session.expire_all()
             return
 
@@ -150,6 +173,7 @@ def save_similarities(id):
             'matches_count': len(found_similarities),
             'has_similarity_warning': bool(code.has_similarity_warning),
         })
+        _notify_integrity_update(code)
 
         # Explicitly clean up session to free memory
         db.session.expire_all()
@@ -189,12 +213,23 @@ def check_task(id):
         })
 
         if SUBMIT_URL and code.course_id:
+            academic_integrity = build_academic_integrity_payload(code)
             requests.post(SUBMIT_URL, json={
                 "points": code.check_points,
                 "comments": code.check_comments,
                 "solution": APP_URL + f"/?id={code.id}",
                 "course_id": code.course_id,
-                "token": generate_jwt(code.user_id, code.task_id)
+                "token": generate_jwt(code.user_id, code.task_id),
+                "academic_integrity": academic_integrity,
+                "has_ai_warning": academic_integrity['ai'].get('warning'),
+                "ai_warning_reasons": academic_integrity['ai'].get('reasons'),
+                "ai_confidence": academic_integrity['ai'].get('confidence'),
+                "gpt_llm_probability": academic_integrity['ai'].get('llm_probability'),
+                "similarity_checked": academic_integrity['similarity'].get('checked'),
+                "has_similarity_warning": academic_integrity['similarity'].get('warning'),
+                "has_critical_similarity_warning": academic_integrity['similarity'].get('critical'),
+                "similarity_matches_count": academic_integrity['similarity'].get('matches_count'),
+                "similarity_max_percent": academic_integrity['similarity'].get('max_percent'),
             })
 
         # Clean up session

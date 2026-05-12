@@ -242,6 +242,47 @@ def build_submission_status_payload(code):
     return payload
 
 
+def _similarity_rows_for_code(code_id):
+    if not code_id:
+        return []
+
+    rows = db.session.execute(
+        similarities_table.select().where(
+            (similarities_table.c.code_id == code_id) |
+            (similarities_table.c.code_id2 == code_id)
+        )
+    ).fetchall()
+
+    return rows
+
+
+def build_academic_integrity_payload(code):
+    if not code:
+        return {
+            'ai': {},
+            'similarity': {},
+        }
+
+    similarity_rows = _similarity_rows_for_code(code.id)
+    similarity_percents = [row.percent for row in similarity_rows if row.percent is not None]
+
+    return {
+        'ai': {
+            'warning': bool(code.has_ai_warning),
+            'confidence': code.ai_confidence,
+            'reasons': code.ai_warning_reasons,
+            'llm_probability': code.gpt_llm_probability,
+        },
+        'similarity': {
+            'checked': bool(code.similarity_checked),
+            'warning': bool(code.has_similarity_warning),
+            'critical': bool(code.has_critical_similarity_warning),
+            'matches_count': len(similarity_rows),
+            'max_percent': max(similarity_percents) if similarity_percents else None,
+        },
+    }
+
+
 def save_similarity(new_code, similar_code, percent, send_notification=True):
     existing_similarity = db.session.execute(
         similarities_table.select().where(

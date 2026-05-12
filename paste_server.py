@@ -476,6 +476,7 @@ def _verify_solutions_api_key():
 
 def _serialize_solution_for_api(code):
     task = code.task
+    academic_integrity = build_academic_integrity_payload(code)
     return {
         'id': code.id,
         'lang': code.lang,
@@ -496,6 +497,7 @@ def _serialize_solution_for_api(code):
         'ai_warning_reasons': code.ai_warning_reasons,
         'ai_confidence': code.ai_confidence,
         'gpt_llm_probability': code.gpt_llm_probability,
+        'academic_integrity': academic_integrity,
         'task': {
             'id': task.id,
             'name': task.name,
