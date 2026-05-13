@@ -363,7 +363,7 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
                 )
                 context = get_payload(task_text_limited + ('\n\nЭталонный ответ: ' + answer_text if answer_text else '') + ('\n\n' + prompt_extra if prompt_extra else ''), code, max_points, lang)
                 input_messages = [{"role": m["role"], "content": m["content"]} for m in context]
-                resp = requests.post(GPT_GATEWAY, json={"token": GPT_KEY, "model": GPT_MODEL, "input": input_messages}, timeout=60)
+                resp = requests.post(GPT_GATEWAY, json={"token": GPT_KEY, "model": GPT_MODEL, "input": input_messages}, timeout=180)
                 resp.raise_for_status()
                 resp_data = resp.json()
                 if isinstance(resp_data, dict) and resp_data.get('error'):
