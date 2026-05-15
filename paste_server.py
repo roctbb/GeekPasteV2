@@ -530,6 +530,34 @@ def _submission_to_diff_text(code):
     return raw_code
 
 
+def _zip_code_parts_for_view(code):
+    try:
+        files = json.loads(code.code)
+    except Exception:
+        return []
+
+    has_nested_zip = any(
+        (file_item.get('name') or '').lower().endswith('.zip')
+        for file_item in files
+        if isinstance(file_item, dict)
+    )
+    if not has_nested_zip:
+        return files
+
+    original_zip = load_original_zip_archive(code.id)
+    if original_zip is None:
+        return files
+
+    extracted_code = extract_data_from_zipfile(original_zip)
+    if not extracted_code:
+        return files
+
+    try:
+        return json.loads(extracted_code)
+    except Exception:
+        return files
+
+
 def _verify_solutions_api_key():
     if not SOLUTIONS_API_KEY:
         return jsonify({'error': 'SOLUTIONS_API_KEY is not configured'}), 503
@@ -700,7 +728,7 @@ def warnings():
                            per_page=per_page)
 
 
-@app.route('/warnings/uncheck/<code_id>', methods=['GET'])
+@app.route('/warnings/uncheck/<code_id>', methods=['POST'])
 @login_required
 def uncheck_warning(code_id):
     if not is_teacher():
@@ -775,7 +803,7 @@ def index():
                 attempts, compare_attempt, attempts_diff = _build_attempts_context(code, compare_to_id)
 
             if code.lang == 'zip':
-                code.code = json.loads(code.code)
+                code.code = _zip_code_parts_for_view(code)
             elif code.lang == 'github':
                 try:
                     github_payload = json.loads(code.code)
@@ -892,6 +920,8 @@ def raw():
         elif not code.available_without_auth and not session.get('user_id'):
             redirect_url = request.url if request.url.startswith('https://') else request.url.replace('http://', 'https://')
             return redirect(AUTH_URL + quote(redirect_url, safe=''))
+        elif code.task and not code.available_without_auth and not (session.get('user_id') and (is_teacher() or is_author(code))):
+            flash("Нет доступа. Это приватный код.", "danger")
         else:
             response = make_response(code.code)
             response.headers['Content-Type'] = 'text/plain'
@@ -1040,7 +1070,7 @@ def student_solutions_api(user_id):
     })
 
 
-@app.route('/solutions/mark_viewed/<code_id>', methods=['POST', 'GET'])
+@app.route('/solutions/mark_viewed/<code_id>', methods=['POST'])
 @login_required
 def mark_solution_viewed(code_id):
     if not is_teacher():
@@ -1067,7 +1097,7 @@ def download_solution(code_id):
     return Response(code.code, mimetype='application/x-ipynb+json', headers={'Content-Disposition': f'attachment; filename=solution_{code_id}.ipynb'})
 
 
-@app.route('/solutions/mark_unviewed/<code_id>', methods=['POST', 'GET'])
+@app.route('/solutions/mark_unviewed/<code_id>', methods=['POST'])
 @login_required
 def mark_solution_unviewed(code_id):
     if not is_teacher():

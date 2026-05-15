@@ -85,9 +85,11 @@
                                     <i class="fas fa-check"></i> Оценить
                                 </a>
                             {% endif %}
-                            <a href="/warnings/uncheck/{{ code.id }}?type={{ warning_type }}&page={{ page }}" class="btn btn-success btn-sm">
-                                <i class="fas fa-exclamation-circle"></i> Сброс
-                            </a>
+                            <form method="POST" action="/warnings/uncheck/{{ code.id }}?type={{ warning_type }}&page={{ page }}" class="d-inline">
+                                <button class="btn btn-success btn-sm">
+                                    <i class="fas fa-exclamation-circle"></i> Сброс
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>

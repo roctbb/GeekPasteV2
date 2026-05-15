@@ -7,7 +7,7 @@ from flask_migrate import Migrate
 from flask_socketio import SocketIO
 import jwt
 from markdown import markdown
-from markupsafe import Markup
+from markupsafe import Markup, escape
 import redis
 import os
 
@@ -34,7 +34,7 @@ from urllib.parse import quote
 
 @app.template_filter('markdown')
 def markdown_filter(text):
-    return Markup(markdown(text))
+    return Markup(markdown(str(escape(str(text or "")))))
 
 @app.template_filter('json')
 def json_filter(text):
@@ -58,7 +58,6 @@ def login_required(f):
     def F(*args, **kwargs):
         token = request.args.get('token')
         if token:
-            print(token)
             make_jwt_auth(token)
             return redirect(url_for(request.endpoint, **{k: v for k, v in request.args.items() if k != 'token'}))
 

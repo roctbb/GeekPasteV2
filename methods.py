@@ -1,10 +1,8 @@
-import io
 import json
 import re
 import string
 import random
 import datetime
-import zipfile
 import os
 from urllib.parse import urlparse, unquote
 
@@ -14,8 +12,9 @@ from config import *
 import requests
 import jwt
 from markdown import markdown as render_markdown
+from markupsafe import escape
 from runner import TestExecutor, SolutionException, ExecutionException
-from submission_file_filter import should_ignore_submission_file
+from submission_archive import extract_data_from_zipfile, rebuild_zip
 from telegram_notifier import send_telegram_message
 from ai_detector import analyze_code_for_ai_usage, get_ai_detection_prompt_addition
 
@@ -238,7 +237,7 @@ def build_submission_status_payload(code):
     }
 
     if check_type and check_type != 'tests':
-        payload['check_comments_html'] = render_markdown(check_comments)
+        payload['check_comments_html'] = render_markdown(str(escape(str(check_comments))))
 
     return payload
 
@@ -664,41 +663,6 @@ def check_task_with_gpt(task, code):
         pass
 
 
-def extract_data_from_zipfile(file):
-    try:
-        with zipfile.ZipFile(io.BytesIO(file), 'r') as zip_ref:
-            file_info = []
-            for zip_item in zip_ref.infolist():
-                file_name = zip_item.filename
-
-                if zip_item.is_dir():
-                    continue  # Пропускаем папки
-
-                if should_ignore_submission_file(file_name):
-                    continue
-
-                with zip_ref.open(zip_item) as extracted_file:
-                    content = extracted_file.read()
-
-                    if b'\x00' in content:  # Проверяем, является ли файл бинарным
-                        file_info.append({
-                            "name": file_name,
-                            "content": f"Файл размером {len(content)} байт.",
-                            "is-binary": True
-                        })
-                    else:
-                        file_info.append({
-                            "name": file_name,
-                            "content": content.decode(errors='replace'),
-                            "is-binary": False
-                        })
-
-            return json.dumps(file_info, ensure_ascii=False)
-    except Exception as e:
-        print(e)
-        return None
-
-
 def extract_code_from_ipynb(file_content):
     try:
         notebook = json.loads(file_content)
@@ -713,20 +677,6 @@ def extract_code_from_ipynb(file_content):
         return combined_code.strip()
     except Exception as e:
         return str(e)
-
-
-def rebuild_zip(code):
-    memory_file = io.BytesIO()
-    with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zipf:
-        for f in json.loads(code.code):
-            if f.get("is-binary") or (
-                    "is-binary" not in f and re.fullmatch(r"Файл размером \d+ байт\.", f["content"].strip())):
-                continue
-            zipf.writestr(f["name"], f["content"])
-
-    memory_file.seek(0)
-
-    return memory_file.read()
 
 
 def generate_jwt(user_id, task_id):

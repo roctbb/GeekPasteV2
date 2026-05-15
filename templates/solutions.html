@@ -84,13 +84,17 @@
                                 </a>
                             {% endif %}
                             {% if not code.viewed_by_teacher %}
-                                <a href="/solutions/mark_viewed/{{ code.id }}" class="btn btn-outline-success btn-sm">
-                                    <i class="fas fa-check"></i> Просмотрено
-                                </a>
+                                <form method="POST" action="/solutions/mark_viewed/{{ code.id }}" class="d-inline">
+                                    <button class="btn btn-outline-success btn-sm">
+                                        <i class="fas fa-check"></i> Просмотрено
+                                    </button>
+                                </form>
                             {% else %}
-                                <a href="/solutions/mark_unviewed/{{ code.id }}" class="btn btn-outline-secondary btn-sm">
-                                    <i class="fas fa-undo"></i>
-                                </a>
+                                <form method="POST" action="/solutions/mark_unviewed/{{ code.id }}" class="d-inline">
+                                    <button class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-undo"></i>
+                                    </button>
+                                </form>
                             {% endif %}
                         </div>
                     </div>

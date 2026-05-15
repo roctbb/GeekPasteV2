@@ -6,7 +6,31 @@ AI/LLM Usage Detection Module
 
 import re
 import ast
+import json
 from datetime import datetime, timedelta
+
+
+def _zip_parts_from_json(code):
+    parts = json.loads(code or "[]")
+    if not isinstance(parts, list):
+        return []
+    return [part for part in parts if isinstance(part, dict)]
+
+
+def _visible_zip_parts_length(code):
+    return sum(
+        len(part.get('content') or '')
+        for part in _zip_parts_from_json(code)
+        if not part.get('is-binary')
+    )
+
+
+def _zip_parts_text(code):
+    return '\n\n'.join(
+        part.get('content') or ''
+        for part in _zip_parts_from_json(code)
+        if not part.get('is-binary')
+    )
 
 
 def check_rapid_progression(user_id, task_id, current_code_length, db_session):
@@ -31,7 +55,7 @@ def check_rapid_progression(user_id, task_id, current_code_length, db_session):
         prev_submission = recent_submissions[1]
 
         try:
-            prev_length = len(prev_submission.code) if prev_submission.lang != 'zip' else sum(len(part['content']) for part in eval(prev_submission.code) if not part.get('is-binary'))
+            prev_length = len(prev_submission.code) if prev_submission.lang != 'zip' else _visible_zip_parts_length(prev_submission.code)
         except:
             prev_length = len(prev_submission.code)
 
@@ -203,7 +227,7 @@ def analyze_code_for_ai_usage(code, lang, user_id=None, task_id=None, db_session
     # Проверка быстрого прироста кода (если есть данные о пользователе)
     if user_id and task_id and db_session:
         try:
-            code_length = len(code) if lang != 'zip' else sum(len(part['content']) for part in eval(code) if not part.get('is-binary'))
+            code_length = len(code) if lang != 'zip' else _visible_zip_parts_length(code)
         except:
             code_length = len(code)
 
@@ -215,8 +239,7 @@ def analyze_code_for_ai_usage(code, lang, user_id=None, task_id=None, db_session
     code_text = code
     if lang == 'zip':
         try:
-            parts = eval(code)
-            code_text = '\n\n'.join([part['content'] for part in parts if not part.get('is-binary')])
+            code_text = _zip_parts_text(code)
         except:
             pass
     elif lang == 'ipynb':
