@@ -8,6 +8,7 @@ import checker
 from config import *
 from methods import *
 from manage import app, socketio, redis_client
+from similarity_candidates import similarity_candidates_query
 from datetime import datetime
 
 celery = Celery('app', broker=CELERY_BROKER)
@@ -103,6 +104,7 @@ def _notify_integrity_update(code):
     except Exception as e:
         app.logger.warning("integrity_callback_failed code_id=%s error=%s", getattr(code, 'id', None), str(e))
 
+
 @celery.task()
 def save_similarities(id):
     with app.app_context():
@@ -132,7 +134,7 @@ def save_similarities(id):
             return
 
         # Use yield_per to avoid loading all records into memory at once
-        query = Code.query.filter(Code.user_id.isnot(None), Code.user_id != code.user_id)
+        query = similarity_candidates_query(code)
 
         current_code = raw_code
         if code.lang == 'ipynb':
