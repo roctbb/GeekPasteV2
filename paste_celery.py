@@ -347,7 +347,7 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
 
             elif check_type == 'gpt':
                 from methods import get_payload, parse_gpt_answer
-                from config import GPT_KEY, GPT_GATEWAY, GPT_MODEL
+                from config import GPT_KEY, GPT_GATEWAY, GPT_MODEL, GPT_MAX_OUTPUT_TOKENS
                 raw_task_text = task_text or ''
                 raw_answer_text = check_config.get('answer', '')
                 raw_prompt_extra = check_config.get('prompt', '')
@@ -365,7 +365,14 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
                 )
                 context = get_payload(task_text_limited + ('\n\nЭталонный ответ: ' + answer_text if answer_text else '') + ('\n\n' + prompt_extra if prompt_extra else ''), code, max_points, lang)
                 input_messages = [{"role": m["role"], "content": m["content"]} for m in context]
-                resp = requests.post(GPT_GATEWAY, json={"token": GPT_KEY, "model": GPT_MODEL, "input": input_messages}, timeout=180)
+                resp = requests.post(GPT_GATEWAY, json={
+                    "token": GPT_KEY,
+                    "model": GPT_MODEL,
+                    "input": input_messages,
+                    "params": {
+                        "max_output_tokens": GPT_MAX_OUTPUT_TOKENS,
+                    },
+                }, timeout=180)
                 resp.raise_for_status()
                 resp_data = resp.json()
                 if isinstance(resp_data, dict) and resp_data.get('error'):

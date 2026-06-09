@@ -530,6 +530,9 @@ def check_task_with_gpt(task, code):
         "token": GPT_KEY,
         "model": model,
         "input": input_messages,
+        "params": {
+            "max_output_tokens": GPT_MAX_OUTPUT_TOKENS,
+        },
     }
 
     try:
