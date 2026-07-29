@@ -1,10 +1,21 @@
-import subprocess
+import base64
 import os
-import sys
-import uuid
-import shutil
 import importlib
+import shutil
+import subprocess
+import sys
+import textwrap
+import threading
+import uuid
+
 from config import IGNORED_PARTS
+
+
+PROBE_OUTPUT_LIMIT = 100 * 1024
+PROBE_PAYLOAD_LIMIT = 100 * 1024
+_PROBE_PROTOCOL_LIMIT = 256 * 1024
+EXECUTION_CAPTURE_LIMIT = 100 * 1024
+ISOLATED_CONTROLLER_CAPTURE_LIMIT = 256 * 1024
 
 
 class ExecutionException(Exception):
@@ -15,8 +26,376 @@ class SolutionException(Exception):
     pass
 
 
+_ISOLATED_PROBE_CHILD = r"""
+import base64
+import builtins
+import io
+import json
+import math
+import os
+import resource
+import sys
+import tempfile
+
+OUTPUT_LIMIT = 100 * 1024
+PAYLOAD_LIMIT = 100 * 1024
+PROTOCOL_FD = os.dup(sys.stdout.fileno())
+PROTOCOL_INPUT = sys.stdin.buffer
+
+
+def send_frame(value):
+    encoded = json.dumps(
+        value,
+        ensure_ascii=False,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    os.write(PROTOCOL_FD, encoded + b"\n")
+
+
+def safe_error(error):
+    return type(error).__name__
+
+
+def bounded_jsonable(value, budget, depth=0):
+    if depth > 20:
+        raise ValueError("payload is nested too deeply")
+    if value is None or isinstance(value, (bool, int)):
+        budget[0] -= 8
+        return value
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError("non-finite number in payload")
+        budget[0] -= 24
+        return value
+    if isinstance(value, str):
+        budget[0] -= len(value.encode("utf-8")) + 2
+        if budget[0] < 0:
+            raise ValueError("payload is too large")
+        return value
+    if isinstance(value, (list, tuple)):
+        if len(value) > 4096:
+            raise ValueError("payload has too many items")
+        result = []
+        for item in value:
+            budget[0] -= 1
+            result.append(bounded_jsonable(item, budget, depth + 1))
+        return result
+    if isinstance(value, dict):
+        if len(value) > 4096:
+            raise ValueError("payload has too many items")
+        result = {}
+        for key, item in value.items():
+            if not isinstance(key, (str, int, float, bool)) and key is not None:
+                raise ValueError("payload has an unsupported key")
+            safe_key = str(key)
+            budget[0] -= len(safe_key.encode("utf-8")) + 2
+            result[safe_key] = bounded_jsonable(item, budget, depth + 1)
+        return result
+    raise ValueError("payload contains an unsupported value")
+
+
+def read_frame():
+    raw = PROTOCOL_INPUT.readline(256 * 1024 + 1)
+    if not raw or len(raw) > 256 * 1024:
+        raise ValueError("invalid controller frame")
+    return json.loads(raw)
+
+
+capture = tempfile.TemporaryFile(mode="w+b")
+os.dup2(capture.fileno(), sys.stdout.fileno())
+os.dup2(capture.fileno(), sys.stderr.fileno())
+sys.stdout = io.TextIOWrapper(
+    os.fdopen(os.dup(1), "wb", closefd=True),
+    encoding="utf-8",
+    errors="replace",
+    write_through=True,
+)
+sys.stderr = io.TextIOWrapper(
+    os.fdopen(os.dup(2), "wb", closefd=True),
+    encoding="utf-8",
+    errors="replace",
+    write_through=True,
+)
+
+try:
+    soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_FSIZE)
+    file_limit = OUTPUT_LIMIT + 1
+    if hard_limit != resource.RLIM_INFINITY:
+        file_limit = min(file_limit, hard_limit)
+    resource.setrlimit(resource.RLIMIT_FSIZE, (file_limit, hard_limit))
+except (OSError, ValueError):
+    pass
+
+try:
+    initial = read_frame()
+    source = base64.b64decode(initial["source"], validate=True).decode("utf-8")
+    input_data = base64.b64decode(
+        initial.get("input", ""),
+        validate=True,
+    ).decode("utf-8")
+    namespace = {
+        "__name__": "__student__",
+        "__builtins__": builtins.__dict__,
+    }
+    sys.stdin = io.StringIO(input_data)
+    exec(compile(source, "<student>", "exec"), namespace, namespace)
+except BaseException as error:
+    send_frame({"type": "load_error", "error": safe_error(error)})
+    raise SystemExit(0)
+
+send_frame({"type": "ready"})
+
+try:
+    command = read_frame()
+    nonce = command["nonce"]
+    probe = base64.b64decode(command["probe"], validate=True).decode("utf-8")
+    namespace["__gc_json"] = json
+    try:
+        exec(compile(probe, "<trusted-probe>", "exec"), namespace, namespace)
+        payload = namespace.get(
+            "__gc_payload",
+            {"__error__": "проверочный сценарий не вернул результат"},
+        )
+    except BaseException as error:
+        payload = {"__error__": safe_error(error)}
+
+    try:
+        payload = bounded_jsonable(payload, [PAYLOAD_LIMIT])
+    except (TypeError, ValueError):
+        payload = {"__error__": "ответ проверочного сценария слишком велик"}
+
+    try:
+        sys.stdout.flush()
+        sys.stderr.flush()
+    except BaseException:
+        pass
+    capture.seek(0)
+    output_bytes = capture.read(OUTPUT_LIMIT + 1)
+    output_truncated = len(output_bytes) > OUTPUT_LIMIT
+    output = output_bytes[:OUTPUT_LIMIT].decode("utf-8", errors="replace")
+    if output_truncated:
+        payload = {"__error__": "вывод программы превышает 100 КиБ"}
+
+    send_frame(
+        {
+            "type": "result",
+            "nonce": nonce,
+            "output_b64": base64.b64encode(
+                output.encode("utf-8")
+            ).decode("ascii"),
+            "payload": payload,
+        }
+    )
+except BaseException as error:
+    send_frame({"type": "driver_error", "error": safe_error(error)})
+"""
+
+
+def build_isolated_probe_controller(source_code, probe_source, input_data=""):
+    encoded_source = base64.b64encode(source_code.encode("utf-8")).decode("ascii")
+    encoded_probe = base64.b64encode(probe_source.encode("utf-8")).decode("ascii")
+    encoded_input = base64.b64encode(input_data.encode("utf-8")).decode("ascii")
+    child_literal = repr(textwrap.dedent(_ISOLATED_PROBE_CHILD))
+
+    return f"""
+import base64
+import json
+import secrets
+import subprocess
+import sys
+
+CHILD_SOURCE = {child_literal}
+INITIAL_FRAME = {{
+    "source": {encoded_source!r},
+    "input": {encoded_input!r},
+}}
+PROBE = {encoded_probe!r}
+FRAME_LIMIT = {_PROBE_PROTOCOL_LIMIT}
+OUTPUT_LIMIT = {PROBE_OUTPUT_LIMIT}
+PAYLOAD_LIMIT = {PROBE_PAYLOAD_LIMIT}
+
+
+def emit(value):
+    print(json.dumps(value, ensure_ascii=False, separators=(",", ":")))
+
+
+def read_frame(stream):
+    raw = stream.readline(FRAME_LIMIT + 1)
+    if not raw or len(raw) > FRAME_LIMIT:
+        raise ValueError("invalid child frame")
+    return json.loads(raw)
+
+
+process = subprocess.Popen(
+    [sys.executable, "-I", "-B", "-u", "-c", CHILD_SOURCE],
+    stdin=subprocess.PIPE,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+)
+
+try:
+    process.stdin.write(
+        json.dumps(INITIAL_FRAME, separators=(",", ":")).encode("utf-8") + b"\\n"
+    )
+    process.stdin.flush()
+    ready = read_frame(process.stdout)
+    if ready != {{"type": "ready"}}:
+        raise ValueError("student source did not become ready")
+
+    nonce = secrets.token_hex(32)
+    command = {{"nonce": nonce, "probe": PROBE}}
+    process.stdin.write(
+        json.dumps(command, separators=(",", ":")).encode("utf-8") + b"\\n"
+    )
+    process.stdin.close()
+
+    frames = []
+    while True:
+        raw = process.stdout.readline(FRAME_LIMIT + 1)
+        if not raw:
+            break
+        if len(raw) > FRAME_LIMIT:
+            frames.append(None)
+            break
+        try:
+            frames.append(json.loads(raw))
+        except json.JSONDecodeError:
+            frames.append(None)
+
+    stderr = process.stderr.read(4097)
+    return_code = process.wait()
+    valid = (
+        return_code == 0
+        and not stderr
+        and len(frames) == 1
+        and isinstance(frames[0], dict)
+        and frames[0].get("type") == "result"
+        and secrets.compare_digest(str(frames[0].get("nonce", "")), nonce)
+        and isinstance(frames[0].get("output_b64"), str)
+        and isinstance(frames[0].get("payload"), dict)
+    )
+    if not valid:
+        emit({{"ok": False, "error": "student protocol validation failed"}})
+    else:
+        try:
+            encoded_output = base64.b64decode(
+                frames[0]["output_b64"],
+                validate=True,
+            )
+        except (ValueError, TypeError):
+            encoded_output = b""
+            valid = False
+        encoded_payload = json.dumps(
+            frames[0]["payload"],
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        if (
+            not valid
+            or len(encoded_output) > OUTPUT_LIMIT
+            or len(encoded_payload) > PAYLOAD_LIMIT
+        ):
+            emit({{"ok": False, "error": "student result exceeds the limit"}})
+        else:
+            emit(
+                {{
+                    "ok": True,
+                    "output_b64": frames[0]["output_b64"],
+                    "payload": frames[0]["payload"],
+                }}
+            )
+except BaseException:
+    if process.poll() is None:
+        process.kill()
+    process.wait()
+    emit({{"ok": False, "error": "isolated probe failed"}})
+"""
+
+
+def _run_process_bounded(command, input_bytes, timeout, capture_limit):
+    process = subprocess.Popen(
+        command,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    stdout = bytearray()
+    stderr = bytearray()
+    overflow = threading.Event()
+
+    def drain(stream, destination):
+        while True:
+            chunk = stream.read(8192)
+            if not chunk:
+                return
+            remaining = capture_limit - len(destination)
+            if remaining > 0:
+                destination.extend(chunk[:remaining])
+            if len(chunk) > remaining:
+                overflow.set()
+                try:
+                    process.kill()
+                except OSError:
+                    pass
+
+    def write_input():
+        try:
+            if input_bytes:
+                process.stdin.write(input_bytes)
+                process.stdin.flush()
+        except (BrokenPipeError, OSError):
+            pass
+        finally:
+            try:
+                process.stdin.close()
+            except OSError:
+                pass
+
+    readers = [
+        threading.Thread(
+            target=drain,
+            args=(process.stdout, stdout),
+            daemon=True,
+        ),
+        threading.Thread(
+            target=drain,
+            args=(process.stderr, stderr),
+            daemon=True,
+        ),
+    ]
+    writer = threading.Thread(target=write_input, daemon=True)
+    for thread in readers:
+        thread.start()
+    writer.start()
+
+    try:
+        return_code = process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired as error:
+        process.kill()
+        process.wait()
+        for thread in readers:
+            thread.join()
+        writer.join()
+        process.stdout.close()
+        process.stderr.close()
+        raise subprocess.TimeoutExpired(
+            command,
+            timeout,
+            output=bytes(stdout),
+            stderr=bytes(stderr),
+        ) from error
+
+    for thread in readers:
+        thread.join()
+    writer.join()
+    process.stdout.close()
+    process.stderr.close()
+    return return_code, bytes(stdout), bytes(stderr), overflow.is_set()
+
+
 class ExecutionContainer:
     _docker_checked = False
+    _harness_docker_timeout = 10
 
     def __init__(self, language, template_path, code):
         try:
@@ -139,7 +518,7 @@ class ExecutionContainer:
             elif self._docker_transfer_mode != "bind":
                 raise ExecutionException(f"Unsupported DOCKER_TRANSFER_MODE: {self._docker_transfer_mode}")
 
-        except Exception as e:
+        except Exception:
             raise ExecutionException("Error creating container.")
 
         return container_id
@@ -158,7 +537,7 @@ class ExecutionContainer:
                 )
 
             if self.language == "cpp":
-                compile_command = f"g++ /code/script.cpp -o /code/program"
+                compile_command = "g++ /code/script.cpp -o /code/program"
                 compile_result = subprocess.run(
                     ["docker", "exec", self.container_id, "bash", "-c", compile_command],
                     stdout=subprocess.PIPE, stderr=subprocess.PIPE
@@ -176,25 +555,156 @@ class ExecutionContainer:
 
     def run(self, input_data, time_limit=1):
         if self.language == "python":
-            exec_command = f"cd /code && python3 script.py"
+            exec_command = "cd /code && python3 script.py"
         else:
-            exec_command = f"cd /code && ./program"
+            exec_command = "cd /code && ./program"
+
+        return self._run_command(exec_command, input_data, time_limit)
+
+    def run_source(
+        self,
+        source_code,
+        input_data="",
+        time_limit=1,
+        probe_source=None,
+    ):
+        if self.language != "python":
+            raise ExecutionException("Test harnesses are supported only for Python tasks.")
+
+        command_input = input_data
+        if probe_source is not None:
+            source_code = build_isolated_probe_controller(
+                source_code,
+                probe_source,
+                input_data,
+            )
+            command_input = ""
+
+        filename = f"__geekpaste_test_{uuid.uuid4().hex}.py"
+        local_path = os.path.join(self.path, filename)
+        container_path = f"/code/{filename}"
 
         try:
-            exec_result = subprocess.run(
-                ["docker", "exec", "-i", self.container_id, "bash", "-c", exec_command],
-                input=input_data.encode(),
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                timeout=time_limit
+            with open(local_path, "w", encoding="utf-8") as file:
+                file.write(source_code)
+
+            if self._docker_transfer_mode == "cp":
+                try:
+                    subprocess.run(
+                        [
+                            "docker",
+                            "cp",
+                            local_path,
+                            f"{self.container_id}:{container_path}",
+                        ],
+                        check=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        timeout=self._harness_docker_timeout,
+                    )
+                except (OSError, subprocess.SubprocessError) as error:
+                    raise ExecutionException(
+                        "Error transferring the isolated test harness."
+                    ) from error
+
+            command = f"cd /code && python3 {filename}"
+            if probe_source is None:
+                return self._run_command(command, command_input, time_limit)
+            return self._run_command(
+                command,
+                command_input,
+                time_limit,
+                system_on_nonzero=True,
+                capture_limit=ISOLATED_CONTROLLER_CAPTURE_LIMIT,
             )
-            if exec_result.returncode != 0:
-                raise SolutionException(f"Runtime error: {exec_result.stderr.decode()}")
-            return exec_result.stdout.decode()
+        finally:
+            try:
+                os.remove(local_path)
+            except FileNotFoundError:
+                pass
+
+            if self._docker_transfer_mode == "cp" and self.container_id:
+                try:
+                    subprocess.run(
+                        ["docker", "exec", self.container_id, "rm", "-f", container_path],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        timeout=self._harness_docker_timeout,
+                    )
+                except (OSError, subprocess.SubprocessError):
+                    # The execution container itself is removed immediately after
+                    # checking, so a failed best-effort file cleanup is harmless.
+                    pass
+
+    def _run_command(
+        self,
+        exec_command,
+        input_data,
+        time_limit,
+        system_on_nonzero=False,
+        capture_limit=EXECUTION_CAPTURE_LIMIT,
+    ):
+        try:
+            command = [
+                "docker",
+                "exec",
+                "-i",
+                self.container_id,
+                "bash",
+                "-c",
+                exec_command,
+            ]
+            return_code, stdout, stderr, overflow = _run_process_bounded(
+                command,
+                input_data.encode(),
+                time_limit,
+                capture_limit,
+            )
+            if overflow:
+                raise SolutionException(
+                    f"Output limit exceeded ({capture_limit} bytes)."
+                )
+            if return_code != 0:
+                exception_type = (
+                    ExecutionException
+                    if system_on_nonzero
+                    else SolutionException
+                )
+                raise exception_type(
+                    f"Runtime error: {stderr.decode(errors='replace')}"
+                )
+            return stdout.decode(errors="replace")
 
         except subprocess.TimeoutExpired:
-            raise SolutionException(f"Test failed: Execution timed out after {time_limit} seconds.")
-        except subprocess.CalledProcessError as e:
-            raise SolutionException(f"Error occurred: {e}")
+            raise SolutionException(
+                f"Test failed: Execution timed out after {time_limit} seconds."
+            ) from None
+        except OSError as error:
+            raise ExecutionException(
+                "Error starting the execution process."
+            ) from error
+
+
+class TestRunner:
+    def __init__(self, container):
+        self.container = container
+
+    def __call__(self, input_data, time_limit=1):
+        return self.container.run(input_data, time_limit)
+
+    def run_source(
+        self,
+        source_code,
+        input_data="",
+        time_limit=1,
+        probe_source=None,
+    ):
+        return self.container.run_source(
+            source_code,
+            input_data,
+            time_limit,
+            probe_source,
+        )
 
 
 class BrainfuckExecutor:
@@ -300,7 +810,7 @@ class TestExecutor:
 
         try:
             os.chdir(self.container.path)
-            result = perform_tests(self.container.run, self.code.code)
+            result = perform_tests(TestRunner(self.container), self.code.code)
             os.chdir(self.original_path)
             return result
         except SolutionException as e:

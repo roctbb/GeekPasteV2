@@ -17,6 +17,7 @@ from runner import TestExecutor, SolutionException, ExecutionException
 from submission_archive import extract_data_from_zipfile, rebuild_zip
 from telegram_notifier import send_telegram_message
 from ai_detector import analyze_code_for_ai_usage, get_ai_detection_prompt_addition
+from score_policy import normalize_test_points
 
 
 def create_id():
@@ -398,12 +399,10 @@ def check_task_with_tests(task, code):
     try:
         with TestExecutor(code) as executor:
             points, comments = executor.perform()
+            points = normalize_test_points(task.id, points)
 
             if points > task.points:
                 raise ExecutionException("Too much points")
-
-            if not points:
-                points = 1
 
             code.check_points = points
             code.check_comments = comments
@@ -437,7 +436,7 @@ def check_task_with_tests(task, code):
         except Exception:
             pass
     except SolutionException as e:
-        code.check_points = 1
+        code.check_points = normalize_test_points(task.id, 0)
         code.check_state = 'solution error'
         code.check_comments = str(e)
 
