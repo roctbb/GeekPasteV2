@@ -30,7 +30,21 @@
                     {% elif prefered_lang == 'zip' %}
                         <div class="form-group me-2">
                             <label for="file" class="text-muted mb-2">Архив с кодом</label>
-                            <input class="form-control" type="file" name="file" accept=".zip"></input>
+                            <input class="form-control" type="file" name="file" accept=".zip" required>
+                        </div>
+                    {% elif task and prefered_lang == 'image' %}
+                        <input type="hidden" name="lang" value="image"/>
+                        <div class="form-group me-2">
+                            <label for="file" class="text-muted mb-2">Изображение решения</label>
+                            <input class="form-control"
+                                   id="file"
+                                   type="file"
+                                   name="file"
+                                   accept="image/jpeg,image/png,image/webp,image/gif"
+                                   required>
+                            <div class="small text-muted mt-1">
+                                JPEG, PNG, WebP или GIF, до 10 МБ. Изображение будет проверено нейросетью.
+                            </div>
                         </div>
                     {% elif task and prefered_lang == 'github' %}
                         <input type="hidden" name="lang" value="github"/>
@@ -87,7 +101,7 @@
 
                     {% endif %}
 
-                    <button type="submit" class="btn btn-primary mt-2">Сохранить</button>
+                    <button type="submit" class="btn btn-primary mt-2">Отправить решение</button>
                 </form>
             </div>
         </div>

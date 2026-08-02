@@ -113,6 +113,19 @@ def save_similarities(id):
         if not code or not code.user_id or code.similarity_checked:
             return
 
+        if code.lang == 'image':
+            code.similarity_checked = True
+            db.session.commit()
+            _push_system_check_event('similarity_check', {
+                'status': 'skipped_image',
+                'code_id': code.id,
+                'task_id': code.task_id,
+                'user_id': code.user_id,
+            })
+            _notify_integrity_update(code)
+            db.session.expire_all()
+            return
+
         if code.task and code.task.bypass_similarity_check:
             return
 

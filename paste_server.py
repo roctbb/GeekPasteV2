@@ -11,7 +11,8 @@ from methods import *
 from manage import *
 from datetime import datetime, timedelta
 import jwt
-from config import USER_URL, TASK_URL, AUTH_URL, DEFAULT_GPT_RATE_LIMIT, LANGS, JWT_SECRET, SOLUTIONS_API_KEY
+from config import USER_URL, TASK_URL, AUTH_URL, DEFAULT_GPT_RATE_LIMIT, LANGS, SPECIAL_SUBMISSION_LANGS, JWT_SECRET, SOLUTIONS_API_KEY, MAX_IMAGE_SUBMISSION_BYTES
+from image_submission import ImageSubmissionError, create_image_submission, parse_image_submission
 from urllib.parse import quote
 from sqlalchemy import or_
 
@@ -145,10 +146,21 @@ def submit():
         if not task:
             abort(404)
 
-    if 'file' in request.files:
+    if 'file' in request.files and request.files['file'].filename:
         file = request.files['file']
 
-        if file.filename.endswith('.zip'):
+        if task and task.lang == 'image':
+            if task.check_type != 'gpt':
+                flash("Изображения можно проверять только через GPT.", "danger")
+                return _return_to_submit_form(default_lang='image')
+            try:
+                content = file.read(MAX_IMAGE_SUBMISSION_BYTES + 1)
+                code = create_image_submission(file.filename, content, MAX_IMAGE_SUBMISSION_BYTES)
+            except ImageSubmissionError as e:
+                flash(str(e), "danger")
+                return _return_to_submit_form(default_lang='image')
+            lang = 'image'
+        elif file.filename.lower().endswith('.zip'):
             lang = "zip"
             content = file.read()
             zip_content = content
@@ -162,8 +174,12 @@ def submit():
                 flash("Не удалось прочитать архив.", "danger")
                 return _return_to_submit_form(default_lang='zip')
 
-        if file.filename.endswith('.ipynb'):
-            code = file.read().decode('utf-8')
+        elif file.filename.lower().endswith('.ipynb'):
+            try:
+                code = file.read().decode('utf-8')
+            except UnicodeDecodeError:
+                flash("Не удалось прочитать файл .ipynb в кодировке UTF-8.", "danger")
+                return _return_to_submit_form(default_lang='ipynb')
             lang = "ipynb"
 
     if github_repo_url:
@@ -186,11 +202,15 @@ def submit():
         flash("Для этой задачи нужно отправить ссылку на GitHub-репозиторий.", "danger")
         return _return_to_submit_form(default_lang='github')
 
+    if task and task.lang == 'image' and lang != 'image':
+        flash("Для этой задачи нужно прикрепить изображение решения.", "danger")
+        return _return_to_submit_form(default_lang='image')
+
     if not code or not str(code).strip():
         flash("Введите код.", "danger")
         return _return_to_submit_form()
 
-    if not lang or lang not in LANGS + ['ipynb', 'zip', 'github']:
+    if not lang or lang not in LANGS + SPECIAL_SUBMISSION_LANGS:
         flash("Выберите язык.", "danger")
         return _return_to_submit_form()
 
@@ -527,6 +547,13 @@ def _submission_to_diff_text(code):
         extracted_code = extract_code_from_ipynb(raw_code)
         return extracted_code or raw_code
 
+    if code.lang == 'image':
+        try:
+            image = parse_image_submission(raw_code)
+            return f"[IMAGE: {image['filename']} ({image['mime_type']}, {len(image['data'])} bytes)]"
+        except ImageSubmissionError:
+            return '[BROKEN IMAGE SUBMISSION]'
+
     return raw_code
 
 
@@ -786,6 +813,7 @@ def index():
             compare_attempt = None
             attempts_diff = None
             github_meta = None
+            image_meta = None
             if session.get('user_id') and is_teacher():
                 all_similarities = code.get_similar_codes_sorted()
                 similarities_total = len(all_similarities)
@@ -815,6 +843,15 @@ def index():
                     }
                 except Exception:
                     pass
+            elif code.lang == 'image':
+                try:
+                    parsed_image = parse_image_submission(code.code)
+                    image_meta = {
+                        'filename': parsed_image['filename'],
+                        'mime_type': parsed_image['mime_type'],
+                    }
+                except ImageSubmissionError:
+                    image_meta = None
 
             return render_template(
                 'code.html',
@@ -826,6 +863,7 @@ def index():
                 compare_attempt=compare_attempt,
                 attempts_diff=attempts_diff,
                 github_meta=github_meta,
+                image_meta=image_meta,
                 similarities_page=similarities_page,
                 similarities_has_prev=similarities_has_prev,
                 similarities_has_next=similarities_has_next,
@@ -897,6 +935,39 @@ def download_archive():
             return response
 
     return redirect('/')
+
+
+@app.route('/image')
+def image_submission():
+    token = request.args.get('token')
+    if token:
+        try:
+            make_jwt_auth(token)
+            return redirect(url_for(request.endpoint, **{k: v for k, v in request.args.items() if k != 'token'}))
+        except Exception:
+            pass
+
+    code = get_code(request.args.get('id'))
+    if not code or code.lang != 'image':
+        abort(404)
+    if not code.available_without_auth and not session.get('user_id'):
+        redirect_url = request.url if request.url.startswith('https://') else request.url.replace('http://', 'https://')
+        return redirect(AUTH_URL + quote(redirect_url, safe=''))
+    if code.task and not code.available_without_auth and not (is_teacher() or is_author(code)):
+        abort(403)
+
+    try:
+        image = parse_image_submission(code.code)
+    except ImageSubmissionError:
+        abort(404)
+
+    return send_file(
+        BytesIO(image['data']),
+        mimetype=image['mime_type'],
+        as_attachment=request.args.get('download') == '1',
+        download_name=image['filename'],
+        max_age=3600,
+    )
 
 
 @app.route('/raw', methods=['GET'])
@@ -1480,7 +1551,7 @@ def _fill_task(task):
     task.name = request.form.get('name') or None
     task.lang = request.form.get('lang') or None
     task.points = int(request.form['points']) if request.form.get('points') else None
-    task.check_type = request.form.get('check_type') or 'tests'
+    task.check_type = 'gpt' if task.lang == 'image' else (request.form.get('check_type') or 'tests')
     task.text = request.form.get('text') or None
     task.gpt_model = request.form.get('gpt_model') or None
     task.gpt_rate_limit = int(request.form['gpt_rate_limit']) if request.form.get('gpt_rate_limit') else None

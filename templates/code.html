@@ -3,13 +3,19 @@
     <div class="card flat-card shadow-soft">
         <div class="code-toolbar">
             <div class="code-toolbar-main">
-                <button class="btn btn-flat btn-success btn-sm" id="copy-code" data-clipboard-target="#code"
-                        data-bs-toggle="popover" data-bs-placement="right" data-bs-content="Скопировано">
-                    Копировать код
-                </button>
-                <a href="/raw?id={{ code.id }}" class="btn btn-flat btn-light btn-sm mt-0">
-                    Чистый
-                </a>
+                {% if code.lang != 'image' %}
+                    <button class="btn btn-flat btn-success btn-sm" id="copy-code" data-clipboard-target="#code"
+                            data-bs-toggle="popover" data-bs-placement="right" data-bs-content="Скопировано">
+                        Копировать код
+                    </button>
+                    <a href="/raw?id={{ code.id }}" class="btn btn-flat btn-light btn-sm mt-0">
+                        Чистый
+                    </a>
+                {% elif image_meta %}
+                    <a href="/image?id={{ code.id }}&download=1" class="btn btn-flat btn-light btn-sm mt-0">
+                        <i class="fas fa-download"></i> Скачать изображение
+                    </a>
+                {% endif %}
                 {% if code.lang == 'zip' %}
                     <a href="/zip?id={{ code.id }}" class="btn btn-flat btn-light btn-sm mt-0">
                         ZIP
@@ -74,7 +80,19 @@
             </div>
         </div>
 
-        {% if code.lang == 'ipynb' %}
+        {% if code.lang == 'image' %}
+            {% if image_meta %}
+                <div class="p-3 text-center border-top">
+                    <img src="/image?id={{ code.id }}"
+                         alt="{{ image_meta.filename }}"
+                         class="img-fluid rounded"
+                         style="max-height: 80vh; object-fit: contain;">
+                    <div class="small text-muted mt-2">{{ image_meta.filename }}</div>
+                </div>
+            {% else %}
+                <div class="alert alert-danger m-3">Не удалось прочитать прикреплённое изображение.</div>
+            {% endif %}
+        {% elif code.lang == 'ipynb' %}
             <div id="code"></div>
         {% elif code.lang == 'zip' or code.lang == 'github' %}
             {% if code.lang == 'github' and github_meta %}

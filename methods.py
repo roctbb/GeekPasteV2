@@ -18,6 +18,7 @@ from submission_archive import extract_data_from_zipfile, rebuild_zip
 from telegram_notifier import send_telegram_message
 from ai_detector import analyze_code_for_ai_usage, get_ai_detection_prompt_addition
 from score_policy import normalize_test_points
+from image_submission import parse_image_submission
 
 
 def create_id():
@@ -441,10 +442,13 @@ def check_task_with_tests(task, code):
         code.check_comments = str(e)
 
 
-def get_payload(task_text, solution_text, max_points, lang=None, check_ai=False):
-    prompt = f"Твоя задача оценить решение задачи по программированию. Оценивай только работоспособность, а не качество кода (если это отдельно не требуется в задаче). Максимальный балл - {max_points}. Если код не запускается или не компилируется, или завершается с ошибкой, ставь 0. Количество баллов кратно 5, если иного не указано в задаче. На первой строке ответа напиши количество баллов числом. Далее - свой подробный комментарий по критериям на русском языке."
+def get_payload(task_text, solution_text, max_points, lang=None, check_ai=False, solution_kind='code'):
+    if solution_kind == 'image':
+        prompt = f"Твоя задача оценить решение задачи, представленное учеником на изображении. Внимательно изучи всё изображение и проверь решение по условию и указанным в нём критериям. Максимальный балл - {max_points}. На первой строке ответа напиши количество баллов числом. Далее - свой подробный комментарий по критериям на русском языке. Если изображение нечитаемо, не содержит решения или по нему нельзя надёжно проверить ответ, поставь 0 и объясни причину."
+    else:
+        prompt = f"Твоя задача оценить решение задачи по программированию. Оценивай только работоспособность, а не качество кода (если это отдельно не требуется в задаче). Максимальный балл - {max_points}. Если код не запускается или не компилируется, или завершается с ошибкой, ставь 0. Количество баллов кратно 5, если иного не указано в задаче. На первой строке ответа напиши количество баллов числом. Далее - свой подробный комментарий по критериям на русском языке."
     if lang and lang != 'zip' and lang != 'ipynb':
-        prompt += "Код должен быть написан на языке {lang}."
+        prompt += f" Код должен быть написан на языке {lang}."
 
     if check_ai:
         prompt += get_ai_detection_prompt_addition()
@@ -500,6 +504,7 @@ def parse_gpt_answer(answer):
 
 
 def check_task_with_gpt(task, code):
+    image_submission = None
     if code.lang == 'zip':
         student_code = '\n\n'.join([f'Файл {part["name"]}\n\n{part["content"]}' for part in json.loads(code.code)])
     elif code.lang == 'github':
@@ -514,16 +519,35 @@ def check_task_with_gpt(task, code):
             student_code = code.code
     elif code.lang == 'ipynb':
         student_code = f'Файл solution.ipynb\n\n{code.code}'
+    elif code.lang == 'image':
+        try:
+            image_submission = parse_image_submission(code.code)
+        except Exception as e:
+            code.check_points = 0
+            code.check_state = 'execution error'
+            code.check_comments = f'Не удалось прочитать изображение: {e}'
+            return
+        student_code = f"К решению прикреплено изображение {image_submission['filename']}. Проверь решение на изображении."
     else:
         student_code = code.code
 
     model = task.gpt_model or GPT_MODEL
-    context = get_payload(task.text, student_code, task.points,
-                          task.lang if task.lang not in ['zip', 'ipynb'] else None,
-                          check_ai=True)
+    context = get_payload(
+        task.text,
+        student_code,
+        task.points,
+        task.lang if task.lang not in SPECIAL_SUBMISSION_LANGS else None,
+        check_ai=code.lang != 'image',
+        solution_kind='image' if code.lang == 'image' else 'code',
+    )
 
     # Convert chat messages to responses API input format
     input_messages = [{"role": msg["role"], "content": msg["content"]} for msg in context]
+    if image_submission:
+        input_messages[-1]['content'] = [
+            {"type": "input_text", "text": input_messages[-1]['content']},
+            {"type": "input_image", "image_url": image_submission['data_url'], "detail": "high"},
+        ]
 
     payload = {
         "token": GPT_KEY,
@@ -567,7 +591,11 @@ def check_task_with_gpt(task, code):
         gpt_answer = message['content'][0]['text']
     except Exception as e:
         print(answer.content)
-        print(payload)
+        print({
+            'model': payload.get('model'),
+            'input_message_count': len(payload.get('input', [])),
+            'contains_image': bool(image_submission),
+        })
         code.check_points = 1
         code.check_state = 'execution error'
         code.check_comments = str(e)
@@ -605,7 +633,10 @@ def check_task_with_gpt(task, code):
     else:
         code.check_state = 'partially done'
 
-    # Выполняем статический анализ на использование AI
+    # Выполняем статический анализ на использование AI только для исходного кода.
+    if code.lang == 'image':
+        return
+
     try:
         ai_analysis = analyze_code_for_ai_usage(
             code.code,

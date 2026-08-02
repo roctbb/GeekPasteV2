@@ -34,7 +34,7 @@
                     <label class="form-label">Язык</label>
                     <select name="lang" class="form-select form-select-sm">
                         <option value="">—</option>
-                        {% for l in langs + ['zip', 'ipynb', 'github'] %}
+                        {% for l in langs + ['zip', 'ipynb', 'github', 'image'] %}
                             <option value="{{ l }}" {{ 'selected' if task and task.lang == l else '' }}>{{ l }}</option>
                         {% endfor %}
                     </select>

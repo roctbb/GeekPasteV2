@@ -10,6 +10,7 @@ def env_bool(name, default=False):
     return raw.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 LANGS = ['cpp', 'python', 'java', 'cs', 'html', 'css', 'js', 'json', 'xml', 'swift', 'php', 'sql']
+SPECIAL_SUBMISSION_LANGS = ['ipynb', 'zip', 'github', 'image']
 
 # Файлы и папки, которые не несут полезного кода ученика и только шумят
 # в просмотре, сравнении решений и GPT-проверке архивов.
@@ -72,6 +73,7 @@ GPT_MODEL = os.getenv('GPT_MODEL', 'gpt-5-mini')
 GPT_KEY = os.getenv('GPT_KEY')
 GPT_GATEWAY = os.getenv('GPT_GATEWAY', 'https://gpt-gateway.ai.medsenger.ru:4443/v1/responses')
 GPT_MAX_OUTPUT_TOKENS = max(16, int(os.getenv('GPT_MAX_OUTPUT_TOKENS', 1024)))
+MAX_IMAGE_SUBMISSION_BYTES = max(1, int(os.getenv('MAX_IMAGE_SUBMISSION_BYTES', 10 * 1024 * 1024)))
 
 # GPT Rate Limiting
 DEFAULT_GPT_RATE_LIMIT = int(os.getenv('DEFAULT_GPT_RATE_LIMIT', 3))  # посылок в час
