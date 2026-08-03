@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 from unittest import mock
@@ -123,6 +124,14 @@ class ExecutionContainerHarnessTests(unittest.TestCase):
         self.assertIn("--pids-limit", command)
         self.assertIn("--read-only", command)
         self.assertIn("/code:rw,exec,nosuid,nodev,size=128m", command)
+        transfer_command = subprocess_run.call_args_list[-1].args[0]
+        self.assertEqual(
+            transfer_command[:7],
+            ["docker", "exec", "-i", "container-id", "tar", "-xpf", "-"],
+        )
+        self.assertFalse(
+            any(call.args[0][:2] == ["docker", "cp"] for call in subprocess_run.call_args_list)
+        )
 
     def test_initial_cpp_compile_uses_the_bounded_compiler(self):
         container = object.__new__(ExecutionContainer)
@@ -289,27 +298,49 @@ class ExecutionContainerHarnessTests(unittest.TestCase):
         subprocess_run,
     ):
         bounded_run.return_value = (0, b"", b"", False)
+        observed_source = {}
+
+        def run_subprocess(command, **kwargs):
+            if command[:5] == ["docker", "exec", "-i", "container-id", "tar"]:
+                with tarfile.open(fileobj=kwargs["stdin"], mode="r:") as archive:
+                    members = archive.getmembers()
+                    self.assertEqual(len(members), 1)
+                    observed_source["name"] = members[0].name
+                    observed_source["value"] = (
+                        archive.extractfile(members[0]).read().decode("utf-8")
+                    )
+            return mock.Mock()
+
+        subprocess_run.side_effect = run_subprocess
         with tempfile.TemporaryDirectory() as directory:
             container = self._container(directory, "cp", language="cpp")
+            source = "int main() { return 0; }"
 
-            result = container.run_source("int main() { return 0; }")
+            result = container.run_source(source)
 
             self.assertEqual(result, "ok")
             compile_command = bounded_run.call_args.args[0]
             source_path = compile_command[5]
             binary_path = compile_command[7]
-            copy_call = subprocess_run.call_args_list[0]
+            transfer_call = subprocess_run.call_args_list[0]
             remove_call = subprocess_run.call_args_list[-1]
-            self.assertEqual(copy_call.args[0][:2], ["docker", "cp"])
             self.assertEqual(
-                copy_call.args[0][-1],
-                f"container-id:{source_path}",
+                transfer_call.args[0][:7],
+                ["docker", "exec", "-i", "container-id", "tar", "-xpf", "-"],
             )
             self.assertEqual(
-                copy_call.kwargs["timeout"],
+                transfer_call.args[0][-2:],
+                ["-C", "/code"],
+            )
+            self.assertEqual(
+                transfer_call.kwargs["timeout"],
                 container._harness_docker_timeout,
             )
-            self.assertFalse(os.path.exists(copy_call.args[0][2]))
+            self.assertEqual(observed_source["name"], os.path.basename(source_path))
+            self.assertEqual(observed_source["value"], source)
+            self.assertFalse(
+                os.path.exists(os.path.join(directory, os.path.basename(source_path)))
+            )
             self.assertEqual(
                 remove_call.args[0],
                 [

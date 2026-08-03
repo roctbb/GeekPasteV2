@@ -4,6 +4,8 @@ import importlib
 import shutil
 import subprocess
 import sys
+import tarfile
+import tempfile
 import textwrap
 import threading
 import uuid
@@ -538,12 +540,19 @@ class ExecutionContainer:
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE
                 )
-                subprocess.run(
-                    ["docker", "cp", f"{self.path}/.", f"{container_id}:/code"],
-                    check=True,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE
-                )
+                if self.language == "cpp":
+                    self._stream_path_into_container(
+                        container_id,
+                        self.path,
+                        "/code",
+                    )
+                else:
+                    subprocess.run(
+                        ["docker", "cp", f"{self.path}/.", f"{container_id}:/code"],
+                        check=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE
+                    )
             elif self._docker_transfer_mode != "bind":
                 raise ExecutionException(f"Unsupported DOCKER_TRANSFER_MODE: {self._docker_transfer_mode}")
 
@@ -551,6 +560,67 @@ class ExecutionContainer:
             raise ExecutionException("Error creating container.")
 
         return container_id
+
+    def _stream_path_into_container(
+        self,
+        container_id,
+        local_path,
+        container_path,
+    ):
+        """Copy trusted files into a writable mount of a read-only container.
+
+        Docker refuses ``docker cp`` whenever the container root filesystem is
+        marked read-only, even when the destination itself is a writable tmpfs.
+        Stream a locally-created archive through ``docker exec`` instead; tar
+        writes directly into the mounted ``/code`` filesystem.
+        """
+        local_path = os.path.abspath(local_path)
+        if not os.path.exists(local_path):
+            raise ExecutionException("C++ sandbox source path does not exist.")
+        if not container_path.startswith("/"):
+            raise ExecutionException("C++ sandbox destination must be absolute.")
+
+        if os.path.isdir(local_path):
+            destination = container_path.rstrip("/") or "/"
+            entries = [
+                (os.path.join(local_path, name), name)
+                for name in sorted(os.listdir(local_path))
+            ]
+        else:
+            destination, archive_name = container_path.rsplit("/", 1)
+            destination = destination or "/"
+            if not archive_name:
+                raise ExecutionException("C++ sandbox destination file is missing.")
+            entries = [(local_path, archive_name)]
+
+        try:
+            with tempfile.SpooledTemporaryFile(max_size=8 * 1024 * 1024) as stream:
+                with tarfile.open(fileobj=stream, mode="w") as archive:
+                    for source, archive_name in entries:
+                        archive.add(source, arcname=archive_name, recursive=True)
+                stream.seek(0)
+                subprocess.run(
+                    [
+                        "docker",
+                        "exec",
+                        "-i",
+                        container_id,
+                        "tar",
+                        "-xpf",
+                        "-",
+                        "-C",
+                        destination,
+                    ],
+                    stdin=stream,
+                    check=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    timeout=self._harness_docker_timeout,
+                )
+        except (OSError, tarfile.TarError, subprocess.SubprocessError) as error:
+            raise ExecutionException(
+                "Error transferring files into the C++ sandbox."
+            ) from error
 
     def setup(self):
         try:
@@ -713,23 +783,11 @@ class ExecutionContainer:
                 ) from error
 
             if self._docker_transfer_mode == "cp":
-                try:
-                    subprocess.run(
-                        [
-                            "docker",
-                            "cp",
-                            local_source_path,
-                            f"{self.container_id}:{container_source_path}",
-                        ],
-                        check=True,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        timeout=self._harness_docker_timeout,
-                    )
-                except (OSError, subprocess.SubprocessError) as error:
-                    raise ExecutionException(
-                        "Error transferring the C++ test harness."
-                    ) from error
+                self._stream_path_into_container(
+                    self.container_id,
+                    local_source_path,
+                    container_source_path,
+                )
             elif self._docker_transfer_mode != "bind":
                 raise ExecutionException(
                     f"Unsupported DOCKER_TRANSFER_MODE: {self._docker_transfer_mode}"
