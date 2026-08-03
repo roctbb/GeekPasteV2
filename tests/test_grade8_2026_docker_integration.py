@@ -1,8 +1,9 @@
 import os
+import subprocess
 import unittest
 
 from environments.grade8_2026_common import perform_task
-from runner import ExecutionContainer, SolutionException, TestRunner
+from runner import ExecutionContainer, ExecutionException, SolutionException, TestRunner
 from tests.test_grade8_2026_chapters_5_6 import CPP_REFERENCE_SOURCES
 from tests.test_grade8_2026_chapters_7_8 import (
     GPH1_REFERENCE_ARCHIVER_SOURCE,
@@ -72,6 +73,28 @@ int main() {
     "set RUN_GRADE8_DOCKER_INTEGRATION=1 inside the GeekPaste runtime",
 )
 class Grade8DockerIntegrationTests(unittest.TestCase):
+    def test_transfer_failure_removes_the_started_container(self):
+        class ForcedTransferFailureContainer(ExecutionContainer):
+            started_container_id = None
+
+            def _stream_path_into_container(
+                self, container_id, local_path, container_path
+            ):
+                type(self).started_container_id = container_id
+                raise ExecutionException("forced transfer failure")
+
+        with self.assertRaises(ExecutionException):
+            ForcedTransferFailureContainer("cpp", "", "int main() { return 0; }")
+
+        container_id = ForcedTransferFailureContainer.started_container_id
+        self.assertIsNotNone(container_id)
+        result = subprocess.run(
+            ["docker", "inspect", container_id],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        self.assertNotEqual(result.returncode, 0)
+
     def score(self, task_id, source_code, language="cpp"):
         with ExecutionContainer(
             language,

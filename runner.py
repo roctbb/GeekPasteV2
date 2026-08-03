@@ -502,6 +502,7 @@ class ExecutionContainer:
             raise ExecutionException("Error connecting to Docker.")
 
     def prepare(self):
+        container_id = None
         try:
             container_image = "python:3.11" if self.language == "python" else "gcc:latest"
             run_command = ["docker", "run", "-d", "--pull", "missing"]
@@ -532,6 +533,9 @@ class ExecutionContainer:
                 check=True,
                 stdout=subprocess.PIPE
             ).stdout.decode().strip()
+            # Make the ID visible to constructor-level cleanup immediately.
+            # Any later transfer/setup failure must not leave a sandbox running.
+            self.container_id = container_id
 
             if self._docker_transfer_mode == "cp":
                 subprocess.run(
@@ -556,8 +560,20 @@ class ExecutionContainer:
             elif self._docker_transfer_mode != "bind":
                 raise ExecutionException(f"Unsupported DOCKER_TRANSFER_MODE: {self._docker_transfer_mode}")
 
-        except Exception:
-            raise ExecutionException("Error creating container.")
+        except Exception as error:
+            if container_id:
+                try:
+                    subprocess.run(
+                        ["docker", "rm", "-f", container_id],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        timeout=self._harness_docker_timeout,
+                    )
+                except (OSError, subprocess.SubprocessError):
+                    pass
+                if self.container_id == container_id:
+                    self.container_id = None
+            raise ExecutionException("Error creating container.") from error
 
         return container_id
 

@@ -133,6 +133,27 @@ class ExecutionContainerHarnessTests(unittest.TestCase):
             any(call.args[0][:2] == ["docker", "cp"] for call in subprocess_run.call_args_list)
         )
 
+    @mock.patch("runner.subprocess.run")
+    def test_cpp_prepare_failure_removes_the_started_container(self, subprocess_run):
+        subprocess_run.side_effect = [
+            mock.Mock(stdout=b"started-container\n"),
+            mock.Mock(),
+            subprocess.CalledProcessError(1, ["docker", "exec", "tar"]),
+            mock.Mock(),
+        ]
+        with tempfile.TemporaryDirectory() as directory:
+            container = self._container(directory, "cp", language="cpp")
+            container._pip_cache_volume = "unused"
+
+            with self.assertRaises(ExecutionException):
+                container.prepare()
+
+        self.assertEqual(
+            subprocess_run.call_args_list[-1].args[0],
+            ["docker", "rm", "-f", "started-container"],
+        )
+        self.assertIsNone(container.container_id)
+
     def test_initial_cpp_compile_uses_the_bounded_compiler(self):
         container = object.__new__(ExecutionContainer)
         container.container_id = None
