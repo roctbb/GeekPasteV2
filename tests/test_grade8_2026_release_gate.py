@@ -24,9 +24,10 @@ class Grade8ReleaseGateTests(unittest.TestCase):
         cls.test_tasks = [task for task in cls.tasks if task["tester_required"]]
 
     def test_manifest_is_the_frozen_2026_mapping(self):
+        manifest_bytes = MANIFEST_PATH.read_bytes().replace(b"\r\n", b"\n")
         self.assertEqual(
-            hashlib.sha256(MANIFEST_PATH.read_bytes()).hexdigest(),
-            "46d89f78897e7a5c71fd87a8806cc5d18062160472d473b575e93a6926d1b4fb",
+            hashlib.sha256(manifest_bytes).hexdigest(),
+            "712497edbfaa9bb0dc7fffe69353116679d4826b1d5539961931ca720f35cabf",
         )
         self.assertEqual(self.manifest["format"], "grade8-2026-environments-v1")
         self.assertEqual(
