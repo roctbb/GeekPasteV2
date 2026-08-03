@@ -119,6 +119,16 @@ def _gpt_rate_limit_status_payload(user_id, task_id, course_id=None):
     }
 
 
+def _task_submission_language_error(task, lang):
+    if not task:
+        return None
+    if task.lang == 'image' and lang != 'image':
+        return "Для этой задачи нужно прикрепить изображение решения."
+    if lang == 'image' and task.lang != 'image':
+        return "Изображение можно отправить только в задачу с типом сдачи «изображение»."
+    return None
+
+
 @app.route('/', methods=['POST'])
 @login_required
 def submit():
@@ -202,9 +212,12 @@ def submit():
         flash("Для этой задачи нужно отправить ссылку на GitHub-репозиторий.", "danger")
         return _return_to_submit_form(default_lang='github')
 
-    if task and task.lang == 'image' and lang != 'image':
-        flash("Для этой задачи нужно прикрепить изображение решения.", "danger")
-        return _return_to_submit_form(default_lang='image')
+    language_error = _task_submission_language_error(task, lang)
+    if language_error:
+        flash(language_error, "danger")
+        return _return_to_submit_form(
+            default_lang='image' if task and task.lang == 'image' else None
+        )
 
     if not code or not str(code).strip():
         flash("Введите код.", "danger")
@@ -549,7 +562,10 @@ def _submission_to_diff_text(code):
 
     if code.lang == 'image':
         try:
-            image = parse_image_submission(raw_code)
+            image = parse_image_submission(
+                raw_code,
+                MAX_IMAGE_SUBMISSION_BYTES,
+            )
             return f"[IMAGE: {image['filename']} ({image['mime_type']}, {len(image['data'])} bytes)]"
         except ImageSubmissionError:
             return '[BROKEN IMAGE SUBMISSION]'
@@ -845,7 +861,10 @@ def index():
                     pass
             elif code.lang == 'image':
                 try:
-                    parsed_image = parse_image_submission(code.code)
+                    parsed_image = parse_image_submission(
+                        code.code,
+                        MAX_IMAGE_SUBMISSION_BYTES,
+                    )
                     image_meta = {
                         'filename': parsed_image['filename'],
                         'mime_type': parsed_image['mime_type'],
@@ -957,7 +976,10 @@ def image_submission():
         abort(403)
 
     try:
-        image = parse_image_submission(code.code)
+        image = parse_image_submission(
+            code.code,
+            MAX_IMAGE_SUBMISSION_BYTES,
+        )
     except ImageSubmissionError:
         abort(404)
 

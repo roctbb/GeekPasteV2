@@ -1,0 +1,1835 @@
+{
+  "format": "grade8-2026-environments-v1",
+  "package_digest": "8fbdbb2ea3fc0004fe8182400fa50d0e64ef4450b321fd9b5be6bf46c576a984",
+  "task_id_start": 2567,
+  "task_id_end": 2769,
+  "tasks": [
+    {
+      "id": 2567,
+      "source": "01-Kak-ustroen-kompyuter/01-Algebra-logiki/02-Tri-osnovnye-operatsii.md#task-1",
+      "name": "Таблица истинности",
+      "points": 5,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2568,
+      "source": "01-Kak-ustroen-kompyuter/01-Algebra-logiki/04-Zakony-algebry-logiki.md#task-1",
+      "name": "Упрощение логических выражений",
+      "points": 15,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2569,
+      "source": "01-Kak-ustroen-kompyuter/01-Algebra-logiki/04-Zakony-algebry-logiki.md#task-2",
+      "name": "Умный турникет",
+      "points": 10,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2570,
+      "source": "01-Kak-ustroen-kompyuter/01-Algebra-logiki/05-NAND-universalnyy-element.md#task-1",
+      "name": "Собираем вентили из NAND",
+      "points": 15,
+      "lang": "python",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2571,
+      "source": "01-Kak-ustroen-kompyuter/01-Algebra-logiki/05-NAND-universalnyy-element.md#task-2",
+      "name": "Всё из ИЛИ-НЕ",
+      "points": 10,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2572,
+      "source": "01-Kak-ustroen-kompyuter/02-Sistemy-schisleniya/03-Shestnadtsaterichnaya-i-bayt.md#task-1",
+      "name": "Туда и обратно",
+      "points": 10,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2573,
+      "source": "01-Kak-ustroen-kompyuter/02-Sistemy-schisleniya/03-Shestnadtsaterichnaya-i-bayt.md#task-2",
+      "name": "Разбираем цвет",
+      "points": 10,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2574,
+      "source": "01-Kak-ustroen-kompyuter/02-Sistemy-schisleniya/03-Shestnadtsaterichnaya-i-bayt.md#task-3",
+      "name": "Сколько весит картинка",
+      "points": 5,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2575,
+      "source": "01-Kak-ustroen-kompyuter/02-Sistemy-schisleniya/03-Shestnadtsaterichnaya-i-bayt.md#task-4",
+      "name": "Розеттский камень",
+      "points": 10,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2576,
+      "source": "01-Kak-ustroen-kompyuter/03-Kak-kompyuter-hranit-chisla/02-Otritsatelnye-chisla.md#task-1",
+      "name": "Байт со знаком",
+      "points": 5,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2577,
+      "source": "01-Kak-ustroen-kompyuter/03-Kak-kompyuter-hranit-chisla/04-Drobnye-chisla.md#task-1",
+      "name": "Одометр",
+      "points": 10,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2578,
+      "source": "01-Kak-ustroen-kompyuter/03-Kak-kompyuter-hranit-chisla/04-Drobnye-chisla.md#task-2",
+      "name": "Туда и обратно со знаком",
+      "points": 15,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2579,
+      "source": "01-Kak-ustroen-kompyuter/03-Kak-kompyuter-hranit-chisla/04-Drobnye-chisla.md#task-3",
+      "name": "Ловим погрешность",
+      "points": 10,
+      "lang": "python",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2580,
+      "source": "01-Kak-ustroen-kompyuter/03-Kak-kompyuter-hranit-chisla/04-Drobnye-chisla.md#task-4",
+      "name": "Где ломается float",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2581,
+      "source": "01-Kak-ustroen-kompyuter/04-Arifmetika-v-zheleze/01-Skladyvaem-stolbikom.md#task-1",
+      "name": "Столбиком в двоичном",
+      "points": 5,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2582,
+      "source": "01-Kak-ustroen-kompyuter/04-Arifmetika-v-zheleze/03-Arifmetiko-logicheskoe-ustroystvo.md#task-1",
+      "name": "Собираем арифметику в nandgame",
+      "points": 15,
+      "lang": "python",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2583,
+      "source": "01-Kak-ustroen-kompyuter/04-Arifmetika-v-zheleze/03-Arifmetiko-logicheskoe-ustroystvo.md#task-2",
+      "name": "Вычитание без вычитателя",
+      "points": 10,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2584,
+      "source": "01-Kak-ustroen-kompyuter/04-Arifmetika-v-zheleze/03-Arifmetiko-logicheskoe-ustroystvo.md#task-3",
+      "name": "Что скажут флаги",
+      "points": 10,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2585,
+      "source": "01-Kak-ustroen-kompyuter/04-Arifmetika-v-zheleze/03-Arifmetiko-logicheskoe-ustroystvo.md#task-4",
+      "name": "Что скажет каждый флаг",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2586,
+      "source": "01-Kak-ustroen-kompyuter/05-Pamyat/03-Operativnaya-pamyat.md#task-1",
+      "name": "Собираем память в nandgame",
+      "points": 15,
+      "lang": "python",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2587,
+      "source": "01-Kak-ustroen-kompyuter/05-Pamyat/03-Operativnaya-pamyat.md#task-2",
+      "name": "Сколько проводов",
+      "points": 5,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2588,
+      "source": "01-Kak-ustroen-kompyuter/05-Pamyat/03-Operativnaya-pamyat.md#task-3",
+      "name": "Сдвиг за один такт",
+      "points": 10,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2589,
+      "source": "01-Kak-ustroen-kompyuter/06-Protsessor-i-assembler/04-Pishem-programmu.md#task-1",
+      "name": "Собираем процессор в nandgame",
+      "points": 15,
+      "lang": "python",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2590,
+      "source": "01-Kak-ustroen-kompyuter/06-Protsessor-i-assembler/04-Pishem-programmu.md#task-2",
+      "name": "Первая программа",
+      "points": 15,
+      "lang": "python",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2591,
+      "source": "01-Kak-ustroen-kompyuter/06-Protsessor-i-assembler/04-Pishem-programmu.md#task-3",
+      "name": "Наследство",
+      "points": 5,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2592,
+      "source": "01-Kak-ustroen-kompyuter/06-Protsessor-i-assembler/04-Pishem-programmu.md#task-4",
+      "name": "Программа с циклом",
+      "points": 10,
+      "lang": "python",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2593,
+      "source": "02-Protsedurnyy-C/01-Pervye-programmy-na-C/03-Pervaya-programma.md#task-1",
+      "name": "Поэтический дебют",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2594,
+      "source": "02-Protsedurnyy-C/01-Pervye-programmy-na-C/05-Vvod-vyvod-i-arifmetika.md#task-1",
+      "name": "Сколько прошло времени",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2595,
+      "source": "02-Protsedurnyy-C/01-Pervye-programmy-na-C/05-Vvod-vyvod-i-arifmetika.md#task-2",
+      "name": "Ловушка деления",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2596,
+      "source": "02-Protsedurnyy-C/01-Pervye-programmy-na-C/06-Vetvleniya.md#task-1",
+      "name": "Ладья в тумане",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2597,
+      "source": "02-Protsedurnyy-C/01-Pervye-programmy-na-C/07-Tsikly.md#task-1",
+      "name": "Кролики Фибоначчи",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2598,
+      "source": "02-Protsedurnyy-C/01-Pervye-programmy-na-C/07-Tsikly.md#task-2",
+      "name": "Собаки на сене",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2599,
+      "source": "02-Protsedurnyy-C/01-Pervye-programmy-na-C/08-Ischem-oshibku-otladchikom.md#task-1",
+      "name": "Скорая помощь",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2600,
+      "source": "02-Protsedurnyy-C/01-Pervye-programmy-na-C/09-Funktsii.md#task-1",
+      "name": "Цифра за цифрой",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2601,
+      "source": "02-Protsedurnyy-C/01-Pervye-programmy-na-C/09-Funktsii.md#task-2",
+      "name": "Разложить на функции",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2602,
+      "source": "02-Protsedurnyy-C/01-Pervye-programmy-na-C/10-Peredacha-po-ssylke.md#task-1",
+      "name": "Баш на баш",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2603,
+      "source": "02-Protsedurnyy-C/01-Pervye-programmy-na-C/10-Peredacha-po-ssylke.md#task-2",
+      "name": "Наименьшее и наибольшее",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2604,
+      "source": "02-Protsedurnyy-C/01-Pervye-programmy-na-C/10-Peredacha-po-ssylke.md#task-3",
+      "name": "Совершенные числа",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2605,
+      "source": "02-Protsedurnyy-C/02-Massivy-stroki-i-fayly/01-Massivy.md#task-1",
+      "name": "Бенджамин Батон",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2606,
+      "source": "02-Protsedurnyy-C/02-Massivy-stroki-i-fayly/01-Massivy.md#task-2",
+      "name": "Потепление",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2607,
+      "source": "02-Protsedurnyy-C/02-Massivy-stroki-i-fayly/01-Massivy.md#task-3",
+      "name": "Дежурство по кругу",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2608,
+      "source": "02-Protsedurnyy-C/02-Massivy-stroki-i-fayly/01-Massivy.md#task-4",
+      "name": "Выше среднего",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2609,
+      "source": "02-Protsedurnyy-C/02-Massivy-stroki-i-fayly/02-Massivy-i-funktsii.md#task-1",
+      "name": "Переворот на месте",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2610,
+      "source": "02-Protsedurnyy-C/02-Massivy-stroki-i-fayly/02-Massivy-i-funktsii.md#task-2",
+      "name": "Красивые бусы",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2611,
+      "source": "02-Protsedurnyy-C/02-Massivy-stroki-i-fayly/03-Matritsy.md#task-1",
+      "name": "Магический квадрат",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2612,
+      "source": "02-Protsedurnyy-C/02-Massivy-stroki-i-fayly/03-Matritsy.md#task-2",
+      "name": "Минное поле",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2613,
+      "source": "02-Protsedurnyy-C/02-Massivy-stroki-i-fayly/04-Stroki-kak-massivy-simvolov.md#task-1",
+      "name": "Шифр Цезаря",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2614,
+      "source": "02-Protsedurnyy-C/02-Massivy-stroki-i-fayly/05-Svoi-funktsii-dlya-strok.md#task-1",
+      "name": "Длинный, как поезд пассажирный",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2615,
+      "source": "02-Protsedurnyy-C/02-Massivy-stroki-i-fayly/05-Svoi-funktsii-dlya-strok.md#task-2",
+      "name": "Двое из ларца, одинаковых с лица",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2616,
+      "source": "02-Protsedurnyy-C/02-Massivy-stroki-i-fayly/05-Svoi-funktsii-dlya-strok.md#task-3",
+      "name": "Свет мой, зеркальце, сравни...",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2617,
+      "source": "02-Protsedurnyy-C/02-Massivy-stroki-i-fayly/05-Svoi-funktsii-dlya-strok.md#task-4",
+      "name": "Я спросил у ясеня, где моя любимая...",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2618,
+      "source": "02-Protsedurnyy-C/02-Massivy-stroki-i-fayly/06-Fayly.md#task-1",
+      "name": "Досье на файл",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2619,
+      "source": "02-Protsedurnyy-C/02-Massivy-stroki-i-fayly/06-Fayly.md#task-2",
+      "name": "Шифр Виженера",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2620,
+      "source": "03-Alisa-i-lineynye-algoritmy/01-Beg-Krasnoy-Korolevy-uchimsya-izmeryat-proizvoditelnost/02-Pervyy-algoritm-NOD-Evklida.md#task-1",
+      "name": "Дедушка алгоритмов",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2621,
+      "source": "03-Alisa-i-lineynye-algoritmy/01-Beg-Krasnoy-Korolevy-uchimsya-izmeryat-proizvoditelnost/06-O-notatsiya.md#task-1",
+      "name": "Оцените сложность",
+      "points": 5,
+      "lang": "python",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2622,
+      "source": "03-Alisa-i-lineynye-algoritmy/01-Beg-Krasnoy-Korolevy-uchimsya-izmeryat-proizvoditelnost/07-Pamyat-tozhe-stoit.md#task-1",
+      "name": "Секундомер",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2623,
+      "source": "03-Alisa-i-lineynye-algoritmy/01-Beg-Krasnoy-Korolevy-uchimsya-izmeryat-proizvoditelnost/07-Pamyat-tozhe-stoit.md#task-2",
+      "name": "Секундомер 2.0 — два обхода",
+      "points": 10,
+      "lang": "python",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2624,
+      "source": "03-Alisa-i-lineynye-algoritmy/02-Pogruzhenie-v-krolichyu-noru-priruchaem-rekursiyu/06-Praktika.md#task-1",
+      "name": "Три ступеньки разом",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2625,
+      "source": "03-Alisa-i-lineynye-algoritmy/02-Pogruzhenie-v-krolichyu-noru-priruchaem-rekursiyu/06-Praktika.md#task-2",
+      "name": "Сапёр возвращается",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2626,
+      "source": "03-Alisa-i-lineynye-algoritmy/02-Pogruzhenie-v-krolichyu-noru-priruchaem-rekursiyu/06-Praktika.md#task-3",
+      "name": "Степень за логарифм",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2627,
+      "source": "03-Alisa-i-lineynye-algoritmy/02-Pogruzhenie-v-krolichyu-noru-priruchaem-rekursiyu/06-Praktika.md#task-4",
+      "name": "Ханойские башни",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2628,
+      "source": "03-Alisa-i-lineynye-algoritmy/03-Bezumnoe-chaepitie-znakomstvo-s-lineynymi-algoritmami/01-Nakopiteli.md#task-1",
+      "name": "Одним махом",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2629,
+      "source": "03-Alisa-i-lineynye-algoritmy/03-Bezumnoe-chaepitie-znakomstvo-s-lineynymi-algoritmami/01-Nakopiteli.md#task-2",
+      "name": "Разгони код — лучшая пара",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2630,
+      "source": "03-Alisa-i-lineynye-algoritmy/03-Bezumnoe-chaepitie-znakomstvo-s-lineynymi-algoritmami/01-Nakopiteli.md#task-3",
+      "name": "Разгони код — перестановка",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2631,
+      "source": "03-Alisa-i-lineynye-algoritmy/03-Bezumnoe-chaepitie-znakomstvo-s-lineynymi-algoritmami/02-Prefiksnye-summy.md#task-1",
+      "name": "Год в шагах",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2632,
+      "source": "03-Alisa-i-lineynye-algoritmy/03-Bezumnoe-chaepitie-znakomstvo-s-lineynymi-algoritmami/02-Prefiksnye-summy.md#task-2",
+      "name": "Морозные дни",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2633,
+      "source": "03-Alisa-i-lineynye-algoritmy/03-Bezumnoe-chaepitie-znakomstvo-s-lineynymi-algoritmami/03-Dva-ukazatelya-i-okno.md#task-1",
+      "name": "Когда проветривать",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2634,
+      "source": "03-Alisa-i-lineynye-algoritmy/03-Bezumnoe-chaepitie-znakomstvo-s-lineynymi-algoritmami/03-Dva-ukazatelya-i-okno.md#task-2",
+      "name": "Ещё одну серию — и спать",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2635,
+      "source": "03-Alisa-i-lineynye-algoritmy/03-Bezumnoe-chaepitie-znakomstvo-s-lineynymi-algoritmami/03-Dva-ukazatelya-i-okno.md#task-3",
+      "name": "Разгони код — лучший отрезок",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2636,
+      "source": "03-Alisa-i-lineynye-algoritmy/04-Zagadka-Cheshirskogo-kota-stroim-konechnyy-avtomat/02-Pishem-avtomat-v-kode.md#task-1",
+      "name": "Слово за словом",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2637,
+      "source": "03-Alisa-i-lineynye-algoritmy/04-Zagadka-Cheshirskogo-kota-stroim-konechnyy-avtomat/03-Razbor-poslozhnee.md#task-1",
+      "name": "Число или не число",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2638,
+      "source": "03-Alisa-i-lineynye-algoritmy/04-Zagadka-Cheshirskogo-kota-stroim-konechnyy-avtomat/03-Razbor-poslozhnee.md#task-2",
+      "name": "Классный журнал",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2639,
+      "source": "03-Alisa-i-lineynye-algoritmy/04-Zagadka-Cheshirskogo-kota-stroim-konechnyy-avtomat/04-Analiz-teksta-avtomatom.md#task-1",
+      "name": "Проверка IP адреса",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2640,
+      "source": "03-Alisa-i-lineynye-algoritmy/04-Zagadka-Cheshirskogo-kota-stroim-konechnyy-avtomat/04-Analiz-teksta-avtomatom.md#task-2",
+      "name": "Электронный почтальон",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2641,
+      "source": "04-Poisk-i-sortirovki/01-Poisk/02-Pishem-dvoichnyy-poisk.md#task-1",
+      "name": "Фейсконтроль",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2642,
+      "source": "04-Poisk-i-sortirovki/01-Poisk/02-Pishem-dvoichnyy-poisk.md#task-2",
+      "name": "Однофамильцы",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2643,
+      "source": "04-Poisk-i-sortirovki/01-Poisk/02-Pishem-dvoichnyy-poisk.md#task-3",
+      "name": "Место в строю",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2644,
+      "source": "04-Poisk-i-sortirovki/01-Poisk/03-Dvoichnyy-poisk-po-otvetu.md#task-1",
+      "name": "Нарезать верёвки",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2645,
+      "source": "04-Poisk-i-sortirovki/01-Poisk/03-Dvoichnyy-poisk-po-otvetu.md#task-2",
+      "name": "Рассадка на контрольной",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2646,
+      "source": "04-Poisk-i-sortirovki/01-Poisk/03-Dvoichnyy-poisk-po-otvetu.md#task-3",
+      "name": "Стенгазета к рассвету",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2647,
+      "source": "04-Poisk-i-sortirovki/02-Kvadratichnye-sortirovki/01-Puzyryok.md#task-1",
+      "name": "Пузырёк под микроскопом",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2648,
+      "source": "04-Poisk-i-sortirovki/02-Kvadratichnye-sortirovki/02-Vybor-i-vstavki.md#task-1",
+      "name": "Куда вставить",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2649,
+      "source": "04-Poisk-i-sortirovki/02-Kvadratichnye-sortirovki/02-Vybor-i-vstavki.md#task-2",
+      "name": "Церемония награждения",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2650,
+      "source": "04-Poisk-i-sortirovki/02-Kvadratichnye-sortirovki/03-Gran-pri-sortirovok.md#task-1",
+      "name": "Гран-при",
+      "points": 20,
+      "lang": "python",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2651,
+      "source": "04-Poisk-i-sortirovki/02-Kvadratichnye-sortirovki/03-Gran-pri-sortirovok.md#task-2",
+      "name": "Черепаха",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2652,
+      "source": "04-Poisk-i-sortirovki/03-Bystrye-sortirovki/01-Sortirovka-sliyaniem.md#task-1",
+      "name": "Две очереди",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2653,
+      "source": "04-Poisk-i-sortirovki/03-Bystrye-sortirovki/01-Sortirovka-sliyaniem.md#task-2",
+      "name": "Сортировка слиянием",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2654,
+      "source": "04-Poisk-i-sortirovki/03-Bystrye-sortirovki/02-Bystraya-sortirovka.md#task-1",
+      "name": "Быстрая сортировка",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2655,
+      "source": "04-Poisk-i-sortirovki/03-Bystrye-sortirovki/03-Kogda-bystraya-spotykaetsya.md#task-1",
+      "name": "Душнила-хакер",
+      "points": 5,
+      "lang": "python",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2656,
+      "source": "04-Poisk-i-sortirovki/03-Bystrye-sortirovki/04-Sortirovka-podschyotom.md#task-1",
+      "name": "Перепись",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2657,
+      "source": "04-Poisk-i-sortirovki/03-Bystrye-sortirovki/05-Sortiruem-ne-chisla.md#task-1",
+      "name": "По второму столбцу",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2658,
+      "source": "04-Poisk-i-sortirovki/03-Bystrye-sortirovki/05-Sortiruem-ne-chisla.md#task-2",
+      "name": "Олимпиадный протокол",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2659,
+      "source": "04-Poisk-i-sortirovki/03-Bystrye-sortirovki/05-Sortiruem-ne-chisla.md#task-3",
+      "name": "Доска почёта",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2660,
+      "source": "04-Poisk-i-sortirovki/04-Zhadnye-algoritmy/01-Zhadnyy-vybor.md#task-1",
+      "name": "Сдача монетами",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2661,
+      "source": "04-Poisk-i-sortirovki/04-Zhadnye-algoritmy/01-Zhadnyy-vybor.md#task-2",
+      "name": "Актовый зал",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2662,
+      "source": "04-Poisk-i-sortirovki/04-Zhadnye-algoritmy/02-Kogda-zhadnost-vryot.md#task-1",
+      "name": "Ловим контрпример",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2663,
+      "source": "04-Poisk-i-sortirovki/04-Zhadnye-algoritmy/02-Kogda-zhadnost-vryot.md#task-2",
+      "name": "Байдарки",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2664,
+      "source": "05-OOP/01-Klassy-i-obekty/02-Struktury.md#task-1",
+      "name": "Центр тяжести",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2665,
+      "source": "05-OOP/01-Klassy-i-obekty/03-Klass-i-obekt.md#task-1",
+      "name": "Тамагочи делает первые шаги",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2666,
+      "source": "05-OOP/01-Klassy-i-obekty/03-Klass-i-obekt.md#task-2",
+      "name": "Аренда илососа",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2667,
+      "source": "05-OOP/01-Klassy-i-obekty/04-Rozhdenie-obekta.md#task-1",
+      "name": "Приют",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2668,
+      "source": "05-OOP/01-Klassy-i-obekty/05-Smert-obekta.md#task-1",
+      "name": "Сам себе HTML",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2669,
+      "source": "05-OOP/01-Klassy-i-obekty/05-Smert-obekta.md#task-2",
+      "name": "Часы, которые нельзя сломать",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2670,
+      "source": "05-OOP/02-Inkapsulyatsiya-i-UML/02-Tamagochi-kotorogo-ne-slomat.md#task-1",
+      "name": "Волшебный напиток",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2671,
+      "source": "05-OOP/02-Inkapsulyatsiya-i-UML/02-Tamagochi-kotorogo-ne-slomat.md#task-2",
+      "name": "Железный банк",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2672,
+      "source": "05-OOP/02-Inkapsulyatsiya-i-UML/03-Chertezh-programmy-diagramma-klassov.md#task-1",
+      "name": "Сейф по чертежу",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2673,
+      "source": "05-OOP/02-Inkapsulyatsiya-i-UML/03-Chertezh-programmy-diagramma-klassov.md#task-2",
+      "name": "Чертёж своих классов",
+      "points": 10,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2674,
+      "source": "05-OOP/02-Inkapsulyatsiya-i-UML/04-Snachala-chertezh-potom-kod.md#task-1",
+      "name": "Чертёж кинотеатра",
+      "points": 10,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2675,
+      "source": "05-OOP/02-Inkapsulyatsiya-i-UML/04-Snachala-chertezh-potom-kod.md#task-2",
+      "name": "Сейф с журналом",
+      "points": 10,
+      "lang": "image",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2676,
+      "source": "05-OOP/03-Isklyucheniya-peregruzka-statika/02-Brosat-ili-vozvraschat.md#task-1",
+      "name": "Спокойное деление",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2677,
+      "source": "05-OOP/03-Isklyucheniya-peregruzka-statika/02-Brosat-ili-vozvraschat.md#task-2",
+      "name": "81-775/776/777",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2678,
+      "source": "05-OOP/03-Isklyucheniya-peregruzka-statika/03-Peregruzka-funktsiy.md#task-1",
+      "name": "Векторная алгебра",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2679,
+      "source": "05-OOP/03-Isklyucheniya-peregruzka-statika/04-Obschee-na-ves-klass.md#task-1",
+      "name": "Перекличка",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2680,
+      "source": "05-OOP/03-Isklyucheniya-peregruzka-statika/04-Obschee-na-ves-klass.md#task-2",
+      "name": "Железный банк 2.0",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2681,
+      "source": "05-OOP/03-Isklyucheniya-peregruzka-statika/04-Obschee-na-ves-klass.md#task-3",
+      "name": "Перевод между счетами",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2682,
+      "source": "05-OOP/04-Nasledovanie-i-polimorfizm/02-Svoim-golosom-pereopredelenie.md#task-1",
+      "name": "2Д-рисовач",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2683,
+      "source": "05-OOP/04-Nasledovanie-i-polimorfizm/04-Virtualnye-metody.md#task-1",
+      "name": "Скорая помощь: умный дом",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2684,
+      "source": "05-OOP/04-Nasledovanie-i-polimorfizm/04-Virtualnye-metody.md#task-2",
+      "name": "Электронный землемер",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2685,
+      "source": "05-OOP/04-Nasledovanie-i-polimorfizm/04-Virtualnye-metody.md#task-3",
+      "name": "Ферма Тамагочи",
+      "points": 25,
+      "lang": "python",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2686,
+      "source": "05-OOP/04-Nasledovanie-i-polimorfizm/04-Virtualnye-metody.md#task-4",
+      "name": "Новая фигура за пять минут",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2687,
+      "source": "06-Struktury-dannyh/01-Sumerechnaya-zona/04-Ukazatel-v-dele.md#task-1",
+      "name": "Обмен без ссылок",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2688,
+      "source": "06-Struktury-dannyh/01-Sumerechnaya-zona/04-Ukazatel-v-dele.md#task-2",
+      "name": "Три в одном",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2689,
+      "source": "06-Struktury-dannyh/01-Sumerechnaya-zona/05-Peremennaya-v-kuche.md#task-1",
+      "name": "Скорая помощь: указатели",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2690,
+      "source": "06-Struktury-dannyh/01-Sumerechnaya-zona/05-Peremennaya-v-kuche.md#task-2",
+      "name": "Питомцы в кармане",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2691,
+      "source": "06-Struktury-dannyh/01-Sumerechnaya-zona/06-Utechki-i-visyachie-ukazateli.md#task-1",
+      "name": "Скорая помощь: течёт",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2692,
+      "source": "06-Struktury-dannyh/01-Sumerechnaya-zona/07-Praktika.md#task-1",
+      "name": "Биохакер",
+      "points": 5,
+      "lang": "python",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2693,
+      "source": "06-Struktury-dannyh/01-Sumerechnaya-zona/07-Praktika.md#task-2",
+      "name": "Кто не вернул",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2694,
+      "source": "06-Struktury-dannyh/02-Umnyy-massiv/01-Arifmetika-ukazateley.md#task-1",
+      "name": "Обход без индексов",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2695,
+      "source": "06-Struktury-dannyh/02-Umnyy-massiv/02-Massiv-eto-adres.md#task-1",
+      "name": "Сумма куска",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2696,
+      "source": "06-Struktury-dannyh/02-Umnyy-massiv/02-Massiv-eto-adres.md#task-2",
+      "name": "Матрёшка",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2697,
+      "source": "06-Struktury-dannyh/02-Umnyy-massiv/03-Dinamicheskiy-massiv.md#task-1",
+      "name": "Бесконечный прогноз",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2698,
+      "source": "06-Struktury-dannyh/02-Umnyy-massiv/04-Bazovyy-vektor.md#task-1",
+      "name": "Свой вектор",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2699,
+      "source": "06-Struktury-dannyh/02-Umnyy-massiv/06-Yomkost-i-amortizatsiya.md#task-1",
+      "name": "Сколько стоит рост",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2700,
+      "source": "06-Struktury-dannyh/02-Umnyy-massiv/08-Praktika.md#task-1",
+      "name": "Умный вектор",
+      "points": 20,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2701,
+      "source": "06-Struktury-dannyh/02-Umnyy-massiv/08-Praktika.md#task-2",
+      "name": "Найдите множитель",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2702,
+      "source": "06-Struktury-dannyh/03-Umnaya-stroka/02-Peregruzka-operatorov.md#task-1",
+      "name": "Вектор в скобках",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2703,
+      "source": "06-Struktury-dannyh/03-Umnaya-stroka/05-Praktika.md#task-1",
+      "name": "Своя строка",
+      "points": 20,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2704,
+      "source": "06-Struktury-dannyh/03-Umnaya-stroka/05-Praktika.md#task-2",
+      "name": "Автодополнение",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2705,
+      "source": "06-Struktury-dannyh/04-Stek-i-ochered/01-Stek.md#task-1",
+      "name": "Стек",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2706,
+      "source": "06-Struktury-dannyh/04-Stek-i-ochered/01-Stek.md#task-2",
+      "name": "Подсветка скобок",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2707,
+      "source": "06-Struktury-dannyh/04-Stek-i-ochered/02-Razbor-vyrazheniy.md#task-1",
+      "name": "Калькулятор",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2708,
+      "source": "06-Struktury-dannyh/04-Stek-i-ochered/03-Ochered.md#task-1",
+      "name": "Горячая картошка",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2709,
+      "source": "06-Struktury-dannyh/04-Stek-i-ochered/03-Ochered.md#task-2",
+      "name": "Кто выиграет, если считать иначе",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2710,
+      "source": "06-Struktury-dannyh/05-Svyaznyy-spisok/01-Uzly-i-ssylki.md#task-1",
+      "name": "Цепочка",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2711,
+      "source": "06-Struktury-dannyh/05-Svyaznyy-spisok/02-Vstavka-i-udalenie.md#task-1",
+      "name": "Плейлист",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2712,
+      "source": "06-Struktury-dannyh/05-Svyaznyy-spisok/02-Vstavka-i-udalenie.md#task-2",
+      "name": "Обратный рейс",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2713,
+      "source": "06-Struktury-dannyh/05-Svyaznyy-spisok/03-Dvusvyaznyy-spisok.md#task-1",
+      "name": "Приёмный покой",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2714,
+      "source": "06-Struktury-dannyh/05-Svyaznyy-spisok/05-Praktika.md#task-1",
+      "name": "Что бы вы взяли",
+      "points": 5,
+      "lang": "python",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2715,
+      "source": "06-Struktury-dannyh/05-Svyaznyy-spisok/05-Praktika.md#task-2",
+      "name": "Угадайка",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2716,
+      "source": "06-Struktury-dannyh/05-Svyaznyy-spisok/05-Praktika.md#task-3",
+      "name": "Редактор с курсором",
+      "points": 20,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2717,
+      "source": "07-Konteynery-STL/01-Konteynery-i-iteratory/02-Iterator.md#task-1",
+      "name": "Битые кадры",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2718,
+      "source": "07-Konteynery-STL/01-Konteynery-i-iteratory/03-Stdstring.md#task-1",
+      "name": "Разбор лога",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2719,
+      "source": "07-Konteynery-STL/01-Konteynery-i-iteratory/04-List-dek-i-adaptery.md#task-1",
+      "name": "Лента багажа",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2720,
+      "source": "07-Konteynery-STL/01-Konteynery-i-iteratory/05-Praktika.md#task-1",
+      "name": "Список дел",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2721,
+      "source": "07-Konteynery-STL/01-Konteynery-i-iteratory/05-Praktika.md#task-2",
+      "name": "Отмена и возврат",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2722,
+      "source": "07-Konteynery-STL/02-Assotsiativnye-konteynery/01-Slovar.md#task-1",
+      "name": "Кто чаще всех",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2723,
+      "source": "07-Konteynery-STL/02-Assotsiativnye-konteynery/02-Mnozhestvo.md#task-1",
+      "name": "Два концерта",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2724,
+      "source": "07-Konteynery-STL/02-Assotsiativnye-konteynery/03-Hesh-tablitsy.md#task-1",
+      "name": "Номера на парковке",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2725,
+      "source": "07-Konteynery-STL/02-Assotsiativnye-konteynery/04-Praktika.md#task-1",
+      "name": "Школьная столовая",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2726,
+      "source": "07-Konteynery-STL/02-Assotsiativnye-konteynery/04-Praktika.md#task-2",
+      "name": "Одинаковые слова",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2727,
+      "source": "07-Konteynery-STL/03-Algoritmy-STL/01-Sortirovka-i-komparatory.md#task-1",
+      "name": "Рейтинг фильмов",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2728,
+      "source": "07-Konteynery-STL/03-Algoritmy-STL/02-Poisk-podschyot-i-preobrazovanie.md#task-1",
+      "name": "Дневник тренировок",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2729,
+      "source": "07-Konteynery-STL/03-Algoritmy-STL/03-Praktika.md#task-1",
+      "name": "Библиотека",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2730,
+      "source": "07-Konteynery-STL/03-Algoritmy-STL/03-Praktika.md#task-2",
+      "name": "Заезды на картинге",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2731,
+      "source": "08-Grafy/01-Filosofskiy-most-prokladyvaem-puti-v-grafah/02-Kak-hranit-graf.md#task-1",
+      "name": "Хоменум ревелио",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2732,
+      "source": "08-Grafy/01-Filosofskiy-most-prokladyvaem-puti-v-grafah/02-Kak-hranit-graf.md#task-2",
+      "name": "Вам может быть знакомо",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2733,
+      "source": "08-Grafy/01-Filosofskiy-most-prokladyvaem-puti-v-grafah/02-Kak-hranit-graf.md#task-3",
+      "name": "Треугольник дружбы",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2734,
+      "source": "08-Grafy/01-Filosofskiy-most-prokladyvaem-puti-v-grafah/03-Obhod-v-shirinu.md#task-1",
+      "name": "Шесть рукопожатий",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2735,
+      "source": "08-Grafy/01-Filosofskiy-most-prokladyvaem-puti-v-grafah/04-Obhod-po-karte.md#task-1",
+      "name": "Указуй",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2736,
+      "source": "08-Grafy/01-Filosofskiy-most-prokladyvaem-puti-v-grafah/04-Obhod-po-karte.md#task-2",
+      "name": "Алохомора",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2737,
+      "source": "08-Grafy/02-Taynaya-komnata-primenyaem-obhod-v-glubinu/01-Obhod-v-glubinu.md#task-1",
+      "name": "Люмос",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2738,
+      "source": "08-Grafy/02-Taynaya-komnata-primenyaem-obhod-v-glubinu/02-Komponenty-i-ostrova.md#task-1",
+      "name": "Острова",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2739,
+      "source": "08-Grafy/02-Taynaya-komnata-primenyaem-obhod-v-glubinu/02-Komponenty-i-ostrova.md#task-2",
+      "name": "Карта Мародёров",
+      "points": 20,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2740,
+      "source": "08-Grafy/02-Taynaya-komnata-primenyaem-obhod-v-glubinu/03-Uyazvimye-uzly.md#task-1",
+      "name": "Слабое звено",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2741,
+      "source": "08-Grafy/02-Taynaya-komnata-primenyaem-obhod-v-glubinu/03-Uyazvimye-uzly.md#task-2",
+      "name": "Редукто",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2742,
+      "source": "08-Grafy/02-Taynaya-komnata-primenyaem-obhod-v-glubinu/04-PageRank.md#task-1",
+      "name": "Один шаг сёрфера",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2743,
+      "source": "08-Grafy/02-Taynaya-komnata-primenyaem-obhod-v-glubinu/04-PageRank.md#task-2",
+      "name": "Рейтинг страниц",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2744,
+      "source": "08-Grafy/03-Kubok-kratchayshego-puti-osvaivaem-vzveshennye-grafy/01-Ryobra-s-vesom.md#task-1",
+      "name": "Проверь маршрут",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2745,
+      "source": "08-Grafy/03-Kubok-kratchayshego-puti-osvaivaem-vzveshennye-grafy/02-Algoritm-Deykstry.md#task-1",
+      "name": "Доставка",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2746,
+      "source": "08-Grafy/03-Kubok-kratchayshego-puti-osvaivaem-vzveshennye-grafy/03-A-star.md#task-1",
+      "name": "Навигатор с чутьём",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2747,
+      "source": "08-Grafy/03-Kubok-kratchayshego-puti-osvaivaem-vzveshennye-grafy/04-Praktika.md#task-1",
+      "name": "Метро с пересадками",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2748,
+      "source": "08-Grafy/03-Kubok-kratchayshego-puti-osvaivaem-vzveshennye-grafy/04-Praktika.md#task-2",
+      "name": "Заправки",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2749,
+      "source": "08-Grafy/04-Dary-szhatiya-stroim-derevo-Haffmana/01-Derevo-eto-graf.md#task-1",
+      "name": "Файловое дерево",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2750,
+      "source": "08-Grafy/04-Dary-szhatiya-stroim-derevo-Haffmana/02-Pochemu-tekst-szhimaetsya.md#task-1",
+      "name": "Считаем экономию",
+      "points": 5,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2751,
+      "source": "08-Grafy/04-Dary-szhatiya-stroim-derevo-Haffmana/03-Algoritm-Haffmana.md#task-1",
+      "name": "Коды Хаффмана",
+      "points": 15,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2752,
+      "source": "08-Grafy/04-Dary-szhatiya-stroim-derevo-Haffmana/03-Algoritm-Haffmana.md#task-2",
+      "name": "Канонический код",
+      "points": 10,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2753,
+      "source": "08-Grafy/04-Dary-szhatiya-stroim-derevo-Haffmana/03-Algoritm-Haffmana.md#task-3",
+      "name": "Редуцио",
+      "points": 20,
+      "lang": "cpp",
+      "check_type": "tests",
+      "tester_required": true
+    },
+    {
+      "id": 2754,
+      "source": "09-Qt/01-Chto-takoe-GUI-freymvork/03-Signaly-i-sloty.md#task-1",
+      "name": "Счётчик",
+      "points": 5,
+      "lang": "zip",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2755,
+      "source": "09-Qt/01-Chto-takoe-GUI-freymvork/04-Komponovka-i-taymer.md#task-1",
+      "name": "Пульт марсохода",
+      "points": 15,
+      "lang": "zip",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2756,
+      "source": "09-Qt/01-Chto-takoe-GUI-freymvork/04-Komponovka-i-taymer.md#task-2",
+      "name": "Таймер для чая",
+      "points": 10,
+      "lang": "zip",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2757,
+      "source": "09-Qt/02-Risovanie-i-sobytiya/01-Risuem-sami.md#task-1",
+      "name": "Радуга",
+      "points": 5,
+      "lang": "zip",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2758,
+      "source": "09-Qt/02-Risovanie-i-sobytiya/02-Mysh-i-klaviatura.md#task-1",
+      "name": "Поймай меня",
+      "points": 10,
+      "lang": "zip",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2759,
+      "source": "09-Qt/02-Risovanie-i-sobytiya/02-Mysh-i-klaviatura.md#task-2",
+      "name": "Рисовалка",
+      "points": 15,
+      "lang": "zip",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2760,
+      "source": "09-Qt/02-Risovanie-i-sobytiya/03-Animatsiya.md#task-1",
+      "name": "Свето-релаксация",
+      "points": 5,
+      "lang": "zip",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2761,
+      "source": "09-Qt/02-Risovanie-i-sobytiya/03-Animatsiya.md#task-2",
+      "name": "Салют",
+      "points": 15,
+      "lang": "zip",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2762,
+      "source": "09-Qt/02-Risovanie-i-sobytiya/03-Animatsiya.md#task-3",
+      "name": "Часы",
+      "points": 15,
+      "lang": "zip",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2763,
+      "source": "09-Qt/03-Pishem-igru-i-perenosim-na-telefon/01-Arhitektura-igry.md#task-1",
+      "name": "Каркас игры",
+      "points": 5,
+      "lang": "zip",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2764,
+      "source": "09-Qt/03-Pishem-igru-i-perenosim-na-telefon/02-Stolknoveniya.md#task-1",
+      "name": "Шарики и персонаж",
+      "points": 15,
+      "lang": "zip",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2765,
+      "source": "09-Qt/03-Pishem-igru-i-perenosim-na-telefon/03-Igra-tselikom.md#task-1",
+      "name": "Новое слово в гейм-индустрии",
+      "points": 20,
+      "lang": "zip",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2766,
+      "source": "09-Qt/03-Pishem-igru-i-perenosim-na-telefon/03-Igra-tselikom.md#task-2",
+      "name": "...ящерица, Спок",
+      "points": 15,
+      "lang": "zip",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2767,
+      "source": "09-Qt/03-Pishem-igru-i-perenosim-na-telefon/05-Praktika.md#task-1",
+      "name": "Резиновое окно",
+      "points": 5,
+      "lang": "zip",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2768,
+      "source": "09-Qt/03-Pishem-igru-i-perenosim-na-telefon/05-Praktika.md#task-2",
+      "name": "Игра в кармане",
+      "points": 15,
+      "lang": "zip",
+      "check_type": "gpt",
+      "tester_required": false
+    },
+    {
+      "id": 2769,
+      "source": "09-Qt/03-Pishem-igru-i-perenosim-na-telefon/05-Praktika.md#task-3",
+      "name": "Рекорды, которые не пропадают",
+      "points": 15,
+      "lang": "zip",
+      "check_type": "gpt",
+      "tester_required": false
+    }
+  ]
+}

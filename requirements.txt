@@ -15,3 +15,4 @@ markdown
 pyTelegramBotAPI[proxy]
 PySocks
 redis
+Pillow

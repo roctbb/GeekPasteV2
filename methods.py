@@ -17,7 +17,7 @@ from runner import TestExecutor, SolutionException, ExecutionException
 from submission_archive import extract_data_from_zipfile, rebuild_zip
 from telegram_notifier import send_telegram_message
 from ai_detector import analyze_code_for_ai_usage, get_ai_detection_prompt_addition
-from score_policy import normalize_test_points
+from score_policy import normalize_gpt_points, normalize_test_points
 from image_submission import parse_image_submission
 
 
@@ -521,7 +521,10 @@ def check_task_with_gpt(task, code):
         student_code = f'Файл solution.ipynb\n\n{code.code}'
     elif code.lang == 'image':
         try:
-            image_submission = parse_image_submission(code.code)
+            image_submission = parse_image_submission(
+                code.code,
+                MAX_IMAGE_SUBMISSION_BYTES,
+            )
         except Exception as e:
             code.check_points = 0
             code.check_state = 'execution error'
@@ -621,7 +624,12 @@ def check_task_with_gpt(task, code):
         return
 
     points, comments, llm_probability = parse_gpt_answer(gpt_answer)
-    code.check_points = max(min(points, task.points), 1)
+    code.check_points = normalize_gpt_points(
+        task.id,
+        code.lang,
+        points,
+        task.points,
+    )
     code.check_comments = comments
 
     # Сохраняем вероятность использования LLM от GPT

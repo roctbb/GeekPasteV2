@@ -16,6 +16,12 @@ PROBE_PAYLOAD_LIMIT = 100 * 1024
 _PROBE_PROTOCOL_LIMIT = 256 * 1024
 EXECUTION_CAPTURE_LIMIT = 100 * 1024
 ISOLATED_CONTROLLER_CAPTURE_LIMIT = 256 * 1024
+ALLOWED_CPP_HARNESS_OPTIONS = frozenset({
+    "-O1",
+    "-O2",
+    "-fno-omit-frame-pointer",
+    "-fsanitize=address,undefined",
+})
 
 
 class ExecutionException(Exception):
@@ -396,11 +402,16 @@ def _run_process_bounded(command, input_bytes, timeout, capture_limit):
 class ExecutionContainer:
     _docker_checked = False
     _harness_docker_timeout = 10
+    _harness_compile_timeout = max(
+        1,
+        int(os.getenv("CPP_HARNESS_COMPILE_TIMEOUT", "10")),
+    )
 
     def __init__(self, language, template_path, code):
         try:
             self.container_id = None
             self.path = None
+            self._unusable = False
             self.language = language
             self.code = code
             self.session_id = str(uuid.uuid4())
@@ -416,12 +427,15 @@ class ExecutionContainer:
             self.setup()
         except SolutionException as e:
             print(e)
+            self.cleanup()
             raise e
         except ExecutionException as e:
             print(e)
+            self.cleanup()
             raise e
         except Exception as e:
             print(e)
+            self.cleanup()
             raise ExecutionException(e)
 
     def __del__(self):
@@ -491,9 +505,24 @@ class ExecutionContainer:
             run_command = ["docker", "run", "-d", "--pull", "missing"]
             if self.language == "python":
                 run_command.extend(["-v", f"{self._pip_cache_volume}:/root/.cache/pip"])
+            else:
+                run_command.extend([
+                    "--network", "none",
+                    "--memory", "512m",
+                    "--cpus", "1.0",
+                    "--pids-limit", "128",
+                    "--ulimit", "fsize=67108864:67108864",
+                    "--ulimit", "nofile=256:256",
+                    "--read-only",
+                    "--tmpfs", "/tmp:rw,nosuid,nodev,size=64m",
+                ])
             if self._docker_transfer_mode == "bind":
                 volume_binding = f"{self.path}:/code"
                 run_command.extend(["-v", volume_binding])
+            elif self.language == "cpp":
+                run_command.extend([
+                    "--tmpfs", "/code:rw,exec,nosuid,nodev,size=128m",
+                ])
             run_command.extend([container_image, "sleep", "infinity"])
 
             container_id = subprocess.run(
@@ -537,13 +566,9 @@ class ExecutionContainer:
                 )
 
             if self.language == "cpp":
-                compile_command = "g++ /code/script.cpp -o /code/program"
-                compile_result = subprocess.run(
-                    ["docker", "exec", self.container_id, "bash", "-c", compile_command],
-                    stdout=subprocess.PIPE, stderr=subprocess.PIPE
-                )
-                if compile_result.returncode != 0:
-                    raise SolutionException(f"Compilation failed: {compile_result.stderr.decode()}")
+                self._compile_cpp_harness("/code/script.cpp", "/code/program")
+        except (SolutionException, ExecutionException):
+            raise
         except Exception as e:
             print(e)
             raise ExecutionException("Error setting up execution.")
@@ -553,13 +578,25 @@ class ExecutionContainer:
             subprocess.run(["docker", "kill", self.container_id], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             subprocess.run(["docker", "rm", self.container_id], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    def run(self, input_data, time_limit=1):
+    def run(
+        self,
+        input_data,
+        time_limit=1,
+        capture_limit=EXECUTION_CAPTURE_LIMIT,
+    ):
+        if getattr(self, "_unusable", False):
+            raise SolutionException("Execution container stopped after a timeout.")
         if self.language == "python":
             exec_command = "cd /code && python3 script.py"
         else:
             exec_command = "cd /code && ./program"
 
-        return self._run_command(exec_command, input_data, time_limit)
+        return self._run_command(
+            exec_command,
+            input_data,
+            time_limit,
+            capture_limit=capture_limit,
+        )
 
     def run_source(
         self,
@@ -567,7 +604,22 @@ class ExecutionContainer:
         input_data="",
         time_limit=1,
         probe_source=None,
+        compile_options=None,
     ):
+        if getattr(self, "_unusable", False):
+            raise SolutionException("Execution container stopped after a timeout.")
+        if self.language == "cpp":
+            if probe_source is not None:
+                raise ExecutionException(
+                    "Isolated probes are supported only for Python tasks."
+                )
+            return self._run_cpp_source(
+                source_code,
+                input_data,
+                time_limit,
+                compile_options,
+            )
+
         if self.language != "python":
             raise ExecutionException("Test harnesses are supported only for Python tasks.")
 
@@ -636,6 +688,160 @@ class ExecutionContainer:
                     # checking, so a failed best-effort file cleanup is harmless.
                     pass
 
+    def _run_cpp_source(
+        self,
+        source_code,
+        input_data,
+        time_limit,
+        compile_options=None,
+    ):
+        identifier = uuid.uuid4().hex
+        source_filename = f"__geekpaste_test_{identifier}.cpp"
+        binary_filename = f"__geekpaste_test_{identifier}"
+        local_source_path = os.path.join(self.path, source_filename)
+        local_binary_path = os.path.join(self.path, binary_filename)
+        container_source_path = f"/code/{source_filename}"
+        container_binary_path = f"/code/{binary_filename}"
+
+        try:
+            try:
+                with open(local_source_path, "w", encoding="utf-8") as file:
+                    file.write(source_code)
+            except (OSError, TypeError) as error:
+                raise ExecutionException(
+                    "Error creating the C++ test harness."
+                ) from error
+
+            if self._docker_transfer_mode == "cp":
+                try:
+                    subprocess.run(
+                        [
+                            "docker",
+                            "cp",
+                            local_source_path,
+                            f"{self.container_id}:{container_source_path}",
+                        ],
+                        check=True,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        timeout=self._harness_docker_timeout,
+                    )
+                except (OSError, subprocess.SubprocessError) as error:
+                    raise ExecutionException(
+                        "Error transferring the C++ test harness."
+                    ) from error
+            elif self._docker_transfer_mode != "bind":
+                raise ExecutionException(
+                    f"Unsupported DOCKER_TRANSFER_MODE: {self._docker_transfer_mode}"
+                )
+
+            self._compile_cpp_harness(
+                container_source_path,
+                container_binary_path,
+                compile_options,
+            )
+            return self._run_command(
+                f"cd /code && ./{binary_filename}",
+                input_data,
+                time_limit,
+            )
+        finally:
+            for local_path in (local_source_path, local_binary_path):
+                try:
+                    os.remove(local_path)
+                except OSError:
+                    pass
+
+            if self._docker_transfer_mode == "cp" and self.container_id:
+                try:
+                    subprocess.run(
+                        [
+                            "docker",
+                            "exec",
+                            self.container_id,
+                            "rm",
+                            "-f",
+                            container_source_path,
+                            container_binary_path,
+                        ],
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        timeout=self._harness_docker_timeout,
+                    )
+                except (OSError, subprocess.SubprocessError):
+                    # Container teardown after the task is the final cleanup fallback.
+                    pass
+
+    def _compile_cpp_harness(
+        self,
+        source_path,
+        binary_path,
+        compile_options=None,
+    ):
+        options = tuple(compile_options or ())
+        if any(option not in ALLOWED_CPP_HARNESS_OPTIONS for option in options):
+            raise ExecutionException("Unsupported C++ harness compiler option.")
+        command = [
+            "docker",
+            "exec",
+            self.container_id,
+            "g++",
+            "-std=c++17",
+            *options,
+            source_path,
+            "-o",
+            binary_path,
+        ]
+        try:
+            return_code, stdout, stderr, overflow = _run_process_bounded(
+                command,
+                b"",
+                self._harness_compile_timeout,
+                EXECUTION_CAPTURE_LIMIT,
+            )
+        except subprocess.TimeoutExpired:
+            self._stop_after_timeout()
+            raise SolutionException(
+                "Compilation timed out after "
+                f"{self._harness_compile_timeout} seconds."
+            ) from None
+        except OSError as error:
+            raise ExecutionException(
+                "Error starting the C++ test harness compiler."
+            ) from error
+
+        if overflow:
+            self._stop_after_timeout()
+            raise SolutionException(
+                f"Compilation output limit exceeded ({EXECUTION_CAPTURE_LIMIT} bytes)."
+            )
+
+        error_text = stderr.decode(errors="replace").strip()
+        if return_code in (125, 126, 127):
+            details = f": {error_text}" if error_text else ""
+            raise ExecutionException(
+                f"Error running the C++ test harness compiler{details}"
+            )
+        if return_code != 0:
+            details = error_text or stdout.decode(errors="replace").strip()
+            raise SolutionException(
+                f"Compilation failed: {details or 'unknown compiler error'}"
+            )
+
+    def _stop_after_timeout(self):
+        self._unusable = True
+        if not self.container_id:
+            return
+        try:
+            subprocess.run(
+                ["docker", "kill", self.container_id],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=getattr(self, "_harness_docker_timeout", 10),
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+
     def _run_command(
         self,
         exec_command,
@@ -661,6 +867,7 @@ class ExecutionContainer:
                 capture_limit,
             )
             if overflow:
+                self._stop_after_timeout()
                 raise SolutionException(
                     f"Output limit exceeded ({capture_limit} bytes)."
                 )
@@ -676,6 +883,7 @@ class ExecutionContainer:
             return stdout.decode(errors="replace")
 
         except subprocess.TimeoutExpired:
+            self._stop_after_timeout()
             raise SolutionException(
                 f"Test failed: Execution timed out after {time_limit} seconds."
             ) from None
@@ -689,8 +897,13 @@ class TestRunner:
     def __init__(self, container):
         self.container = container
 
-    def __call__(self, input_data, time_limit=1):
-        return self.container.run(input_data, time_limit)
+    def __call__(
+        self,
+        input_data,
+        time_limit=1,
+        capture_limit=EXECUTION_CAPTURE_LIMIT,
+    ):
+        return self.container.run(input_data, time_limit, capture_limit)
 
     def run_source(
         self,
@@ -698,12 +911,14 @@ class TestRunner:
         input_data="",
         time_limit=1,
         probe_source=None,
+        compile_options=None,
     ):
         return self.container.run_source(
             source_code,
             input_data,
             time_limit,
             probe_source,
+            compile_options,
         )
 
 

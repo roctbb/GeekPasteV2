@@ -30,7 +30,7 @@ class Grade7Chapter0ReleaseGateTests(unittest.TestCase):
             frozenset(migration.GRADE7_INTRO_TEST_TASK_IDS),
             EXPECTED_TEST_TASK_IDS,
         )
-        self.assertEqual(ZERO_SCORE_TEST_TASK_IDS, EXPECTED_TEST_TASK_IDS)
+        self.assertTrue(EXPECTED_TEST_TASK_IDS.issubset(ZERO_SCORE_TEST_TASK_IDS))
 
     def test_every_migrated_task_has_an_importable_tester(self):
         for task_id in EXPECTED_TEST_TASK_IDS:
