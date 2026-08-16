@@ -7,6 +7,7 @@ import unittest
 from unittest import mock
 
 from runner import (
+    APPLICATION_ROOT,
     ExecutionContainer,
     ExecutionException,
     SolutionException,
@@ -94,6 +95,58 @@ class TestRunnerTests(unittest.TestCase):
                 )
             ],
         )
+
+
+class TestExecutorImportTests(unittest.TestCase):
+    def test_tester_import_does_not_depend_on_the_process_working_directory(self):
+        script = """
+import os
+import sys
+import tempfile
+
+from runner import APPLICATION_ROOT, TestExecutor
+
+os.chdir(tempfile.gettempdir())
+sys.path[:] = [
+    entry
+    for entry in sys.path
+    if entry not in ("", APPLICATION_ROOT)
+]
+sys.modules.pop("environments", None)
+sys.modules.pop("environments.task_2770", None)
+sys.modules.pop("environments.task_2770.tester", None)
+
+tester = TestExecutor._load_tester_module(2770)
+assert callable(tester.perform_tests)
+assert tester.perform_tests.__module__ == "environments.task_2440.tester"
+assert APPLICATION_ROOT in sys.path
+"""
+
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            cwd=APPLICATION_ROOT,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_execution_paths_are_anchored_to_the_application_root(self):
+        container = object.__new__(ExecutionContainer)
+        container.session_id = "test-session"
+        container.container_id = None
+        container.path = None
+
+        with tempfile.TemporaryDirectory() as directory:
+            previous_path = os.getcwd()
+            try:
+                os.chdir(directory)
+                self.assertEqual(
+                    container.get_path(),
+                    os.path.join(APPLICATION_ROOT, "executions", "test-session"),
+                )
+            finally:
+                os.chdir(previous_path)
 
 
 class ExecutionContainerHarnessTests(unittest.TestCase):

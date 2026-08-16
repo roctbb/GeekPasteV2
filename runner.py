@@ -13,6 +13,10 @@ import uuid
 from config import IGNORED_PARTS
 
 
+APPLICATION_ROOT = os.path.dirname(os.path.abspath(__file__))
+ENVIRONMENTS_ROOT = os.path.join(APPLICATION_ROOT, "environments")
+EXECUTIONS_ROOT = os.path.join(APPLICATION_ROOT, "executions")
+
 PROBE_OUTPUT_LIMIT = 100 * 1024
 PROBE_PAYLOAD_LIMIT = 100 * 1024
 _PROBE_PROTOCOL_LIMIT = 256 * 1024
@@ -459,7 +463,7 @@ class ExecutionContainer:
         self.path = None
 
     def get_path(self):
-        return os.path.abspath(os.path.join("executions", self.session_id))
+        return os.path.join(EXECUTIONS_ROOT, self.session_id)
 
     def clear_execution_folder(self):
         if self.path:
@@ -1068,7 +1072,9 @@ class TestExecutor:
         self.original_path = os.getcwd()
         self.code = code
         self.task = code.task
-        self.container = ExecutionContainer(code.lang, f"environments/task_{code.task_id}", code.code)
+        self.container = None
+        template_path = os.path.join(ENVIRONMENTS_ROOT, f"task_{code.task_id}")
+        self.container = ExecutionContainer(code.lang, template_path, code.code)
 
     def __enter__(self):
         return self
@@ -1079,7 +1085,7 @@ class TestExecutor:
     def cleanup(self):
         if not self.container:
             return
-        os.chdir(self.original_path)
+        self._restore_original_path()
         self.container.cleanup()
         mod_name = f"environments.task_{self.code.task_id}.tester"
         sys.modules.pop(mod_name, None)
@@ -1088,23 +1094,34 @@ class TestExecutor:
     def __del__(self):
         self.cleanup()
 
-    def perform(self):
-        mod_name = f"environments.task_{self.code.task_id}.tester"
+    def _restore_original_path(self):
         try:
-            tester_module = importlib.import_module(mod_name)
-            importlib.reload(tester_module)  # force fresh load
+            os.chdir(self.original_path)
+        except OSError:
+            os.chdir(APPLICATION_ROOT)
+
+    @staticmethod
+    def _load_tester_module(task_id):
+        if APPLICATION_ROOT not in sys.path:
+            sys.path.insert(0, APPLICATION_ROOT)
+
+        mod_name = f"environments.task_{task_id}.tester"
+        tester_module = importlib.import_module(mod_name)
+        return importlib.reload(tester_module)
+
+    def perform(self):
+        try:
+            tester_module = self._load_tester_module(self.code.task_id)
             perform_tests = getattr(tester_module, 'perform_tests')
         except Exception as e:
             raise ExecutionException(f"Error importing tester module: {e}.")
 
         try:
             os.chdir(self.container.path)
-            result = perform_tests(TestRunner(self.container), self.code.code)
-            os.chdir(self.original_path)
-            return result
+            return perform_tests(TestRunner(self.container), self.code.code)
         except SolutionException as e:
-            os.chdir(self.original_path)
             raise e
         except Exception as e:
-            os.chdir(self.original_path)
             raise ExecutionException(f"Error running tester: {e}.")
+        finally:
+            self._restore_original_path()
