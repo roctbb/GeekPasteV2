@@ -19,7 +19,7 @@ EXPECTED_TASKS = {
     2446: (10, 8),
     2447: (15, 9),
     2448: (15, 9),
-    2449: (15, 8),
+    2449: (15, 9),
     2450: (20, 9),
 }
 
@@ -37,7 +37,10 @@ def runner_for(spec, failed_key=None, variant_index=0, reverse_password=False):
         lines = list(variants[chosen_index])
         if reverse_password and case.matcher == "password" and len(lines) > 2:
             lines = lines[:1] + list(reversed(lines[1:]))
-        return "Собственные приглашения ученика: " + "\n".join(lines) + "\n"
+        answer = "\n".join(lines) + "\n"
+        if case.matcher in {"coordinate", "password", "turnstile"}:
+            return answer
+        return "Собственные приглашения ученика: " + answer
 
     return runner
 
@@ -82,6 +85,15 @@ class Grade7Chapter0IOTests(unittest.TestCase):
             spec = TASK_SPECS[task_id]
             self.assertEqual(spec.max_points, max_points)
             self.assertEqual(len(spec.cases), case_count)
+            self.assertTrue(
+                all(case.input_data.rstrip("\r\n") for case in spec.cases),
+                f"Task {task_id} contains a sole-empty stdin scenario",
+            )
+            if task_id == 2445:
+                self.assertEqual(
+                    [case.key for case in spec.cases],
+                    [str(number) for number in range(1, case_count + 1)],
+                )
 
     def test_adversarial_cases_are_present_verbatim(self):
         inputs = {
@@ -89,6 +101,9 @@ class Grade7Chapter0IOTests(unittest.TestCase):
             for task_id, spec in TASK_SPECS.items()
         }
         self.assertTrue({"-5\n0\n", "0\n3\n"} <= inputs[2442])
+        self.assertTrue({"6\n", "0\n"} <= inputs[2441])
+        self.assertNotIn("6\nнет\n", inputs[2441])
+        self.assertNotIn("0\nнет\n", inputs[2441])
         self.assertTrue(
             {"5\n8\n5\n", "10\n1\n2\n", "1\n10\n2\n"} <= inputs[2443]
         )
@@ -101,7 +116,10 @@ class Grade7Chapter0IOTests(unittest.TestCase):
             <= inputs[2446]
         )
         self.assertTrue({"abbba\n", "aAAa\n", "  a \n"} <= inputs[2447])
-        self.assertTrue({"aaaaaaaaaaaa\n", "aAAa\n", "a  \n"} <= inputs[2449])
+        self.assertTrue(
+            {"aaaaaaaaaaaa\n", "aAAa\n", "a  \n", "  a\n"} <= inputs[2449]
+        )
+        self.assertIn("\u00a0\u2003\n", inputs[2445])
         self.assertTrue({"Az-9!\n27\n", "z\n55\n", "яЯ\n67\n"} <= inputs[2450])
 
     def test_all_reference_outputs_receive_exact_maximum(self):
@@ -140,7 +158,7 @@ class Grade7Chapter0IOTests(unittest.TestCase):
         reference = runner_for(spec)
 
         def age_only_runner(input_data):
-            if input_data in {"6\nнет\n", "0\nнет\n"}:
+            if input_data in {"6\n", "0\n"}:
                 return reference(input_data)
             return "неверный ответ\n"
 
@@ -191,6 +209,35 @@ for symbol in text:
         points, _ = perform_task(2445, forgets_zero, source)
         self.assertLess(points, TASK_SPECS[2445].max_points)
 
+    def test_statistics_uses_isspace_for_unicode_whitespace(self):
+        def only_ascii_spaces(input_data):
+            text = input_data.rstrip("\n")
+            letters = digits = spaces = others = 0
+            for symbol in text:
+                if symbol.isalpha():
+                    letters += 1
+                elif symbol.isdigit():
+                    digits += 1
+                elif symbol in " \t":
+                    spaces += 1
+                else:
+                    others += 1
+            return (
+                f"Букв: {letters}\n"
+                f"Цифр: {digits}\n"
+                f"Пробелов: {spaces}\n"
+                f"Других символов: {others}\n"
+            )
+
+        source = """
+text = input()
+for symbol in text:
+    pass
+"""
+        points, _ = perform_task(2445, only_ascii_spaces, source)
+
+        self.assertLess(points, TASK_SPECS[2445].max_points)
+
     def test_prompts_and_whitespace_before_answer_are_ignored(self):
         spec = TASK_SPECS[2445]
         cases = {case.input_data: case for case in spec.cases}
@@ -210,59 +257,144 @@ for symbol in text:
         )
         self.assertEqual(points, spec.max_points)
 
-    def test_turnstile_accepts_only_an_explicit_error(self):
+    def test_feedback_preview_makes_invisible_input_characters_visible(self):
+        tabs_feedback = self.assert_not_max(
+            2445,
+            runner_with_override(TASK_SPECS[2445], "5", "неверно\n"),
+        )
+        self.assertIn(r"Ввод: \t\t", tabs_feedback)
+        self.assertNotIn("Ввод: <пустой ввод>", tabs_feedback)
+        self.assertIn(r"Обозначения: \t — табуляция", tabs_feedback)
+
+        edge_spaces_feedback = self.assert_not_max(
+            2447,
+            runner_with_override(TASK_SPECS[2447], "9", "неверно\n"),
+        )
+        self.assertIn("Ввод: ␠␠a␠", edge_spaces_feedback)
+        self.assertIn("␠ — пробел на краю строки", edge_spaces_feedback)
+
+    def test_turnstile_requires_the_three_exact_answers(self):
         spec = TASK_SPECS[2441]
-        clear_error = runner_with_override(
+        exact_error = runner_with_override(
             spec,
             "4",
-            "Возраст: Билет: Ошибка: укажите «да» или «нет»\n",
+            "Возраст: Билет: Непонятный ответ\n",
         )
-        points, _ = perform_task(2441, clear_error)
+        points, _ = perform_task(
+            2441,
+            exact_error,
+            'age = int(input("Возраст: "))\nticket = input("Билет: ")',
+        )
         self.assertEqual(points, spec.max_points)
 
-        instruction_only = runner_with_override(
+        for case_key, replacement in (
+            ("1", "Проход разрешен\n"),
+            ("2", "проход разрешён\n"),
+            ("3", "Для прохода нужен билет.\n"),
+            ("4", "Ошибка: непонятный ответ\n"),
+            ("4", "Ответьте только «да» или «нет»\n"),
+            ("4", "Проход разрешён\nНепонятный ответ\n"),
+        ):
+            with self.subTest(case_key=case_key, replacement=replacement):
+                self.assert_not_max(
+                    2441,
+                    runner_with_override(spec, case_key, replacement),
+                )
+
+        exact_without_newline = runner_with_override(
             spec,
             "4",
-            "Ответьте только «да» или «нет»\n",
+            "Непонятный ответ",
         )
-        self.assert_not_max(2441, instruction_only)
-
-        contradictory = runner_with_override(
-            spec,
-            "4",
-            "Проход разрешён\nОшибка: непонятный ответ\n",
-        )
-        self.assert_not_max(2441, contradictory)
-
-        without_newline = runner_with_override(spec, "4", "Ошибка: непонятный ответ")
-        points, _ = perform_task(2441, without_newline)
+        points, _ = perform_task(2441, exact_without_newline)
         self.assertEqual(points, spec.max_points)
 
-        allowed_without_newline_or_yo = runner_with_override(
-            spec,
-            "1",
-            "Проход разрешен",
+    def test_turnstile_ignores_only_literal_input_prompts_from_source(self):
+        spec = TASK_SPECS[2441]
+        reference = runner_for(spec)
+        source = (
+            'age = int(input("Ошибка? Введите возраст: "))\n'
+            'if age >= 7:\n'
+            '    ticket = input("Для прохода нужен билет? ")\n'
         )
-        points, _ = perform_task(2441, allowed_without_newline_or_yo)
-        self.assertEqual(points, spec.max_points)
 
-    def test_password_problem_order_is_not_significant(self):
+        def prompted_runner(input_data):
+            age = int(input_data.splitlines()[0])
+            prompts = "Ошибка? Введите возраст: "
+            if age >= 7:
+                prompts += "Для прохода нужен билет? "
+            return prompts + reference(input_data)
+
+        points, feedback = perform_task(2441, prompted_runner, source)
+        self.assertEqual(points, spec.max_points, feedback)
+
+        def undeclared_prefix_runner(input_data):
+            return "Диагностика: " + reference(input_data)
+
+        points, _ = perform_task(
+            2441,
+            undeclared_prefix_runner,
+            "age = int(input())\nticket = input()\n",
+        )
+        self.assertLess(points, spec.max_points)
+
+    def test_coordinate_ignores_only_literal_input_prompts_from_source(self):
+        spec = TASK_SPECS[2442]
+        reference = runner_for(spec)
+        source = (
+            'x = int(input("Ось X: "))\n'
+            'y = int(input("Ось Y: "))\n'
+        )
+
+        def prompted_runner(input_data):
+            return "Ось X: Ось Y: " + reference(input_data)
+
+        points, feedback = perform_task(2442, prompted_runner, source)
+        self.assertEqual(points, spec.max_points, feedback)
+
+        def undeclared_prefix_runner(input_data):
+            return "Диагностика: " + reference(input_data)
+
+        points, _ = perform_task(
+            2442,
+            undeclared_prefix_runner,
+            "x = int(input())\ny = int(input())\n",
+        )
+        self.assertLess(points, spec.max_points)
+
+    def test_password_requires_exact_order_and_allows_literal_input_prompt(self):
         spec = TASK_SPECS[2448]
+        reversed_order = runner_for(spec, reverse_password=True)
         points, _ = perform_task(
             2448,
-            runner_for(spec, reverse_password=True),
+            reversed_order,
         )
-        self.assertEqual(points, spec.max_points)
+        self.assertLess(points, spec.max_points)
 
-        prompt_with_requirement = runner_with_override(
-            spec,
-            "1",
-            "Подсказка: пароль должен быть не короче 8 символов. Пароль подходит\n",
+        reference = runner_for(spec)
+        prompt = "Пароль не подходит: введите пароль: "
+
+        def prompted_runner(input_data):
+            return prompt + reference(input_data)
+
+        points, feedback = perform_task(
+            2448,
+            prompted_runner,
+            'password = input("{}")\n'.format(prompt),
         )
-        points, _ = perform_task(2448, prompt_with_requirement)
-        self.assertEqual(points, spec.max_points)
+        self.assertEqual(points, spec.max_points, feedback)
 
-    def test_password_accepts_clear_semantic_problem_wording(self):
+        def undeclared_prefix_runner(input_data):
+            return "Диагностика: " + reference(input_data)
+
+        points, _ = perform_task(
+            2448,
+            undeclared_prefix_runner,
+            "password = input()\n",
+        )
+        self.assertLess(points, spec.max_points)
+
+    def test_password_rejects_non_exact_problem_wording(self):
         spec = TASK_SPECS[2448]
         reference = runner_for(spec)
         replacements = {
@@ -282,8 +414,8 @@ for symbol in text:
         def semantic_runner(input_data):
             return replacements.get(input_data, reference(input_data))
 
-        points, feedback = perform_task(2448, semantic_runner)
-        self.assertEqual(points, spec.max_points, feedback)
+        points, _ = perform_task(2448, semantic_runner)
+        self.assertLess(points, spec.max_points)
 
     def test_password_rejects_contradictory_and_unknown_results(self):
         spec = TASK_SPECS[2448]
@@ -468,6 +600,20 @@ for symbol in text:
             return "".join(chunks) + "\n"
 
         self.assert_not_max(2449, normalizes_the_input)
+
+    def test_compression_must_preserve_leading_spaces(self):
+        def strips_only_leading_spaces(input_data):
+            text = input_data.rstrip("\n").lstrip()
+            chunks = []
+            start = 0
+            for index in range(1, len(text) + 1):
+                if index < len(text) and text[index] == text[start]:
+                    continue
+                chunks.append(text[start] + str(index - start))
+                start = index
+            return "".join(chunks) + "\n"
+
+        self.assert_not_max(2449, strips_only_leading_spaces)
 
     def test_password_accepts_zero_and_punctuation(self):
         spec = TASK_SPECS[2448]

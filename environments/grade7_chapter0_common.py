@@ -84,8 +84,13 @@ def _literal_node(value):
     return ast.Constant(value=value)
 
 
-def _replace_top_level_assignment(tree, name, value):
+def _replace_top_level_assignment(tree, name, value, capture_as=None):
     replacement = _literal_node(value)
+    if capture_as is not None:
+        replacement = ast.NamedExpr(
+            target=ast.Name(id=capture_as, ctx=ast.Store()),
+            value=replacement,
+        )
     for node in tree.body:
         if isinstance(node, ast.Assign):
             for target in node.targets:
@@ -290,21 +295,60 @@ def _nested_case_collection_size(tree):
     return maximum
 
 
-def _contains_word_sequence(output, expected):
-    words = re.findall(r"[A-Za-zА-Яа-яЁё]+", output.lower())
-    expected_words = [str(item).lower() for item in expected]
-    if not expected_words:
-        return "[]" in output or not output.strip()
-    size = len(expected_words)
-    return any(
-        words[index:index + size] == expected_words
-        for index in range(len(words) - size + 1)
+def _literal_input_prompts(tree):
+    """Return string literals passed directly to ``input`` in source code."""
+    prompts = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call) or not node.args:
+            continue
+        if not (
+            isinstance(node.func, ast.Name)
+            and node.func.id == "input"
+        ):
+            continue
+        try:
+            prompt = ast.literal_eval(node.args[0])
+        except (TypeError, ValueError):
+            continue
+        if isinstance(prompt, str) and prompt:
+            prompts.append(prompt)
+    return tuple(prompts)
+
+
+def _without_literal_input_prompts(output, prompts, prompt_count):
+    normalized = output.replace("\r\n", "\n").replace("\r", "\n")
+    if normalized.endswith("\n"):
+        normalized = normalized[:-1]
+
+    # With redirected stdin, ``input(prompt)`` writes prompts without echoing
+    # entered data.  Remove only exact prompt literals found in the submitted
+    # source, never an arbitrary human-looking prefix.
+    candidates = sorted(set(prompts), key=len, reverse=True)
+    for _ in range(prompt_count):
+        match = next(
+            (prompt for prompt in candidates if normalized.startswith(prompt)),
+            None,
+        )
+        if match is None:
+            break
+        normalized = normalized[len(match):]
+    return normalized
+
+
+def _matches_prompted_exact_output(output, expected, prompts, prompt_count):
+    """Ignore submitted literal input prompts and compare the answer exactly."""
+    return (
+        _without_literal_input_prompts(output, prompts, prompt_count)
+        == expected
     )
 
 
 def _frequency_map(output):
     pairs = re.findall(
-        r"[\"']?([A-Za-zА-Яа-яЁё]+)[\"']?\s*:\s*(-?\d+)",
+        (
+            r"[\"']?([A-Za-zА-Яа-яЁё]+)[\"']?\s*"
+            r"(?::|=|[—–-])\s*(-?\d+)"
+        ),
         output.lower(),
     )
     return {word: int(count) for word, count in pairs}
@@ -321,43 +365,52 @@ def _parse_items(value):
     ]
 
 
-def _interest_output(output):
+def _interest_output(output, prompts):
+    output = _without_literal_input_prompts(output, prompts, 2)
     labels = ("Общие", "Все", "Только у Алисы", "Только у Бориса")
-    result = {}
-    for label in labels:
-        matches = list(re.finditer(
-            rf"{re.escape(label)}[ \t]*:[ \t]*([^\r\n]*)",
-            output,
-            flags=re.IGNORECASE,
-        ))
-        if not matches:
-            result[label] = None
-            continue
-        result[label] = _parse_items(matches[-1].group(1))
+    result = {label: None for label in labels}
+    lines = output.split("\n") if output else []
+    if len(lines) != len(labels):
+        return result
+
+    for line in lines:
+        matched_label = None
+        matched_value = None
+        for label in labels:
+            match = re.fullmatch(
+                rf"[ \t]*{re.escape(label)}[ \t]*:[ \t]*([^\r\n]*)",
+                line,
+            )
+            if match is not None:
+                matched_label = label
+                matched_value = match.group(1)
+                break
+        if matched_label is None or result[matched_label] is not None:
+            return {label: None for label in labels}
+        result[matched_label] = _parse_items(matched_value)
     return result
 
 
-def _rankings(output):
-    found = re.findall(
-        r"(?m)^\s*(?:(\d+)\s*[.)]\s*)?"
-        r"([A-Za-zА-Яа-яЁё_-]+)\s*[—–-]\s*(-?\d+)\s*$",
-        output,
-    )
-    return [
-        (int(place) if place else None, name, int(points))
-        for place, name, points in found
-    ]
+def _rankings(output, prompts, prompt_count):
+    text = _without_literal_input_prompts(output, prompts, prompt_count)
+    if not text:
+        return []
+    rankings = []
+    for line in text.split("\n"):
+        match = re.fullmatch(
+            r"[ \t]*(\d+)\.[ \t]+(.+?)[ \t]+—[ \t]+(-?\d+)[ \t]*",
+            line,
+        )
+        if match is None:
+            return []
+        rankings.append(
+            (int(match.group(1)), match.group(2).strip(), int(match.group(3)))
+        )
+    return rankings
 
 
-def _rare_items(output):
-    text = output.replace("\r", "")
-    prompt = re.search(
-        r"(?:введите|ввод)[^:\n]*:\s*",
-        text,
-        flags=re.IGNORECASE,
-    )
-    if prompt:
-        text = text[prompt.end():]
+def _rare_items(output, prompts):
+    text = _without_literal_input_prompts(output, prompts, 1)
     lowered = text.lower().replace("ё", "е")
     if (
         re.search(r"\bнет\s+редк", lowered)
@@ -366,9 +419,9 @@ def _rare_items(output):
         or "редких слов не найдено" in lowered
     ):
         return []
-    if ":" in text:
-        text = text.rsplit(":", 1)[-1]
-    return _parse_items(text.splitlines()[-1] if text.splitlines() else text)
+    if "\n" in text:
+        return None
+    return _parse_items(text)
 
 
 def _random_words(count):
@@ -424,142 +477,6 @@ def _called_names(nodes):
     return names
 
 
-def _reachable_execution_nodes(tree, excluded=()):
-    definitions = _direct_function_definitions(tree)
-    excluded = set(excluded)
-    roots = [
-        node
-        for node in tree.body
-        if not isinstance(
-            node,
-            (
-                ast.FunctionDef,
-                ast.AsyncFunctionDef,
-                ast.ClassDef,
-                ast.Import,
-                ast.ImportFrom,
-            ),
-        )
-    ]
-    reachable = list(roots)
-    pending = list(_called_names(roots))
-    visited = set()
-
-    while pending:
-        name = pending.pop()
-        if name in visited or name in excluded or name not in definitions:
-            continue
-        visited.add(name)
-        body = definitions[name].body
-        reachable.extend(body)
-        pending.extend(_called_names(body))
-    return reachable
-
-
-def _literal_collection_sizes(tree):
-    sizes = {}
-    for node in ast.walk(tree):
-        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
-            continue
-        value = node.value
-        if not isinstance(value, (ast.List, ast.Tuple, ast.Set)):
-            continue
-        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-        for target in targets:
-            if isinstance(target, ast.Name):
-                sizes[target.id] = len(value.elts)
-    return sizes
-
-
-def _iterable_size(node, collection_sizes):
-    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
-        return len(node.elts)
-    if isinstance(node, ast.Name):
-        return collection_sizes.get(node.id, 1)
-    if (
-        isinstance(node, ast.Call)
-        and isinstance(node.func, ast.Name)
-        and node.func.id == "range"
-    ):
-        try:
-            arguments = [ast.literal_eval(argument) for argument in node.args]
-            return len(range(*arguments))
-        except (TypeError, ValueError):
-            return 1
-    return 1
-
-
-def _executed_call_count(tree, function_name):
-    roots = _reachable_execution_nodes(tree, excluded={function_name})
-    collection_sizes = _literal_collection_sizes(tree)
-    total = 0
-
-    def count(node, multiplier=1):
-        nonlocal total
-        if (
-            isinstance(node, ast.If)
-            and isinstance(node.test, ast.Constant)
-            and not node.test.value
-        ):
-            for child in node.orelse:
-                count(child, multiplier)
-            return
-        if isinstance(node, (ast.For, ast.AsyncFor)):
-            iterations = _iterable_size(node.iter, collection_sizes)
-            for child in node.body:
-                count(child, multiplier * iterations)
-            for child in node.orelse:
-                count(child, multiplier)
-            return
-        if (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id == function_name
-        ):
-            total += multiplier
-        for child in ast.iter_child_nodes(node):
-            count(child, multiplier)
-
-    for root in roots:
-        count(root)
-    return total
-
-
-def _reachable_calls(tree, function_name):
-    calls = []
-
-    class ReachableCallVisitor(ast.NodeVisitor):
-        def visit_FunctionDef(self, node):
-            return None
-
-        def visit_AsyncFunctionDef(self, node):
-            return None
-
-        def visit_ClassDef(self, node):
-            return None
-
-        def visit_If(self, node):
-            if isinstance(node.test, ast.Constant):
-                branch = node.body if node.test.value else node.orelse
-                for child in branch:
-                    self.visit(child)
-                return None
-            self.generic_visit(node)
-
-        def visit_Call(self, node):
-            if (
-                isinstance(node.func, ast.Name)
-                and node.func.id == function_name
-            ):
-                calls.append(node)
-            self.generic_visit(node)
-
-    visitor = ReachableCallVisitor()
-    for root in _reachable_execution_nodes(tree, excluded={function_name}):
-        visitor.visit(root)
-    return calls
-
-
 def _uses_frequency_dictionary(tree):
     dictionary_names = set()
     counter_names = set()
@@ -575,21 +492,16 @@ def _uses_frequency_dictionary(tree):
         }
         if isinstance(value, (ast.Dict, ast.DictComp)):
             dictionary_names.update(names)
-        elif (
-            isinstance(value, ast.Call)
-            and (
-                (
-                    isinstance(value.func, ast.Name)
-                    and value.func.id == "Counter"
-                )
-                or (
-                    isinstance(value.func, ast.Attribute)
-                    and value.func.attr == "Counter"
-                )
-            )
-        ):
-            dictionary_names.update(names)
-            counter_names.update(names)
+        elif isinstance(value, ast.Call):
+            constructor = None
+            if isinstance(value.func, ast.Name):
+                constructor = value.func.id
+            elif isinstance(value.func, ast.Attribute):
+                constructor = value.func.attr
+            if constructor in {"dict", "Counter"}:
+                dictionary_names.update(names)
+            if constructor == "Counter":
+                counter_names.update(names)
 
     for name in dictionary_names:
         reads = 0
@@ -652,29 +564,66 @@ def _used_top_level_functions(tree):
 
 
 def _error_classification_complete(source_code):
-    comments = "\n".join(
+    comments = [
         match.group(1)
         for match in re.finditer(r"(?m)^\s*#(.*)$", source_code)
-    ).lower()
-    syntax_described = (
-        "синтакс" in comments
-        and (
-            "двоеточ" in comments
-            or "знак равенства" in comments
-            or "сравнен" in comments
+    ]
+    comments = [comment.lower() for comment in comments]
+
+    def matching_indices(category_parts, fragment):
+        return {
+            index
+            for index, comment in enumerate(comments)
+            if (
+                all(part in comment for part in category_parts)
+                and fragment(comment)
+            )
+        }
+
+    matches = [matching_indices(
+        ("синтакс",),
+        lambda comment: (
+            "двоеточ" in comment
+            and "def" in comment
+            and re.search(r"\bcount_even\b", comment) is not None
+        ),
+    )]
+    matches.append(matching_indices(
+        ("синтакс",),
+        lambda comment: (
+            "==" in comment
+            and re.search(r"(?<![=])=(?!=)", comment) is not None
+            and ("услов" in comment or re.search(r"\bif\b", comment))
+        ),
+    ))
+    matches.append(matching_indices(
+        ("ошиб", "имен"),
+        lambda comment: re.search(r"\bcount_evens\b", comment) is not None,
+    ))
+    matches.append(matching_indices(
+        ("ошиб", "имен"),
+        lambda comment: re.search(r"\bvalue\b", comment) is not None,
+    ))
+    matches.append(matching_indices(
+        ("логическ",),
+        lambda comment: (
+            "return" in comment
+            and any(
+                marker in comment
+                for marker in ("цикл", "отступ", "вложен")
+            )
+        ),
+    ))
+
+    def can_choose_distinct(position, used):
+        if position == len(matches):
+            return True
+        return any(
+            can_choose_distinct(position + 1, used | {index})
+            for index in matches[position] - used
         )
-    )
-    names_described = (
-        ("ошиб" in comments and "имен" in comments)
-        and "count_evens" in comments
-        and re.search(r"\bvalues?\b", comments)
-    )
-    logic_described = (
-        "логическ" in comments
-        and "return" in comments
-        and "цикл" in comments
-    )
-    return bool(syntax_described and names_described and logic_described)
+
+    return len(comments) >= 5 and can_choose_distinct(0, set())
 
 
 def _statistics_values(output):
@@ -709,6 +658,185 @@ def _report_statuses(output, count):
     return statuses, (int(summary.group(1)), int(summary.group(2)))
 
 
+def _output_lines(output):
+    normalized = output.replace("\r\n", "\n").replace("\r", "\n")
+    if not normalized:
+        return []
+    if normalized.endswith("\n"):
+        normalized = normalized[:-1]
+    return normalized.split("\n")
+
+
+def _instrument_function_call_log(tree, function_name):
+    """Wrap a top-level function and record calls made by student code."""
+    instrumented = copy.deepcopy(tree)
+    for index, node in enumerate(instrumented.body):
+        if not isinstance(node, ast.FunctionDef) or node.name != function_name:
+            continue
+
+        wrapper = ast.parse(f"""
+__gc_original_function = {function_name}
+__gc_observed_calls = []
+__gc_function_call_depth = 0
+__gc_original_print = print
+__gc_printed_strings = []
+def __gc_record_print(*__gc_values, **__gc_print_kwargs):
+    __gc_printed_strings.extend(
+        __gc_value
+        for __gc_value in __gc_values
+        if isinstance(__gc_value, str)
+    )
+    return __gc_original_print(*__gc_values, **__gc_print_kwargs)
+print = __gc_record_print
+def __gc_record_function_call(*__gc_args, **__gc_kwargs):
+    global __gc_function_call_depth
+    __gc_outer_call = __gc_function_call_depth == 0
+    __gc_function_call_depth += 1
+    try:
+        __gc_result = __gc_original_function(*__gc_args, **__gc_kwargs)
+    finally:
+        __gc_function_call_depth -= 1
+    if __gc_outer_call:
+        __gc_observed_calls.append({{
+            "argument": (
+                __gc_args[0]
+                if __gc_args and isinstance(__gc_args[0], str)
+                else None
+            ),
+            "result": __gc_result if isinstance(__gc_result, str) else None,
+        }})
+    return __gc_result
+{function_name} = __gc_record_function_call
+""").body
+        instrumented.body[index + 1:index + 1] = wrapper
+        ast.fix_missing_locations(instrumented)
+        return instrumented
+    return None
+
+
+def _instrument_first_argument_log(tree, function_name, keyword_name):
+    """Wrap a top-level function and retain arguments from real outer calls."""
+    instrumented = copy.deepcopy(tree)
+    for index, node in enumerate(instrumented.body):
+        if not isinstance(node, ast.FunctionDef) or node.name != function_name:
+            continue
+
+        wrapper = ast.parse(f"""
+import copy as __gc_copy
+__name__ = "__main__"
+__gc_original_observed_function = {function_name}
+__gc_observed_arguments = []
+__gc_observed_call_depth = 0
+def __gc_record_observed_call(*__gc_args, **__gc_kwargs):
+    global __gc_observed_call_depth
+    __gc_outer_call = __gc_observed_call_depth == 0
+    if __gc_outer_call:
+        __gc_argument = (
+            __gc_args[0]
+            if __gc_args
+            else __gc_kwargs.get({keyword_name!r})
+        )
+        try:
+            __gc_argument = __gc_copy.deepcopy(__gc_argument)
+        except BaseException:
+            __gc_argument = None
+        __gc_observed_arguments.append(__gc_argument)
+    __gc_observed_call_depth += 1
+    try:
+        return __gc_original_observed_function(*__gc_args, **__gc_kwargs)
+    finally:
+        __gc_observed_call_depth -= 1
+{function_name} = __gc_record_observed_call
+""").body
+        instrumented.body[index + 1:index + 1] = wrapper
+        ast.fix_missing_locations(instrumented)
+        return instrumented
+    return None
+
+
+def _instrument_callable_argument_log(tree, function_name, keyword_name):
+    """Wrap a function and retain callable objects passed by student code."""
+    instrumented = copy.deepcopy(tree)
+    for index, node in enumerate(instrumented.body):
+        if not isinstance(node, ast.FunctionDef) or node.name != function_name:
+            continue
+
+        wrapper = ast.parse(f"""
+__name__ = "__main__"
+__gc_original_callable_consumer = {function_name}
+__gc_observed_callables = []
+__gc_callable_consumer_depth = 0
+def __gc_record_callable_argument(*__gc_args, **__gc_kwargs):
+    global __gc_callable_consumer_depth
+    __gc_outer_call = __gc_callable_consumer_depth == 0
+    if __gc_outer_call:
+        __gc_callable = (
+            __gc_args[0]
+            if __gc_args
+            else __gc_kwargs.get({keyword_name!r})
+        )
+        if callable(__gc_callable):
+            __gc_observed_callables.append(__gc_callable)
+    __gc_callable_consumer_depth += 1
+    try:
+        return __gc_original_callable_consumer(*__gc_args, **__gc_kwargs)
+    finally:
+        __gc_callable_consumer_depth -= 1
+{function_name} = __gc_record_callable_argument
+""").body
+        instrumented.body[index + 1:index + 1] = wrapper
+        ast.fix_missing_locations(instrumented)
+        return instrumented
+    return None
+
+
+def _all_call_results_are_printed(output, calls, printed_strings=()):
+    remaining_lines = _output_lines(output)
+    remaining_strings = list(printed_strings)
+    for call in calls:
+        result = call.get("result")
+        if not isinstance(result, str):
+            return False
+        if result in remaining_strings:
+            remaining_strings.remove(result)
+            continue
+        if not result:
+            if "" not in remaining_lines:
+                return False
+            remaining_lines.remove("")
+            continue
+
+        pattern = re.compile(rf"(?<!\w){re.escape(result)}(?!\w)")
+        for index, line in enumerate(remaining_lines):
+            match = pattern.search(line)
+            if match is None:
+                continue
+            remaining_lines[index] = line[:match.start()] + line[match.end():]
+            break
+        else:
+            return False
+    return True
+
+
+def _exact_test_report_lines(actual_values, expected_values):
+    lines = []
+    passed = 0
+    for number, (actual, expected) in enumerate(
+        zip(actual_values, expected_values),
+        1,
+    ):
+        if actual == expected:
+            passed += 1
+            lines.append(f"Тест {number}: пройден")
+        else:
+            lines.append(
+                f"Тест {number}: ошибка — "
+                f"ожидалось {expected}, получено {actual}"
+            )
+    lines.append(f"Пройдено {passed} из {len(expected_values)} тестов")
+    return lines
+
+
 def _case_values(payload):
     if payload.get("__error__") or not payload.get("exists"):
         return []
@@ -726,55 +854,51 @@ def _matches_cases(results, expected):
 
 def _task_2451(runner, source_code):
     tree = _parse_source(source_code)
+    prompts = _literal_input_prompts(tree)
     generated = _random_words(7)
-    variants = [
+    scenarios = [
         (
-            [
+            ", ".join((
                 generated[0],
                 generated[1],
                 generated[0],
                 generated[2],
                 generated[1],
                 generated[3],
-            ],
+            )) + "\n",
             generated[:4],
         ),
-        (generated[4:], generated[4:]),
-        ([], []),
+        (
+            "  {} ,{},  {}  \n".format(*generated[4:]),
+            generated[4:],
+        ),
+        (", ".join(generated[4:]) + "\n", generated[4:]),
+        (", ".join([generated[0]] * 4) + "\n", [generated[0]]),
     ]
     checks = []
-    assignment_found = True
-    for words, expected in variants:
-        variant_tree = copy.deepcopy(tree)
-        assignment_found = (
-            _replace_top_level_assignment(variant_tree, "words", words)
-            and assignment_found
-        )
-        probe = """
-__gc_payload = {
-    "words": globals().get("words"),
-}
-"""
-        output, payload = _run_probe(
-            runner,
-            ast.unparse(variant_tree),
-            probe,
-        )
-        visible_result = _contains_word_sequence(output, expected)
-        transformed_words = payload.get("words") == expected
+    for input_data, expected in scenarios:
+        ok, output = _safe_program_run(runner, input_data)
         checks.append(
-            not payload.get("__error__")
-            and (visible_result or transformed_words)
+            ok
+            and _matches_prompted_exact_output(
+                output,
+                ", ".join(expected),
+                prompts,
+                1,
+            )
         )
 
     return _finish(2451, [
         (
-            assignment_found and checks[0],
-            "повторы удалены с сохранением порядка первого появления",
+            checks[0] and checks[1] and checks[3],
+            (
+                "слова читаются из строки через запятую; повторы "
+                "удалены с сохранением порядка"
+            ),
         ),
         (
-            assignment_found and all(checks[1:]),
-            "решение работает для списка без повторов и пустого списка",
+            checks[2],
+            "решение работает для строки без повторов",
         ),
     ])
 
@@ -807,7 +931,8 @@ def _task_2452(runner, source_code):
 
 
 def _task_2453(runner, source_code):
-    _parse_source(source_code)
+    tree = _parse_source(source_code)
+    prompts = _literal_input_prompts(tree)
     scenarios = [
         (
             "Python, музыка, игры\nспорт, Игры, музыка\n",
@@ -840,7 +965,7 @@ def _task_2453(runner, source_code):
     parsed = []
     for input_data, expected in scenarios:
         ok, output = _safe_program_run(runner, input_data)
-        parsed.append((ok, _interest_output(output), expected))
+        parsed.append((ok, _interest_output(output, prompts), expected))
 
     labels_present = all(
         ok and all(value is not None for value in actual.values())
@@ -877,40 +1002,53 @@ def _task_2453(runner, source_code):
 
 def _task_2454(runner, source_code):
     tree = _parse_source(source_code)
-    variants = [
+    prompts = _literal_input_prompts(tree)
+    generated = sorted(_random_words(3))
+    scenarios = [
         (
-            ["Алиса:15", "Борис:9", "Алиса:7", "Виктор:12", "Борис:8"],
+            "5\nАлиса:15\nБорис:9\nАлиса:7\nВиктор:12\nБорис:8\n",
             [("Алиса", 22), ("Борис", 17), ("Виктор", 12)],
         ),
         (
-            [
-                "Аня:5",
-                "Борис:2",
-                "Аня:4",
-                "Вера:10",
-                "Аня:8",
-                "Борис:3",
-            ],
+            "6\nАня:5\nБорис:2\nАня:4\nВера:10\nАня:8\nБорис:3\n",
             [("Аня", 17), ("Вера", 10), ("Борис", 5)],
+        ),
+        (
+            "4\n{}:5\n{}:3\n{}:2\n{}:5\n".format(
+                generated[2],
+                generated[0],
+                generated[0],
+                generated[1],
+            ),
+            [(name, 5) for name in generated],
+        ),
+        (
+            (
+                "6\n"
+                "Анна Мария:-5\n"
+                "Борис Петров:4\n"
+                "Анна Мария:2\n"
+                "Ян:-1\n"
+                "Борис Петров:-8\n"
+                "Ян:-2\n"
+            ),
+            [
+                ("Анна Мария", -3),
+                ("Ян", -3),
+                ("Борис Петров", -4),
+            ],
         ),
     ]
     parsed_runs = []
-    assignment_found = True
-    for source_results, expected in variants:
-        variant_tree = copy.deepcopy(tree)
-        assignment_found = (
-            _replace_top_level_assignment(variant_tree, "results", source_results)
-            and assignment_found
-        )
-        ok, output = _safe_source_run(
-            runner,
-            ast.unparse(variant_tree),
-        )
-        rankings = _rankings(output)
-        parsed_runs.append((ok, rankings[-len(expected):], expected))
+    for input_data, expected in scenarios:
+        ok, output = _safe_program_run(runner, input_data)
+        rankings = _rankings(output, prompts, len(input_data.splitlines()))
+        parsed_runs.append((ok, rankings, expected))
 
     parsed_all = all(
         ok and len(actual) == len(expected)
+        and [place for place, _, _ in actual]
+        == list(range(1, len(expected) + 1))
         for ok, actual, expected in parsed_runs
     )
     totals_all = all(
@@ -925,16 +1063,19 @@ def _task_2454(runner, source_code):
 
     return _finish(2454, [
         (
-            assignment_found and parsed_all,
-            "строки результатов разобраны на имя и баллы",
+            parsed_all,
+            "N строк результатов вида Имя:баллы правильно разобраны",
         ),
         (
-            assignment_found and totals_all,
+            totals_all,
             "баллы каждого участника правильно суммируются",
         ),
         (
-            assignment_found and ordered_all,
-            "таблица отсортирована по убыванию итоговых баллов",
+            ordered_all,
+            (
+                "таблица отсортирована по убыванию баллов, а при "
+                "равенстве — по имени"
+            ),
         ),
     ])
 
@@ -964,24 +1105,46 @@ def _task_2455(runner, source_code):
     for player, chest, expected in variants:
         variant_tree = copy.deepcopy(tree)
         assignments_found = (
-            _replace_top_level_assignment(variant_tree, "player", player)
-            and _replace_top_level_assignment(variant_tree, "chest", chest)
+            _replace_top_level_assignment(
+                variant_tree,
+                "player",
+                player,
+                capture_as="__gc_initial_player",
+            )
+            and _replace_top_level_assignment(
+                variant_tree,
+                "chest",
+                chest,
+                capture_as="__gc_initial_chest",
+            )
             and assignments_found
         )
         probe = """
 __gc_payload = {
     "player": globals().get("player"),
     "chest": globals().get("chest"),
+    "player_in_place": (
+        globals().get("player") is globals().get("__gc_initial_player")
+    ),
+    "chest_in_place": (
+        globals().get("chest") is globals().get("__gc_initial_chest")
+    ),
 }
 """
         _, payload = _run_probe(runner, ast.unparse(variant_tree), probe)
         results.append((payload, expected))
 
     inventory_correct = all(
-        not payload.get("__error__") and payload.get("player") == expected
+        not payload.get("__error__")
+        and payload.get("player") == expected
+        and payload.get("player_in_place") is True
         for payload, expected in results
     )
-    chest_empty = all(payload.get("chest") == {} for payload, _ in results)
+    chest_empty = all(
+        payload.get("chest") == {}
+        and payload.get("chest_in_place") is True
+        for payload, _ in results
+    )
     return _finish(2455, [
         (
             assignments_found and inventory_correct,
@@ -996,6 +1159,7 @@ __gc_payload = {
 
 def _task_2456(runner, source_code):
     tree = _parse_source(source_code)
+    prompts = _literal_input_prompts(tree)
     scenarios = [
         ("кот пёс кот сова лиса пёс енот\n", ["енот", "лиса", "сова"]),
         ("а а б б\n", []),
@@ -1004,15 +1168,27 @@ def _task_2456(runner, source_code):
     results = []
     for input_data, expected in scenarios:
         ok, output = _safe_program_run(runner, input_data)
-        results.append((ok, _rare_items(output), expected))
+        results.append((ok, output, _rare_items(output, prompts), expected))
 
     selected = all(
-        ok and set(actual) == set(expected)
-        for ok, actual, expected in results
+        ok and isinstance(actual, list) and set(actual) == set(expected)
+        for ok, _, actual, expected in results
     )
-    sorted_and_empty = all(
+    sorted_nonempty = all(
         actual == expected
-        for _, actual, expected in results
+        for _, _, actual, expected in results
+        if expected
+    )
+    no_rare_message = all(
+        ok
+        and _matches_prompted_exact_output(
+            output,
+            "Редких слов нет",
+            prompts,
+            1,
+        )
+        for ok, output, _, expected in results
+        if not expected
     )
     return _finish(2456, [
         (
@@ -1020,8 +1196,11 @@ def _task_2456(runner, source_code):
             "словарь частот построен и выбраны слова с частотой один",
         ),
         (
-            sorted_and_empty,
-            "слова отсортированы, случай без редких слов обработан",
+            sorted_nonempty and no_rare_message,
+            (
+                "слова отсортированы, а при их отсутствии выведено "
+                "«Редких слов нет»"
+            ),
         ),
     ])
 
@@ -1096,26 +1275,35 @@ def _task_2458(runner, source_code):
                 "максимум": 9.0,
             },
         ),
+        (
+            "-7\n",
+            {
+                "сумма": -7.0,
+                "среднее": -7.0,
+                "минимум": -7.0,
+                "максимум": -7.0,
+            },
+        ),
     ]
     behavior = []
     for input_data, expected in scenarios:
         ok, output = _safe_program_run(runner, input_data)
         behavior.append(ok and _statistics_values(output) == expected)
-    normal_behavior = all(behavior)
-
-    empty_ok, _ = _safe_program_run(runner, "\n")
     return _finish(2458, [
         (
             has_three_functions,
             "программа разделена как минимум на три функции",
         ),
         (
-            has_parameters and has_return and normal_behavior,
+            has_parameters and has_return and behavior[0],
             "функции используют параметры/return и правильно считают статистику",
         ),
         (
-            empty_ok,
-            "пустой ввод не приводит к необработанной ошибке",
+            all(behavior[1:]),
+            (
+                "статистика верна для нескольких наборов, включая "
+                "отрицательные числа и одно число"
+            ),
         ),
     ])
 
@@ -1148,8 +1336,55 @@ def _task_2459(runner, source_code):
     _, payload = _run_function_cases(runner, tree, "normalize_name", cases)
     results = _case_values(payload)
     core_ok = _matches_cases(results[:3], expected[:3])
-    own_checks = _executed_call_count(tree, "normalize_name") >= 6
     hidden_ok = _matches_cases(results[3:], expected[3:])
+
+    instrumented = _instrument_function_call_log(tree, "normalize_name")
+    observed_calls = []
+    printed_strings = []
+    own_output = ""
+    if instrumented is not None:
+        own_output, own_payload = _run_probe(
+            runner,
+            ast.unparse(instrumented),
+            (
+                '__gc_payload = {'
+                '"calls": globals().get("__gc_observed_calls", []), '
+                '"printed": globals().get("__gc_printed_strings", []),'
+                '}'
+            ),
+        )
+        candidate_calls = own_payload.get("calls", [])
+        if isinstance(candidate_calls, list):
+            observed_calls = candidate_calls
+        candidate_printed = own_payload.get("printed", [])
+        if isinstance(candidate_printed, list):
+            printed_strings = candidate_printed
+
+    published_arguments = {
+        "   иВАН   иВАНОВ  ",
+        "аЛИСА",
+        "",
+    }
+    observed_arguments = [
+        call.get("argument")
+        for call in observed_calls
+        if isinstance(call, dict)
+    ]
+    own_arguments = {
+        argument
+        for argument in observed_arguments
+        if isinstance(argument, str) and argument not in published_arguments
+    }
+    own_checks = (
+        len(observed_calls) >= 6
+        and published_arguments.issubset(observed_arguments)
+        and len(own_arguments) >= 3
+        and _all_call_results_are_printed(
+            own_output,
+            observed_calls,
+            printed_strings,
+        )
+    )
     return _finish(2459, [
         (
             core_ok,
@@ -1157,7 +1392,10 @@ def _task_2459(runner, source_code):
         ),
         (
             hidden_ok and own_checks,
-            "проходят дополнительные случаи и добавлены собственные проверки",
+            (
+                "выполнены и напечатаны три заданные и не менее трёх "
+                "различных собственных проверок"
+            ),
         ),
     ])
 
@@ -1219,7 +1457,47 @@ def _task_2460(runner, source_code):
             for result, original in zip(results, original_lists)
         )
     )
-    own_checks = _executed_call_count(tree, "average") >= 5
+    observed_arguments = []
+    instrumented = _instrument_first_argument_log(
+        tree,
+        "average",
+        "numbers",
+    )
+    if instrumented is not None:
+        _, observed_payload = _run_probe(
+            runner,
+            ast.unparse(instrumented),
+            """
+__gc_payload = {
+    "arguments": [
+        __gc_value
+        for __gc_value in globals().get("__gc_observed_arguments", [])
+        if isinstance(__gc_value, list)
+        and all(
+            isinstance(__gc_item, (int, float))
+            and not isinstance(__gc_item, bool)
+            for __gc_item in __gc_value
+        )
+    ],
+}
+""",
+        )
+        candidate_arguments = observed_payload.get("arguments", [])
+        if isinstance(candidate_arguments, list):
+            observed_arguments = candidate_arguments
+
+    published_arguments = ([2, 4, 6], [1.5, 2.5], [])
+    published_keys = {tuple(argument) for argument in published_arguments}
+    observed_keys = {
+        tuple(argument)
+        for argument in observed_arguments
+        if isinstance(argument, list)
+    }
+    own_keys = observed_keys - published_keys
+    own_checks = (
+        published_keys.issubset(observed_keys)
+        and len(own_keys) >= 2
+    )
     return _finish(2460, [
         (
             values_ok,
@@ -1227,7 +1505,10 @@ def _task_2460(runner, source_code):
         ),
         (
             all_values_ok and unchanged and own_checks,
-            "список не изменяется и добавлено не менее пяти проверок",
+            (
+                "список не изменяется; выполнены три заданные "
+                "и не менее двух различных собственных проверок"
+            ),
         ),
     ])
 
@@ -1241,7 +1522,9 @@ def _password_result(result):
     valid, errors = value
     if not isinstance(valid, bool) or not isinstance(errors, list):
         return None
-    return valid, [str(error).strip().lower() for error in errors]
+    if not all(isinstance(error, str) for error in errors):
+        return None
+    return valid, errors
 
 
 def _task_2461(runner, source_code):
@@ -1298,44 +1581,45 @@ def _task_2461(runner, source_code):
         len(normalized) == len(expected)
         and all(
             actual is not None
-            and len(actual[1]) == len(wanted[1])
-            and set(actual[1]) == set(wanted[1])
+            and actual[1] == wanted[1]
             for actual, wanted in zip(normalized, expected)
         )
     )
-    mentioned_passwords = set()
-    for root in _reachable_execution_nodes(
+    observed_passwords = []
+    instrumented = _instrument_first_argument_log(
         tree,
-        excluded={"check_password"},
-    ):
-        mentioned_passwords.update(
-            node.value
-            for node in ast.walk(root)
-            if isinstance(node, ast.Constant)
-            and isinstance(node.value, str)
-            and node.value in published_passwords
-        )
-    own_checks = (
-        _executed_call_count(tree, "check_password") >= 7
-        and len(mentioned_passwords) == len(published_passwords)
+        "check_password",
+        "password",
     )
+    if instrumented is not None:
+        _, observed_payload = _run_probe(
+            runner,
+            ast.unparse(instrumented),
+            """
+__gc_payload = {
+    "arguments": [
+        __gc_value
+        for __gc_value in globals().get("__gc_observed_arguments", [])
+        if isinstance(__gc_value, str)
+    ],
+}
+""",
+        )
+        candidate_passwords = observed_payload.get("arguments", [])
+        if isinstance(candidate_passwords, list):
+            observed_passwords = candidate_passwords
+    own_checks = set(published_passwords).issubset(observed_passwords)
     return _finish(2461, [
         (booleans_ok, "функция возвращает верный логический результат"),
-        (errors_ok, "функция возвращает полный список проблем"),
+        (
+            errors_ok,
+            "функция возвращает точные сообщения в заданном порядке",
+        ),
         (
             booleans_ok and errors_ok and own_checks,
             "в программе подготовлены проверки для всех семи случаев",
         ),
     ])
-
-
-def _distinct_tested_functions(calls):
-    functions = set()
-    for call in calls:
-        if len(call.args) < 2:
-            continue
-        functions.add(ast.dump(call.args[0], include_attributes=False))
-    return len(functions) >= 2
 
 
 def _task_2462(runner, source_code):
@@ -1433,21 +1717,38 @@ __gc_payload = {{"reports": __gc_reports}}
             continue
         statuses, summary = parsed
         statuses_ok = statuses_ok and statuses == expected_statuses
-        report_ok = report_ok and (
-            statuses == expected_statuses
-            and summary == (
-                sum(expected_statuses),
-                len(expected_statuses),
-            )
+        expected_lines = _exact_test_report_lines(
+            scenario["actual"],
+            scenario["expected"],
         )
+        report_ok = report_ok and _output_lines(
+            str(report.get("output", ""))
+        ) == expected_lines
 
-    own_calls = _reachable_calls(tree, "run_tests")
-    own_runs = _distinct_tested_functions(own_calls)
-    _, own_output = _safe_source_run(
-        runner,
-        source_code,
-        time_limit=3,
+    own_runs = False
+    own_output = ""
+    instrumented = _instrument_callable_argument_log(
+        tree,
+        "run_tests",
+        "function",
     )
+    if instrumented is not None:
+        own_output, own_payload = _run_probe(
+            runner,
+            ast.unparse(instrumented),
+            """
+__gc_unique_callables = []
+for __gc_candidate in globals().get("__gc_observed_callables", []):
+    if not any(
+        __gc_candidate is __gc_existing
+        for __gc_existing in __gc_unique_callables
+    ):
+        __gc_unique_callables.append(__gc_candidate)
+__gc_payload = {"distinct_function_count": len(__gc_unique_callables)}
+""",
+            time_limit=3,
+        )
+        own_runs = own_payload.get("distinct_function_count", 0) >= 2
     intentional_failure = bool(
         re.search(
             r"тест\s*\d+\s*:\s*ошиб",
@@ -1466,7 +1767,7 @@ __gc_payload = {{"reports": __gc_reports}}
         ),
         (
             report_ok,
-            "выводится отчёт по каждому тесту и верный итог",
+            "отчёт и итог выведены в точном заданном формате",
         ),
         (
             own_runs and intentional_failure,

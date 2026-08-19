@@ -100,7 +100,7 @@ TASK_SPECS: Dict[int, TaskSpec] = {
             _case(
                 "1",
                 "ребёнок младше 7 лет",
-                "6\nнет\n",
+                "6\n",
                 "Проход разрешён",
                 matcher="turnstile",
             ),
@@ -128,7 +128,7 @@ TASK_SPECS: Dict[int, TaskSpec] = {
             _case(
                 "5",
                 "нулевой возраст",
-                "0\nнет\n",
+                "0\n",
                 "Проход разрешён",
                 matcher="turnstile",
             ),
@@ -411,39 +411,39 @@ TASK_SPECS: Dict[int, TaskSpec] = {
             ),
             _case(
                 "2",
-                "пустая строка",
-                "\n",
-                ("Букв: 0", "Цифр: 0", "Пробелов: 0", "Других символов: 0"),
-            ),
-            _case(
-                "3",
                 "только цифры",
                 "12345\n",
                 ("Букв: 0", "Цифр: 5", "Пробелов: 0", "Других символов: 0"),
             ),
             _case(
-                "4",
+                "3",
                 "только пробелы",
                 "   \n",
                 ("Букв: 0", "Цифр: 0", "Пробелов: 3", "Других символов: 0"),
             ),
             _case(
-                "5",
+                "4",
                 "буквы и пробел",
                 "абв где\n",
                 ("Букв: 6", "Цифр: 0", "Пробелов: 1", "Других символов: 0"),
             ),
             _case(
-                "6",
+                "5",
                 "табуляция как пробельный символ",
                 "\t\t\n",
                 ("Букв: 0", "Цифр: 0", "Пробелов: 2", "Других символов: 0"),
             ),
             _case(
-                "7",
+                "6",
                 "цифра ноль",
                 "0\n",
                 ("Букв: 0", "Цифр: 1", "Пробелов: 0", "Других символов: 0"),
+            ),
+            _case(
+                "7",
+                "Unicode-пробелы",
+                "\u00a0\u2003\n",
+                ("Букв: 0", "Цифр: 0", "Пробелов: 2", "Других символов: 0"),
             ),
         ),
         (
@@ -455,7 +455,7 @@ TASK_SPECS: Dict[int, TaskSpec] = {
                 "1",
             ),
             _criterion(
-                "все четыре счётчика верны на пустой и однородных строках",
+                "все четыре счётчика верны на однородных строках",
                 "2",
                 "3",
                 "4",
@@ -749,6 +749,13 @@ TASK_SPECS: Dict[int, TaskSpec] = {
                 "a1 2",
                 matcher="exact_suffix",
             ),
+            _case(
+                "9",
+                "пробелы в начале являются символами",
+                "  a\n",
+                " 2a1",
+                matcher="exact_suffix",
+            ),
         ),
         (
             _criterion("каждая серия заменяется символом и её длиной", "1"),
@@ -764,6 +771,7 @@ TASK_SPECS: Dict[int, TaskSpec] = {
                 "6",
                 "7",
                 "8",
+                "9",
             ),
         ),
     ),
@@ -866,53 +874,51 @@ TASK_SPECS: Dict[int, TaskSpec] = {
 }
 
 
-_PASSWORD_HEADER = "пароль не подходит:"
-_PASSWORD_POSITIVE = "пароль подходит"
-_PASSWORD_PROBLEM_PATTERNS = {
-    "короче 8 символов": (
-        r"короче\s+(?:8|восьми)(?:\s+символ[а-я]*)?",
-        r"(?:парол[а-я]*\s+)?слишком\s+корот[а-я]*",
-        (
-            r"длин[а-я]*(?:\s+парол[а-я]*)?\s+должн[а-я]*\s+быть\s+"
-            r"не\s+(?:меньше|короче)\s+(?:8|восьми)(?:\s+символ[а-я]*)?"
-        ),
-    ),
-    "нет цифры": (
-        r"нет\s+(?:ни\s+одн[а-я]*\s+)?цифр[а-я]*",
-        r"не\s+хватает\s+цифр[а-я]*",
-        r"без\s+цифр[а-я]*",
-        r"добав[а-я]*\s+цифр[а-я]*",
-    ),
-    "нет строчной буквы": (
-        r"нет\s+(?:ни\s+одн[а-я]*\s+)?строчн[а-я]*(?:\s+букв[а-я]*)?",
-        r"не\s+хватает\s+строчн[а-я]*(?:\s+букв[а-я]*)?",
-        r"без\s+строчн[а-я]*(?:\s+букв[а-я]*)?",
-    ),
-    "нет заглавной буквы": (
-        r"нет\s+(?:ни\s+одн[а-я]*\s+)?заглавн[а-я]*(?:\s+букв[а-я]*)?",
-        r"не\s+хватает\s+заглавн[а-я]*(?:\s+букв[а-я]*)?",
-        r"без\s+заглавн[а-я]*(?:\s+букв[а-я]*)?",
-    ),
-    "есть пробел": (
-        r"есть\s+пробел[а-я]*",
-        r"содерж[а-я]*\s+пробел[а-я]*",
-        r"пробел[а-я]*\s+запрещ[а-я]*",
-        r"не\s+должн[а-я]*\s+быть\s+пробел[а-я]*",
-    ),
-}
-
-_TURNSTILE_ALLOWED = "проход разрешен"
-_TURNSTILE_TICKET = "для прохода нужен билет"
-_TURNSTILE_ERROR_ROOTS = (
-    "ошиб",
-    "непонят",
-    "неверн",
-    "некоррект",
-    "недопустим",
-)
-
 _TIME_AT_END = re.compile(r"(?<!\d)((?:[01]\d|2[0-3]):[0-5]\d)\s*$")
 _INTEGER_AT_END = re.compile(r"(?<![+\-\d])([+-]?\d+)\s*$")
+_LITERAL_PROMPT_TASK_IDS = frozenset({2441, 2442, 2448})
+
+
+def _literal_input_prompts(source_code):
+    """Return non-empty string literals passed directly to built-in input()."""
+    if not source_code:
+        return ()
+    try:
+        tree = ast.parse(source_code)
+    except (SyntaxError, TypeError, ValueError):
+        return ()
+
+    prompts = []
+    for node in ast.walk(tree):
+        if not (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "input"
+            and node.args
+            and isinstance(node.args[0], ast.Constant)
+            and isinstance(node.args[0].value, str)
+            and node.args[0].value
+        ):
+            continue
+        prompts.append(node.args[0].value)
+    return tuple(dict.fromkeys(prompts))
+
+
+def _without_leading_input_prompt_candidates(actual, prompts):
+    """Yield stdout suffixes reachable by removing only declared prompts."""
+    actual = str(actual)
+    positions = {0}
+    pending = [0]
+    while pending:
+        position = pending.pop()
+        for prompt in prompts:
+            if not actual.startswith(prompt, position):
+                continue
+            next_position = position + len(prompt)
+            if next_position not in positions:
+                positions.add(next_position)
+                pending.append(next_position)
+    return tuple(actual[position:] for position in sorted(positions))
 
 
 def _normalise(text):
@@ -944,8 +950,6 @@ def _matches_exact_suffix(actual, variants):
 def _matches_coordinate(actual, variants):
     actual_text = _normalise_casefold(actual)
     expected_text = _normalise_casefold("\n".join(variants[0]))
-    if re.search(r"\bне\s+(?:наход|на\b|в\b)", actual_text):
-        return False
 
     def categories(text):
         found = set()
@@ -961,11 +965,44 @@ def _matches_coordinate(actual, variants):
             ("third", "трет"),
             ("fourth", "четв"),
         ):
-            if root in text and "четверт" in text:
+            if re.search(r"\b{}\w*\s+четверт".format(root), text):
                 found.add(key)
         return found
 
-    return categories(actual_text) == categories(expected_text)
+    expected_categories = categories(expected_text)
+    if len(expected_categories) != 1:
+        return False
+
+    patterns = {
+        "origin": (
+            r"(?:(?:точка(?:\s+находится)?\s+)?в\s+начале\s+координат|"
+            r"начало\s+координат)[.!]?"
+        ),
+        "axis_x": (
+            r"(?:(?:точка(?:\s+находится)?\s+)?на\s+оси\s+x|ось\s+x)[.!]?"
+        ),
+        "axis_y": (
+            r"(?:(?:точка(?:\s+находится)?\s+)?на\s+оси\s+y|ось\s+y)[.!]?"
+        ),
+        "first": (
+            r"(?:(?:точка(?:\s+находится)?\s+)?в\s+первой\s+четверти|"
+            r"первая\s+четверть)[.!]?"
+        ),
+        "second": (
+            r"(?:(?:точка(?:\s+находится)?\s+)?во?\s+второй\s+четверти|"
+            r"вторая\s+четверть)[.!]?"
+        ),
+        "third": (
+            r"(?:(?:точка(?:\s+находится)?\s+)?в\s+третьей\s+четверти|"
+            r"третья\s+четверть)[.!]?"
+        ),
+        "fourth": (
+            r"(?:(?:точка(?:\s+находится)?\s+)?в\s+четвертой\s+четверти|"
+            r"четвертая\s+четверть)[.!]?"
+        ),
+    }
+    expected_category = next(iter(expected_categories))
+    return re.fullmatch(patterns[expected_category], actual_text) is not None
 
 
 def _matches_clock(actual, variants):
@@ -989,62 +1026,23 @@ def _matches_final_integer(actual, variants):
 
 
 def _matches_turnstile(actual, variants):
-    text = _normalise_casefold(actual)
-    expected = _normalise_casefold("\n".join(variants[0]))
-    has_allowed = _TURNSTILE_ALLOWED in text
-    has_ticket = _TURNSTILE_TICKET in text
-    has_error = any(root in text for root in _TURNSTILE_ERROR_ROOTS)
-
-    if _TURNSTILE_ALLOWED in expected:
-        return text.endswith(_TURNSTILE_ALLOWED) and not has_ticket and not has_error
-    if _TURNSTILE_TICKET in expected:
-        return text.endswith(_TURNSTILE_TICKET) and not has_allowed and not has_error
-
-    return (
-        has_error
-        and not has_allowed
-        and not has_ticket
+    actual_text = str(actual).replace("\r\n", "\n").replace("\r", "\n")
+    if actual_text.endswith("\n"):
+        actual_text = actual_text[:-1]
+    return any(
+        actual_text == "\n".join(expected)
+        for expected in variants
     )
 
 
-def _strip_password_separators(text):
-    return re.sub(r"[\s\-–—•,;:.()\[\]{}]+", "", text)
-
-
 def _matches_password(actual, variants):
-    expected = variants[0]
-    text = _normalise_casefold(actual)
-
-    if len(expected) == 1:
-        return (
-            text.endswith(_PASSWORD_POSITIVE)
-            and _PASSWORD_HEADER not in text
-        )
-
-    header_at = text.rfind(_PASSWORD_HEADER)
-    if header_at < 0 or _PASSWORD_POSITIVE in text:
-        return False
-
-    answer = text[header_at + len(_PASSWORD_HEADER):]
-    actual_problems = set()
-    remainder = answer
-    for problem, patterns in _PASSWORD_PROBLEM_PATTERNS.items():
-        matched = False
-        for pattern in patterns:
-            if re.search(pattern, answer):
-                matched = True
-                remainder = re.sub(pattern, " ", remainder)
-        if matched:
-            actual_problems.add(problem)
-
-    expected_problems = {
-        _normalise_casefold(line).removeprefix("- ")
-        for line in expected[1:]
-    }
-    if actual_problems != expected_problems:
-        return False
-
-    return not _strip_password_separators(remainder)
+    actual_text = str(actual).replace("\r\n", "\n").replace("\r", "\n")
+    if actual_text.endswith("\n"):
+        actual_text = actual_text[:-1]
+    return any(
+        actual_text == "\n".join(expected)
+        for expected in variants
+    )
 
 
 _MATCHERS: Dict[str, Callable[[str, ExpectedVariants], bool]] = {
@@ -1058,13 +1056,27 @@ _MATCHERS: Dict[str, Callable[[str, ExpectedVariants], bool]] = {
 }
 
 
-def _preview(value, limit=FEEDBACK_PREVIEW_CHARS):
-    value = str(value).replace("\r\n", "\n").replace("\r", "\n").strip()
+def _preview(
+    value,
+    limit=FEEDBACK_PREVIEW_CHARS,
+    empty_label="<пустой вывод>",
+):
+    value = str(value).replace("\r\n", "\n").replace("\r", "\n")
+    # The final newline terminates console input/output and is not content.
+    value = value.rstrip("\n")
     if not value:
-        return "<пустой вывод>"
-    if len(value) <= limit:
-        return value
-    return value[:limit] + "…"
+        return empty_label
+
+    visible_lines = []
+    for line in value.split("\n"):
+        line = line.replace("\t", r"\t")
+        line = re.sub(r"^ +", lambda match: "␠" * len(match.group()), line)
+        line = re.sub(r" +$", lambda match: "␠" * len(match.group()), line)
+        visible_lines.append(line)
+    visible = " ↵ ".join(visible_lines)
+    if len(visible) <= limit:
+        return visible
+    return visible[:limit] + "…"
 
 
 def _expected_preview(case):
@@ -1222,6 +1234,11 @@ def perform_task(task_id, runner, source_code=None):
 
     results = {}
     output_previews = {}
+    literal_input_prompts = (
+        _literal_input_prompts(source_code)
+        if task_id in _LITERAL_PROMPT_TASK_IDS
+        else ()
+    )
 
     for case in spec.cases:
         try:
@@ -1254,7 +1271,17 @@ def perform_task(task_id, runner, source_code=None):
 
         output_previews[case.key] = _preview(actual)
         try:
-            results[case.key] = _MATCHERS[case.matcher](actual, case.expected)
+            matcher = _MATCHERS[case.matcher]
+            if task_id in _LITERAL_PROMPT_TASK_IDS:
+                results[case.key] = any(
+                    matcher(candidate, case.expected)
+                    for candidate in _without_leading_input_prompt_candidates(
+                        actual,
+                        literal_input_prompts,
+                    )
+                )
+            else:
+                results[case.key] = matcher(actual, case.expected)
         except Exception as error:
             results[case.key] = False
             output_previews[case.key] = "Не удалось разобрать вывод: {}".format(
@@ -1315,10 +1342,18 @@ def perform_task(task_id, runner, source_code=None):
     lines.extend("- " + criterion.description for criterion in failed_criteria)
     lines.append("Проблемные проверки:")
 
+    has_invisible_input_markers = False
     for case in failed_cases:
+        input_preview = _preview(case.input_data, empty_label="<пустой ввод>")
+        has_invisible_input_markers = has_invisible_input_markers or (
+            r"\t" in input_preview or "␠" in input_preview
+        )
         lines.extend(
             (
-                "- {}. Ввод: {}".format(case.label, _preview(case.input_data)),
+                "- {}. Ввод: {}".format(
+                    case.label,
+                    input_preview,
+                ),
                 "  Ожидаемый содержательный ответ: {}".format(
                     _expected_preview(case)
                 ),
@@ -1326,6 +1361,11 @@ def perform_task(task_id, runner, source_code=None):
             )
         )
 
+    if has_invisible_input_markers:
+        lines.append(
+            "Обозначения: \\t — табуляция; "
+            "␠ — пробел на краю строки."
+        )
     lines.append(
         "Тексты приглашений вводить данные не проверяются; сравнивается только ответ программы."
     )
