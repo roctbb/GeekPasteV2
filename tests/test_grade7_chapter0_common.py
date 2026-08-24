@@ -619,7 +619,7 @@ print("Только у Бориса:", ", ".join(sorted(boris_set - alice_set)))
 
         self.assertLess(points, TASK_MAX_POINTS[2453])
 
-    def test_rare_words_requires_a_frequency_dictionary(self):
+    def test_rare_words_accepts_correct_words_count_solution(self):
         source = """
 words = input().lower().split()
 rare = sorted({word for word in words if words.count(word) == 1})
@@ -628,9 +628,48 @@ if rare:
 else:
     print("Редких слов нет")
 """
-        points, _ = perform_task(2456, LocalRunner(source), source)
+        points, comments = perform_task(2456, LocalRunner(source), source)
 
-        self.assertEqual(points, 5)
+        self.assertEqual(points, TASK_MAX_POINTS[2456], comments)
+
+    def test_rare_words_accepts_correct_dictionary_comprehension(self):
+        source = """
+words = input().lower().split()
+counts = {word: words.count(word) for word in words}
+rare = sorted(word for word, count in counts.items() if count == 1)
+if rare:
+    print(", ".join(rare))
+else:
+    print("Редких слов нет")
+"""
+        points, comments = perform_task(2456, LocalRunner(source), source)
+
+        self.assertEqual(points, TASK_MAX_POINTS[2456], comments)
+
+    def test_rare_words_requires_comma_and_space_separator(self):
+        source = REFERENCE_SOLUTIONS[2456].replace(
+            'print(", ".join(rare))',
+            'print(",".join(rare))',
+        )
+        points, comments = perform_task(2456, LocalRunner(source), source)
+
+        self.assertEqual(points, 5, comments)
+        self.assertIn("разделены точно «, »", comments)
+
+    def test_rare_words_is_not_solved_by_known_case_lookup(self):
+        source = '''
+text = input().strip()
+answers = {
+    "кот пёс кот сова лиса пёс енот": "енот, лиса, сова",
+    "а а б б": "Редких слов нет",
+    "яблоко груша слива": "груша, слива, яблоко",
+    "мак мак мак сыр сыр чай мёд мёд хлеб": "хлеб, чай",
+}
+print(answers.get(text, "енот, лиса, сова"))
+'''
+        points, comments = perform_task(2456, LocalRunner(source), source)
+
+        self.assertLess(points, TASK_MAX_POINTS[2456], comments)
 
     def test_rare_words_accepts_dict_constructor(self):
         source = REFERENCE_SOLUTIONS[2456].replace("counts = {}", "counts = dict()")
@@ -956,6 +995,89 @@ for case in [
                 points, _ = perform_task(2459, LocalRunner(source), source)
 
                 self.assertLess(points, TASK_MAX_POINTS[2459])
+
+    def test_normalize_name_accepts_visible_single_space_published_example(self):
+        source = """
+def normalize_name(name):
+    return " ".join(part.capitalize() for part in name.split())
+
+for case in [
+    " иВАН иВАНОВ ", "аЛИСА", "", "анна", "борис", "вера"
+]:
+    print(normalize_name(case))
+"""
+        points, comments = perform_task(2459, LocalRunner(source), source)
+
+        self.assertEqual(points, TASK_MAX_POINTS[2459], comments)
+
+    def test_normalize_name_accepts_keyword_calls(self):
+        source = """
+def normalize_name(name):
+    return " ".join(part.capitalize() for part in name.split())
+
+for case in [
+    " иВАН иВАНОВ ", "аЛИСА", "", "анна", "борис", "вера"
+]:
+    print(normalize_name(name=case))
+"""
+        points, comments = perform_task(2459, LocalRunner(source), source)
+
+        self.assertEqual(points, TASK_MAX_POINTS[2459], comments)
+
+    def test_normalize_name_whitespace_variants_of_published_case_are_not_own(self):
+        source = """
+def normalize_name(name):
+    return " ".join(part.capitalize() for part in name.split())
+
+for case in [
+    " иВАН иВАНОВ ",
+    "  иВАН   иВАНОВ  ",
+    "\tиВАН\tиВАНОВ\t",
+    "аЛИСА",
+    "",
+    "анна",
+]:
+    print(normalize_name(case))
+"""
+        points, comments = perform_task(2459, LocalRunner(source), source)
+
+        self.assertEqual(points, 5, comments)
+        self.assertIn("три различных собственных примера", comments)
+
+    def test_normalize_name_whitespace_variants_of_own_case_count_once(self):
+        source = """
+def normalize_name(name):
+    return " ".join(part.capitalize() for part in name.split())
+
+for case in [
+    " иВАН иВАНОВ ",
+    "аЛИСА",
+    "",
+    "анна мария",
+    " анна   мария ",
+    "\tанна\tмария\t",
+]:
+    print(normalize_name(case))
+"""
+        points, comments = perform_task(2459, LocalRunner(source), source)
+
+        self.assertEqual(points, 5, comments)
+        self.assertIn("три различных собственных примера", comments)
+
+    def test_normalize_name_published_example_still_requires_edge_whitespace(self):
+        source = """
+def normalize_name(name):
+    return " ".join(part.capitalize() for part in name.split())
+
+for case in [
+    "иВАН иВАНОВ", "аЛИСА", "", "анна", "борис", "вера"
+]:
+    print(normalize_name(case))
+"""
+        points, comments = perform_task(2459, LocalRunner(source), source)
+
+        self.assertEqual(points, 5, comments)
+        self.assertIn("не выполнены все три заданных примера", comments)
 
     def test_normalize_name_requires_every_result_to_be_printed(self):
         source = """

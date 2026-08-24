@@ -477,65 +477,6 @@ def _called_names(nodes):
     return names
 
 
-def _uses_frequency_dictionary(tree):
-    dictionary_names = set()
-    counter_names = set()
-    for node in ast.walk(tree):
-        if not isinstance(node, (ast.Assign, ast.AnnAssign)):
-            continue
-        value = node.value
-        targets = node.targets if isinstance(node, ast.Assign) else [node.target]
-        names = {
-            target.id
-            for target in targets
-            if isinstance(target, ast.Name)
-        }
-        if isinstance(value, (ast.Dict, ast.DictComp)):
-            dictionary_names.update(names)
-        elif isinstance(value, ast.Call):
-            constructor = None
-            if isinstance(value.func, ast.Name):
-                constructor = value.func.id
-            elif isinstance(value.func, ast.Attribute):
-                constructor = value.func.attr
-            if constructor in {"dict", "Counter"}:
-                dictionary_names.update(names)
-            if constructor == "Counter":
-                counter_names.update(names)
-
-    for name in dictionary_names:
-        reads = 0
-        writes = name in counter_names
-        for node in ast.walk(tree):
-            if (
-                isinstance(node, ast.Attribute)
-                and isinstance(node.value, ast.Name)
-                and node.value.id == name
-                and node.attr in {
-                    "get",
-                    "items",
-                    "keys",
-                    "setdefault",
-                    "update",
-                    "values",
-                }
-            ):
-                reads += 1
-                writes = writes or node.attr in {"setdefault", "update"}
-            elif (
-                isinstance(node, ast.Subscript)
-                and isinstance(node.value, ast.Name)
-                and node.value.id == name
-            ):
-                if isinstance(node.ctx, ast.Store):
-                    writes = True
-                else:
-                    reads += 1
-        if reads and writes:
-            return True
-    return False
-
-
 def _used_top_level_functions(tree):
     definitions = _direct_function_definitions(tree)
     roots = [
@@ -667,7 +608,7 @@ def _output_lines(output):
     return normalized.split("\n")
 
 
-def _instrument_function_call_log(tree, function_name):
+def _instrument_function_call_log(tree, function_name, keyword_name):
     """Wrap a top-level function and record calls made by student code."""
     instrumented = copy.deepcopy(tree)
     for index, node in enumerate(instrumented.body):
@@ -697,12 +638,13 @@ def __gc_record_function_call(*__gc_args, **__gc_kwargs):
     finally:
         __gc_function_call_depth -= 1
     if __gc_outer_call:
+        __gc_argument = (
+            __gc_args[0]
+            if __gc_args
+            else __gc_kwargs.get({keyword_name!r})
+        )
         __gc_observed_calls.append({{
-            "argument": (
-                __gc_args[0]
-                if __gc_args and isinstance(__gc_args[0], str)
-                else None
-            ),
+            "argument": __gc_argument if isinstance(__gc_argument, str) else None,
             "result": __gc_result if isinstance(__gc_result, str) else None,
         }})
     return __gc_result
@@ -1160,10 +1102,34 @@ __gc_payload = {
 def _task_2456(runner, source_code):
     tree = _parse_source(source_code)
     prompts = _literal_input_prompts(tree)
+    generated = _random_words(8)
+    generated_input = [
+        generated[0],
+        generated[3],
+        generated[1],
+        generated[0],
+        generated[4],
+        generated[2],
+        generated[5],
+        generated[1],
+        generated[6],
+        generated[4],
+        generated[7],
+        generated[6],
+    ]
+    random.SystemRandom().shuffle(generated_input)
     scenarios = [
         ("кот пёс кот сова лиса пёс енот\n", ["енот", "лиса", "сова"]),
         ("а а б б\n", []),
         ("яблоко груша слива\n", ["груша", "слива", "яблоко"]),
+        (
+            "мак мак мак сыр сыр чай мёд мёд хлеб\n",
+            ["хлеб", "чай"],
+        ),
+        (
+            " ".join(generated_input) + "\n",
+            sorted((generated[2], generated[3], generated[5], generated[7])),
+        ),
     ]
     results = []
     for input_data, expected in scenarios:
@@ -1174,9 +1140,15 @@ def _task_2456(runner, source_code):
         ok and isinstance(actual, list) and set(actual) == set(expected)
         for ok, _, actual, expected in results
     )
-    sorted_nonempty = all(
-        actual == expected
-        for _, _, actual, expected in results
+    exact_nonempty = all(
+        ok
+        and _matches_prompted_exact_output(
+            output,
+            ", ".join(expected),
+            prompts,
+            1,
+        )
+        for ok, output, _, expected in results
         if expected
     )
     no_rare_message = all(
@@ -1192,14 +1164,14 @@ def _task_2456(runner, source_code):
     )
     return _finish(2456, [
         (
-            selected and _uses_frequency_dictionary(tree),
-            "словарь частот построен и выбраны слова с частотой один",
+            selected,
+            "для всех наборов выбраны только слова с частотой один",
         ),
         (
-            sorted_nonempty and no_rare_message,
+            exact_nonempty and no_rare_message,
             (
-                "слова отсортированы, а при их отсутствии выведено "
-                "«Редких слов нет»"
+                "слова отсортированы и разделены точно «, », а при их "
+                "отсутствии выведено «Редких слов нет»"
             ),
         ),
     ])
@@ -1338,7 +1310,11 @@ def _task_2459(runner, source_code):
     core_ok = _matches_cases(results[:3], expected[:3])
     hidden_ok = _matches_cases(results[3:], expected[3:])
 
-    instrumented = _instrument_function_call_log(tree, "normalize_name")
+    instrumented = _instrument_function_call_log(
+        tree,
+        "normalize_name",
+        "name",
+    )
     observed_calls = []
     printed_strings = []
     own_output = ""
@@ -1370,21 +1346,59 @@ def _task_2459(runner, source_code):
         for call in observed_calls
         if isinstance(call, dict)
     ]
-    own_arguments = {
-        argument
-        for argument in observed_arguments
-        if isinstance(argument, str) and argument not in published_arguments
+    published_argument_keys = {
+        re.sub(r"\s+", " ", argument)
+        for argument in published_arguments
     }
+    observed_argument_pairs = [
+        (argument, re.sub(r"\s+", " ", argument))
+        for argument in observed_arguments
+        if isinstance(argument, str)
+    ]
+    observed_argument_keys = [
+        argument_key
+        for _, argument_key in observed_argument_pairs
+    ]
+    published_semantic_keys = {
+        " ".join(argument.split())
+        for argument in published_arguments
+    }
+    own_argument_keys = (
+        {
+            " ".join(argument.split())
+            for argument, argument_key in observed_argument_pairs
+            if argument_key not in published_argument_keys
+        }
+        - published_semantic_keys
+        - {""}
+    )
+    published_checks = published_argument_keys.issubset(observed_argument_keys)
+    enough_own_checks = len(own_argument_keys) >= 3
+    all_results_printed = _all_call_results_are_printed(
+        own_output,
+        observed_calls,
+        printed_strings,
+    )
     own_checks = (
         len(observed_calls) >= 6
-        and published_arguments.issubset(observed_arguments)
-        and len(own_arguments) >= 3
-        and _all_call_results_are_printed(
-            own_output,
-            observed_calls,
-            printed_strings,
-        )
+        and published_checks
+        and enough_own_checks
+        and all_results_printed
     )
+    checks_message = (
+        "выполнены и напечатаны три заданные и не менее трёх "
+        "различных собственных проверок"
+    )
+    if not own_checks:
+        problems = []
+        if not published_checks:
+            problems.append("не выполнены все три заданных примера")
+        if not enough_own_checks:
+            problems.append("нужно три различных собственных примера")
+        if not all_results_printed:
+            problems.append("результат каждого вызова нужно напечатать")
+        if problems:
+            checks_message = "; ".join(problems)
     return _finish(2459, [
         (
             core_ok,
@@ -1392,10 +1406,7 @@ def _task_2459(runner, source_code):
         ),
         (
             hidden_ok and own_checks,
-            (
-                "выполнены и напечатаны три заданные и не менее трёх "
-                "различных собственных проверок"
-            ),
+            checks_message,
         ),
     ])
 
