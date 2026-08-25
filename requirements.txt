@@ -12,6 +12,7 @@ tqdm
 PyJWT
 requests
 markdown
+bleach
 pyTelegramBotAPI[proxy]
 PySocks
 redis

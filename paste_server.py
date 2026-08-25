@@ -875,6 +875,7 @@ def index():
             return render_template(
                 'code.html',
                 code=code,
+                submission_status=build_submission_status_payload(code),
                 similarities=similarities,
                 user_url=USER_URL,
                 task_url=TASK_URL,

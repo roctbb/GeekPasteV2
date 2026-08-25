@@ -6,8 +6,7 @@ from config import *
 from flask_migrate import Migrate
 from flask_socketio import SocketIO
 import jwt
-from markdown import markdown
-from markupsafe import Markup, escape
+from comment_markdown import render_comment_markdown
 import redis
 import os
 
@@ -34,7 +33,7 @@ from urllib.parse import quote
 
 @app.template_filter('markdown')
 def markdown_filter(text):
-    return Markup(markdown(str(escape(str(text or "")))))
+    return render_comment_markdown(text)
 
 @app.template_filter('json')
 def json_filter(text):

@@ -163,10 +163,10 @@
                 {% endif %}
                 {% if code.task.check_type == 'tests' %}
                     <pre class="m-0 flat-pre" id="submission-status-comments-pre"><code class="p-2 py-3 txt" id="submission-status-comments-text">{{ code.check_comments or '' }}</code></pre>
-                    <div class="p-3 txt d-none" id="submission-status-comments-html"></div>
+                    <div class="p-3 txt submission-markdown d-none" id="submission-status-comments-html"></div>
                 {% else %}
                     <pre class="m-0 flat-pre d-none" id="submission-status-comments-pre"><code class="p-2 py-3 txt" id="submission-status-comments-text"></code></pre>
-                    <div class="p-3 txt" id="submission-status-comments-html">{{ (code.check_comments or '') | safe | markdown }}</div>
+                    <div class="p-3 txt submission-markdown" id="submission-status-comments-html">{{ submission_status.get('check_comments_html', '') | safe }}</div>
                 {% endif %}
 
                 <a style="border: 1px solid #ddd; {% if initial_state == 'done' or initial_state == 'not checked' %}display: none;{% endif %}"
@@ -539,11 +539,7 @@
                     }, 2600);
                 }
 
-                renderSubmissionStatus({
-                    check_state: socketConfig.initialState,
-                    check_points: {{ code.check_points or 0 }},
-                    check_comments: {{ (code.check_comments or '') | tojson }}
-                }, false);
+                renderSubmissionStatus({{ submission_status | tojson }}, false);
 
                 if (window.io && currentState === 'not checked') {
                     var socket = io({

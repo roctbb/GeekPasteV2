@@ -11,8 +11,7 @@ from models import *
 from config import *
 import requests
 import jwt
-from markdown import markdown as render_markdown
-from markupsafe import escape
+from comment_markdown import render_comment_markdown
 from runner import TestExecutor, SolutionException, ExecutionException
 from submission_archive import extract_data_from_zipfile, rebuild_zip
 from telegram_notifier import send_telegram_message
@@ -239,7 +238,7 @@ def build_submission_status_payload(code):
     }
 
     if check_type and check_type != 'tests':
-        payload['check_comments_html'] = render_markdown(str(escape(str(check_comments))))
+        payload['check_comments_html'] = str(render_comment_markdown(check_comments))
 
     return payload
 

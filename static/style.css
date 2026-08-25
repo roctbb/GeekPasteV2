@@ -922,6 +922,21 @@ label.text-muted,
     color: #1f2937;
 }
 
+.submission-markdown > :last-child {
+    margin-bottom: 0;
+}
+
+.submission-markdown pre {
+    overflow-x: auto;
+    padding: 0.75rem;
+    border-radius: 0.4rem;
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.submission-markdown code {
+    white-space: break-spaces;
+}
+
 .nav-tabs {
     border-bottom: 1px solid var(--border-soft);
 }
