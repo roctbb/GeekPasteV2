@@ -4,7 +4,11 @@ import subprocess
 import sys
 import unittest
 
-from environments.grade7_chapter0_common import TASK_MAX_POINTS, perform_task
+from environments.grade7_chapter0_common import (
+    INTEREST_SCENARIOS,
+    TASK_MAX_POINTS,
+    perform_task,
+)
 from runner import (
     ExecutionContainer,
     ExecutionException,
@@ -572,6 +576,30 @@ print("Только у Бориса:", ", ".join(sorted(boris_set - alice_set)))
         points, _ = perform_task(2453, LocalRunner(source), source)
 
         self.assertLess(points, TASK_MAX_POINTS[2453])
+
+    def test_interest_inputs_vary_only_whitespace_next_to_commas(self):
+        for input_data, _ in INTEREST_SCENARIOS:
+            for line in input_data.splitlines():
+                with self.subTest(line=line):
+                    self.assertEqual(line, line.strip())
+
+    def test_interest_exact_comma_space_parser_loses_only_format_points(self):
+        source = """
+first = set(input().lower().split(", "))
+second = set(input().lower().split(", "))
+print("Общие:", ", ".join(first & second))
+print("Все:", ", ".join(first | second))
+print("Только у Алисы:", ", ".join(first - second))
+print("Только у Бориса:", ", ".join(second - first))
+"""
+
+        points, comments = perform_task(2453, LocalRunner(source), source)
+
+        self.assertEqual(points, 10, comments)
+        self.assertIn(
+            "пробелы непосредственно рядом с запятыми",
+            comments,
+        )
 
     def test_interest_labels_are_case_sensitive(self):
         mutations = (

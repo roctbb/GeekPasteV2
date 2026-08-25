@@ -25,6 +25,37 @@ TASK_MAX_POINTS = {
 }
 
 
+INTEREST_SCENARIOS = (
+    (
+        "Python, музыка, игры\nспорт, Игры, музыка\n",
+        {
+            "Общие": {"игры", "музыка"},
+            "Все": {"python", "музыка", "игры", "спорт"},
+            "Только у Алисы": {"python"},
+            "Только у Бориса": {"спорт"},
+        },
+    ),
+    (
+        "Чтение,МУЗЫКА\nчтение ,  спорт\n",
+        {
+            "Общие": {"чтение"},
+            "Все": {"чтение", "музыка", "спорт"},
+            "Только у Алисы": {"музыка"},
+            "Только у Бориса": {"спорт"},
+        },
+    ),
+    (
+        "чтение\nЧТЕНИЕ\n",
+        {
+            "Общие": {"чтение"},
+            "Все": {"чтение"},
+            "Только у Алисы": set(),
+            "Только у Бориса": set(),
+        },
+    ),
+)
+
+
 def perform_task(task_id, runner, source_code=None):
     handler = _TASK_HANDLERS.get(task_id)
     if handler is None:
@@ -875,37 +906,8 @@ def _task_2452(runner, source_code):
 def _task_2453(runner, source_code):
     tree = _parse_source(source_code)
     prompts = _literal_input_prompts(tree)
-    scenarios = [
-        (
-            "Python, музыка, игры\nспорт, Игры, музыка\n",
-            {
-                "Общие": {"игры", "музыка"},
-                "Все": {"python", "музыка", "игры", "спорт"},
-                "Только у Алисы": {"python"},
-                "Только у Бориса": {"спорт"},
-            },
-        ),
-        (
-            "  Чтение, МУЗЫКА  \nчтение, спорт\n",
-            {
-                "Общие": {"чтение"},
-                "Все": {"чтение", "музыка", "спорт"},
-                "Только у Алисы": {"музыка"},
-                "Только у Бориса": {"спорт"},
-            },
-        ),
-        (
-            "чтение\nЧТЕНИЕ\n",
-            {
-                "Общие": {"чтение"},
-                "Все": {"чтение"},
-                "Только у Алисы": set(),
-                "Только у Бориса": set(),
-            },
-        ),
-    ]
     parsed = []
-    for input_data, expected in scenarios:
+    for input_data, expected in INTEREST_SCENARIOS:
         ok, output = _safe_program_run(runner, input_data)
         parsed.append((ok, _interest_output(output, prompts), expected))
 
@@ -913,29 +915,38 @@ def _task_2453(runner, source_code):
         ok and all(value is not None for value in actual.values())
         for ok, actual, _ in parsed
     )
-    without_duplicates = all(
-        all(
-            len(items) == len(set(items))
-            for items in actual.values()
-            if items is not None
+    def sections_match(result, sections):
+        ok, actual, expected = result
+        return ok and all(
+            actual[label] is not None
+            and len(actual[label]) == len(set(actual[label]))
+            and set(actual[label]) == expected[label]
+            for label in sections
         )
-        for _, actual, _ in parsed
+
+    all_sections = (
+        "Общие",
+        "Все",
+        "Только у Алисы",
+        "Только у Бориса",
     )
+    normalized_delimiters = sections_match(parsed[1], all_sections)
     common_and_union = all(
-        set(actual["Общие"] or []) == expected["Общие"]
-        and set(actual["Все"] or []) == expected["Все"]
-        for _, actual, expected in parsed
-    ) and without_duplicates
-    differences = all(
-        set(actual["Только у Алисы"] or []) == expected["Только у Алисы"]
-        and set(actual["Только у Бориса"] or []) == expected["Только у Бориса"]
-        for _, actual, expected in parsed
-    ) and without_duplicates
+        sections_match(parsed[index], ("Общие", "Все"))
+        for index in (0, 2)
+    )
+    differences = labels_present and all(
+        sections_match(
+            parsed[index],
+            ("Только у Алисы", "Только у Бориса"),
+        )
+        for index in (0, 2)
+    )
 
     return _finish(2453, [
         (
-            labels_present,
-            "ввод корректно разобран независимо от регистра и пробелов",
+            normalized_delimiters,
+            "регистр и пробелы непосредственно рядом с запятыми не мешают сравнению",
         ),
         (common_and_union, "правильно найдены общие и все интересы"),
         (differences, "правильно найдены интересы только каждого пользователя"),
