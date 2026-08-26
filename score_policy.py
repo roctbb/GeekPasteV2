@@ -13,7 +13,7 @@ def normalize_test_points(task_id, points):
 
 
 GRADE8_2026_TASK_IDS = range(2567, 2794)
-ZERO_SCORE_GPT_TASK_IDS = frozenset((2457, 2787))
+ZERO_SCORE_GPT_TASK_IDS = frozenset((2457, 2462, 2787, 2792))
 
 
 def normalize_gpt_points(task_id, language, points, maximum):

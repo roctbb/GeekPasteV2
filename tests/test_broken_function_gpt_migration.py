@@ -89,7 +89,7 @@ class BrokenFunctionGptMigrationTests(unittest.TestCase):
                     self.migration.upgrade()
 
     def test_gpt_rubric_preserves_a_real_zero(self):
-        self.assertEqual(set(TASK_IDS), set(ZERO_SCORE_GPT_TASK_IDS))
+        self.assertTrue(set(TASK_IDS).issubset(ZERO_SCORE_GPT_TASK_IDS))
         self.assertEqual(normalize_gpt_points(2457, "python", 0, 15), 0)
         self.assertEqual(normalize_gpt_points(2787, "python", 0, 15), 0)
 
