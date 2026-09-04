@@ -536,22 +536,19 @@ _NAND_MIN_COMPONENTS = {"Nand": 2, "Invert": 1, "And": 2, "Or": 3, "Xor": 3}
 _NAND_NODE_ARITY = {"NAND": 2, "INV": 1, "AND": 2, "OR": 2}
 
 
-def _json_export_and_explanations(source_code):
+def _json_export(source_code):
     text = (source_code or "").strip()
-    decoder = json.JSONDecoder()
-    # The published contract asks for the complete Export JSON first, without
-    # a Markdown fence or any other prefix.  Keeping the boundary strict also
-    # prevents an arbitrary prose preamble from being silently discarded.
+    # The published contract accepts exactly one raw JSON object: no Markdown
+    # fence, explanation, comment, or other text before or after the export.
     if not text.startswith("{"):
-        return None, ""
+        return None
     try:
-        value, length = decoder.raw_decode(text)
+        value = json.loads(text)
     except (TypeError, ValueError, json.JSONDecodeError):
-        return None, ""
+        return None
     if not isinstance(value, dict):
-        return None, ""
-    tail = text[length:].strip()
-    return value, tail
+        return None
+    return value
 
 
 def _valid_nandgame_diagram(diagram, level, component_costs):
@@ -712,81 +709,16 @@ def _completed_nand_levels(export):
     return found, component_costs
 
 
-_NAND_EXPLANATION_RE = re.compile(
-    r"^\s*(?:[-*]\s*)?(Nand|Invert|And|Or|Xor)\s*[:\-—]\s*(.+?)\s*$",
-    flags=re.IGNORECASE,
-)
-_NAND_SEMANTIC_PATTERNS = {
-    "Nand": r"(?:\brelay\w*\b|реле|both\s+inputs|оба\s+вход|конъюнк|not\s+and|не\s+и)",
-    "Invert": r"(?:\binvert\w*\b|\binvers\w*\b|инверс|отриц|\bnegat\w*\b|\bnot\b|\bне\b)",
-    "And": r"(?:\bconjunction\b|конъюнк|double\s+inver|двойн|\band\b|\bи\b)",
-    "Or": r"(?:\bdisjunction\b|дизъюнк|de\s+morgan|морган|\bor\b|\bили\b)",
-    "Xor": r"(?:\bexclusive\b|исключ|\bdifferent\b|нерав|\bxor\b)",
-}
-
-
-def _nand_count_from_explanation(text):
-    patterns = (
-        r"\b(\d{1,6})\s*(?:nand|элемент(?:а|ов)?\s+nand)\b",
-        r"\bnand(?:\s+gates?|\s+элемент(?:а|ов)?)?\s*[:=\-—]?\s*(\d{1,6})\b",
-    )
-    for pattern in patterns:
-        match = re.search(pattern, text, flags=re.IGNORECASE)
-        if match is not None:
-            return int(match.group(1))
-    return None
-
-
-def _meaningful_nand_explanations(text, component_costs):
-    explanations = {}
-    canonical = {level.casefold(): level for level in _NAND_LEVELS}
-    lines = [line for line in str(text or "").splitlines() if line.strip()]
-    # The task explicitly requires exactly five non-empty labelled lines after
-    # the JSON.  Do not ignore a sixth line or an unrecognised attachment.
-    if len(lines) != len(_NAND_LEVELS):
-        return False
-    for line in lines:
-        match = _NAND_EXPLANATION_RE.match(line)
-        if match is None:
-            return False
-        level = canonical[match.group(1).casefold()]
-        if level in explanations:
-            return False
-        explanations[level] = match.group(2).strip()
-    if set(explanations) != set(_NAND_LEVELS):
-        return False
-    for level, explanation in explanations.items():
-        lowered = " " + explanation.casefold() + " "
-        words = re.findall(r"[^\W\d_]+", lowered, flags=re.UNICODE)
-        if len(explanation) < 18 or len(words) < 3:
-            return False
-        if re.search(_NAND_SEMANTIC_PATTERNS[level], lowered, flags=re.IGNORECASE) is None:
-            return False
-        stated_count = _nand_count_from_explanation(explanation)
-        if stated_count != component_costs.get(level):
-            return False
-    return True
-
-
 def _nand_handler(_runner, source_code):
-    export, explanation_text = _json_export_and_explanations(source_code)
-    levels, component_costs = (
-        _completed_nand_levels(export) if export is not None else (set(), {})
-    )
-    explanations_ok = (
-        set(_NAND_LEVELS) <= levels
-        and _meaningful_nand_explanations(explanation_text, component_costs)
-    )
+    export = _json_export(source_code)
+    levels, _component_costs = _completed_nand_levels(export) if export is not None else (set(), {})
     return finish_criteria(
         2570,
         15,
         [
             ({"Nand", "Invert"} <= levels, "в экспорте пройдены Nand и Invert"),
             ({"And", "Or"} <= levels, "в экспорте пройдены And и Or"),
-            (
-                {"Xor"} <= levels and explanations_ok,
-                "в экспорте пройден Xor и приложены пять объяснений с верным числом NAND",
-            ),
+            ({"Xor"} <= levels, "в экспорте пройден Xor"),
         ],
     )
 

@@ -441,9 +441,14 @@ def check_task_with_tests(task, code):
         code.check_comments = str(e)
 
 
+NANDGAME_JSON_GPT_TASK_IDS = frozenset({2582, 2586, 2589, 2590, 2592})
+
+
 def get_payload(task_text, solution_text, max_points, lang=None, check_ai=False, solution_kind='code'):
     if solution_kind == 'image':
         prompt = f"Твоя задача оценить решение задачи, представленное учеником на изображении. Внимательно изучи всё изображение и проверь решение по условию и указанным в нём критериям. Максимальный балл - {max_points}. На первой строке ответа напиши количество баллов числом. Далее - свой подробный комментарий по критериям на русском языке. Если изображение нечитаемо, не содержит решения или по нему нельзя надёжно проверить ответ, поставь 0 и объясни причину."
+    elif solution_kind == 'json':
+        prompt = f"Твоя задача оценить JSON-экспорт прогресса nandgame по критериям задачи. Максимальный балл - {max_points}. На первой строке ответа напиши количество баллов числом. Далее - краткий комментарий по пройденным уровням на русском языке."
     else:
         prompt = f"Твоя задача оценить решение задачи по программированию. Оценивай только работоспособность, а не качество кода (если это отдельно не требуется в задаче). Максимальный балл - {max_points}. Если код не запускается или не компилируется, или завершается с ошибкой, ставь 0. Количество баллов кратно 5, если иного не указано в задаче. На первой строке ответа напиши количество баллов числом. Далее - свой подробный комментарий по критериям на русском языке."
     if lang and lang != 'zip' and lang != 'ipynb':
@@ -533,14 +538,32 @@ def check_task_with_gpt(task, code):
     else:
         student_code = code.code
 
+    solution_kind = 'image' if code.lang == 'image' else 'code'
+    prompt_lang = task.lang if task.lang not in SPECIAL_SUBMISSION_LANGS else None
+    if task.id in NANDGAME_JSON_GPT_TASK_IDS:
+        try:
+            nandgame_export = json.loads((student_code or '').strip())
+        except (TypeError, ValueError, json.JSONDecodeError):
+            nandgame_export = None
+        if not isinstance(nandgame_export, dict):
+            code.check_points = 0
+            code.check_state = 'partially done'
+            code.check_comments = (
+                'Пришлите только один JSON-объект из кнопки Export без '
+                'Markdown-обрамления, комментариев и другого текста.'
+            )
+            return
+        solution_kind = 'json'
+        prompt_lang = None
+
     model = task.gpt_model or GPT_MODEL
     context = get_payload(
         task.text,
         student_code,
         task.points,
-        task.lang if task.lang not in SPECIAL_SUBMISSION_LANGS else None,
+        prompt_lang,
         check_ai=code.lang != 'image',
-        solution_kind='image' if code.lang == 'image' else 'code',
+        solution_kind=solution_kind,
     )
 
     # Convert chat messages to responses API input format

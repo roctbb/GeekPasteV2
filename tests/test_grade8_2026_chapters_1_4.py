@@ -127,15 +127,6 @@ def real_nand_export(*, include_xor=True):
     return result
 
 
-NAND_EXPLANATIONS = """
-Nand: Two relay switches negate conjunction of both inputs; the circuit uses 0 NAND gates.
-Invert: The input signal is inverted by the single stage; the circuit uses 1 NAND gate.
-And: A double inversion restores the AND conjunction; the circuit uses 2 NAND gates.
-Or: De Morgan transforms the inputs into an OR disjunction; the circuit uses 3 NAND gates.
-Xor: Exclusive OR is true only for different input signals; the circuit uses 4 NAND gates.
-""".strip()
-
-
 class ReferenceRunner:
     """Return each hidden case's own oracle output without invoking Docker."""
 
@@ -232,59 +223,41 @@ class ComparatorAndNandTests(unittest.TestCase):
         self.assertFalse(chapter.strict_text_equal("abc \n", "abc\n"))
         self.assertFalse(chapter.strict_text_equal("a  b\n", "a b\n"))
 
-    def test_nand_accepts_real_flat_export_and_five_explanations(self):
-        source = "{}\n{}".format(json.dumps(real_nand_export()), NAND_EXPLANATIONS)
-        maximum, points, feedback = perform(2570, None, source)
+    def test_nand_accepts_real_flat_export_as_raw_json(self):
+        maximum, points, feedback = perform(2570, None, json.dumps(real_nand_export()))
         self.assertEqual((maximum, points), (15, 15), feedback)
 
-    def test_nand_rejects_markdown_fence_and_extra_explanation_line(self):
+    def test_nand_rejects_markdown_fence_and_any_extra_text(self):
         payload = json.dumps(real_nand_export())
-        fenced = "```json\n{}\n```\n{}".format(payload, NAND_EXPLANATIONS)
+        fenced = "```json\n{}\n```".format(payload)
         _maximum, points, _feedback = perform(2570, None, fenced)
         self.assertEqual(points, 0)
 
-        extra = payload + "\n" + NAND_EXPLANATIONS + "\nAttachment: screenshot"
+        extra = payload + "\nВсе уровни пройдены."
         _maximum, points, _feedback = perform(2570, None, extra)
-        self.assertEqual(points, 10)
+        self.assertEqual(points, 0)
 
     def test_nand_scores_completed_level_groups(self):
         payload = real_nand_export(include_xor=False)
         maximum, points, feedback = perform(
-            2570, None, json.dumps(payload) + "\n" + NAND_EXPLANATIONS
+            2570, None, json.dumps(payload)
         )
         self.assertEqual(maximum, 15)
         self.assertEqual(points, 10, feedback)
 
-    def test_nand_requires_all_five_substantive_explanations_and_correct_counts(self):
-        payload = json.dumps(real_nand_export())
-        generic = "\n".join(
-            "{}: This circuit is completed correctly and uses {} NAND gates.".format(level, count)
-            for level, count in zip(("Nand", "Invert", "And", "Or", "Xor"), range(5))
-        )
-        _maximum, points, _feedback = perform(2570, None, payload + "\n" + generic)
-        self.assertEqual(points, 10)
-
-        wrong_count = NAND_EXPLANATIONS.replace("uses 4 NAND", "uses 5 NAND")
-        _maximum, points, _feedback = perform(2570, None, payload + "\n" + wrong_count)
-        self.assertEqual(points, 10)
-
-        missing = "\n".join(NAND_EXPLANATIONS.splitlines()[:-1])
-        _maximum, points, _feedback = perform(2570, None, payload + "\n" + missing)
-        self.assertEqual(points, 10)
-
     def test_nand_rejects_nested_fake_export_and_invalid_diagram_schema(self):
         nested = {"snapshot": {"data": real_nand_export()}}
         _maximum, points, _feedback = perform(
-            2570, None, json.dumps(nested) + "\n" + NAND_EXPLANATIONS
+            2570, None, json.dumps(nested)
         )
         self.assertEqual(points, 0)
 
         malformed = real_nand_export()
         malformed["NandGame:Levels:OR"] = {"nodes": [{"anything": 1}], "connections": [1]}
         _maximum, points, _feedback = perform(
-            2570, None, json.dumps(malformed) + "\n" + NAND_EXPLANATIONS
+            2570, None, json.dumps(malformed)
         )
-        self.assertEqual(points, 5)
+        self.assertEqual(points, 10)
 
     def test_nand_rejects_malformed_or_plain_prose(self):
         for source in ("Nand Invert And Or Xor", "{not json", "[]"):
