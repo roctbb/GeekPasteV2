@@ -173,6 +173,19 @@
                    href="/?task_id={{ code.task.id }}&course_id={{ code.course_id }}"
                    id="submission-resubmit-link"
                    class="btn btn-light btn-flat btn-sm mt-0 m-2 mx-3">Отправить снова?</a>
+                {% if recheck_csrf %}
+                    <section class="p-3 border-top" id="teacher-recheck" data-code-id="{{ code.id }}" data-csrf="{{ recheck_csrf }}">
+                        <button type="button" class="btn btn-light btn-flat btn-sm" id="teacher-recheck-toggle">Попросить перепроверить</button>
+                        <p class="small mt-2 mb-0" id="teacher-recheck-message" role="status" aria-live="polite"></p>
+                        <form id="teacher-recheck-form" class="mt-2" hidden>
+                            <label for="teacher-recheck-comment" class="form-label">Почему нужна перепроверка?</label>
+                            <textarea id="teacher-recheck-comment" class="form-control" rows="3" required minlength="10" maxlength="1000" placeholder="Напишите, с чем именно вы не согласны"></textarea>
+                            <p class="small text-muted mt-2">Запрос и комментарий получит преподаватель. Повторная автоматическая проверка не запускается.</p>
+                            <button type="submit" class="btn btn-primary btn-flat btn-sm" id="teacher-recheck-submit">Отправить запрос</button>
+                        </form>
+                    </section>
+                    <script src="{{ url_for('static', filename='js/teacher-recheck.js') }}" defer></script>
+                {% endif %}
             </div>
         </div>
 

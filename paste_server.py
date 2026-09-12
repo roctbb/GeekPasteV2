@@ -1,6 +1,7 @@
 # coding: utf8
 import difflib
 import hmac
+import secrets
 import json
 from io import BytesIO
 
@@ -15,6 +16,7 @@ from config import USER_URL, TASK_URL, AUTH_URL, DEFAULT_GPT_RATE_LIMIT, LANGS, 
 from image_submission import ImageSubmissionError, create_image_submission, parse_image_submission
 from urllib.parse import quote
 from sqlalchemy import or_
+from recheck_request import codingprojects_recheck
 
 SOCKET_SUBMISSION_ROOM_PREFIX = "submission:"
 SYSTEM_RECENT_CHECKS_KEY = "system:recent_checks"
@@ -875,6 +877,7 @@ def index():
             return render_template(
                 'code.html',
                 code=code,
+                recheck_csrf=_recheck_csrf_token() if session.get('user_id') and is_author(code) and code.task and code.course_id else None,
                 submission_status=build_submission_status_payload(code),
                 similarities=similarities,
                 user_url=USER_URL,
@@ -1225,6 +1228,42 @@ def my_submissions():
                            has_next=has_next,
                            total=total,
                            per_page=per_page)
+
+
+def _recheck_csrf_token():
+    if not session.get('recheck_csrf'):
+        session['recheck_csrf'] = secrets.token_urlsafe(32)
+    return session['recheck_csrf']
+
+
+@app.route('/submission/recheck', methods=['GET', 'POST'])
+def request_teacher_recheck():
+    if not session.get('user_id'):
+        abort(401)
+    code = get_code(request.args.get('id'))
+    if not code:
+        abort(404)
+    # Public pastes and teacher access do not confer permission to appeal as the author.
+    if not is_author(code):
+        abort(403)
+    if not code.task or not code.course_id:
+        abort(400)
+    comment = None
+    if request.method == 'POST':
+        csrf = request.headers.get('X-CSRF-Token', '')
+        if not csrf or not hmac.compare_digest(csrf, session.get('recheck_csrf', '')):
+            abort(403)
+        data = request.get_json(silent=True) or {}
+        comment = data.get('comment') if isinstance(data, dict) else None
+        if not isinstance(comment, str) or not 10 <= len(comment.strip()) <= 1000:
+            return jsonify(state='error', message='Напишите, с чем не согласны: от 10 до 1000 символов.'), 422
+        comment = comment.strip()
+    try:
+        data, status = codingprojects_recheck(code, comment)
+        return jsonify(data), status, {'Cache-Control': 'no-store'}
+    except (requests.RequestException, ValueError):
+        app.logger.warning('teacher_recheck_api_unavailable code_id=%s', code.id)
+        return jsonify(state='error', message='Не удалось связаться с CodingProjects. Попробуйте ещё раз.'), 502
 
 
 @app.route('/recheck', methods=['POST'])
