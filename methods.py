@@ -16,7 +16,8 @@ from runner import TestExecutor, SolutionException, ExecutionException
 from submission_archive import extract_data_from_zipfile, rebuild_zip
 from telegram_notifier import send_telegram_message
 from ai_detector import analyze_code_for_ai_usage, get_ai_detection_prompt_addition
-from score_policy import normalize_gpt_points, normalize_test_points
+from score_policy import (normalize_gpt_points, normalize_test_points,
+                          minimum_submission_score, attempt_comment)
 from image_submission import parse_image_submission
 
 
@@ -395,10 +396,13 @@ def send_similarity_summary_notification(main_code, similarities):
         pass
 
 
+@minimum_submission_score
 def check_task_with_tests(task, code):
     try:
         with TestExecutor(code) as executor:
             points, comments = executor.perform()
+            if points == 0:
+                comments = attempt_comment(comments)
             points = normalize_test_points(task.id, points)
 
             if points > task.points:
@@ -538,6 +542,7 @@ def parse_gpt_answer(answer):
     return points, comments, llm_probability
 
 
+@minimum_submission_score
 def check_task_with_gpt(task, code):
     image_submission = None
     publication_points = 0
@@ -730,6 +735,8 @@ def check_task_with_gpt(task, code):
             points,
             task.points,
         )
+        if points == 0:
+            comments = attempt_comment(comments)
     code.check_comments = comments
 
     # Сохраняем вероятность использования LLM от GPT

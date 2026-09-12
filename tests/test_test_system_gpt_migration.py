@@ -154,10 +154,10 @@ class TestSystemGptMigrationTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "task 2792 is missing"):
                     self.migration.upgrade()
 
-    def test_gpt_rubric_preserves_real_zeroes(self):
-        self.assertTrue(set(TASK_IDS).issubset(ZERO_SCORE_GPT_TASK_IDS))
-        self.assertEqual(normalize_gpt_points(2462, "python", 0, 20), 0)
-        self.assertEqual(normalize_gpt_points(2792, "python", 0, 20), 0)
+    def test_gpt_rubric_receives_attempt_point(self):
+        self.assertFalse(set(TASK_IDS) & ZERO_SCORE_GPT_TASK_IDS)
+        self.assertEqual(normalize_gpt_points(2462, "python", 0, 20), 1)
+        self.assertEqual(normalize_gpt_points(2792, "python", 0, 20), 1)
 
 
 if __name__ == "__main__":

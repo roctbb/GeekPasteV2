@@ -57,7 +57,7 @@ class NandgameJsonGptCheckTests(unittest.TestCase):
                     code = make_code(value)
                     code.task_id = task_id
                     check_task_with_gpt(make_task(task_id), code)
-                    self.assertEqual(code.check_points, 0)
+                    self.assertEqual(code.check_points, 1)
                     self.assertEqual(code.check_state, 'partially done')
                     self.assertIn('только один JSON-объект', code.check_comments)
         post.assert_not_called()

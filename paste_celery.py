@@ -9,6 +9,7 @@ from config import *
 from methods import *
 from manage import app, socketio, redis_client
 from similarity_candidates import similarity_candidates_query
+from score_policy import finalize_submission_score, attempt_comment
 from datetime import datetime
 
 celery = Celery('app', broker=CELERY_BROKER)
@@ -213,42 +214,48 @@ def check_task(id):
         if task.bypass_similarity_check and code.check_state == 'done':
             code.viewed_by_teacher = True
 
-        code.checked_at = datetime.now()
-        db.session.commit()
-        _emit_submission_status(code)
-        _push_system_check_event('code_check', {
-            'status': code.check_state or '',
-            'code_id': code.id,
-            'task_id': code.task_id,
-            'user_id': code.user_id,
-            'check_type': task.check_type if task else '',
-            'points': code.check_points or 0,
-            'max_points': task.points if task and task.points is not None else None,
-            'comments': _short_text(code.check_comments),
+        _publish_checked_submission(code)
+
+
+def _publish_checked_submission(code):
+    task = code.task
+    finalize_submission_score(code)
+    code.checked_at = datetime.now()
+    db.session.commit()
+    _emit_submission_status(code)
+    _push_system_check_event('code_check', {
+        'status': code.check_state or '',
+        'code_id': code.id,
+        'task_id': code.task_id,
+        'user_id': code.user_id,
+        'check_type': task.check_type if task else '',
+        'points': code.check_points or 0,
+        'max_points': task.points if task and task.points is not None else None,
+        'comments': _short_text(code.check_comments),
+    })
+
+    if SUBMIT_URL and code.course_id:
+        academic_integrity = build_academic_integrity_payload(code)
+        requests.post(SUBMIT_URL, json={
+            "points": code.check_points,
+            "comments": code.check_comments,
+            "solution": APP_URL + f"/?id={code.id}",
+            "course_id": code.course_id,
+            "token": generate_jwt(code.user_id, code.task_id),
+            "academic_integrity": academic_integrity,
+            "has_ai_warning": academic_integrity['ai'].get('warning'),
+            "ai_warning_reasons": academic_integrity['ai'].get('reasons'),
+            "ai_confidence": academic_integrity['ai'].get('confidence'),
+            "gpt_llm_probability": academic_integrity['ai'].get('llm_probability'),
+            "similarity_checked": academic_integrity['similarity'].get('checked'),
+            "has_similarity_warning": academic_integrity['similarity'].get('warning'),
+            "has_critical_similarity_warning": academic_integrity['similarity'].get('critical'),
+            "similarity_matches_count": academic_integrity['similarity'].get('matches_count'),
+            "similarity_max_percent": academic_integrity['similarity'].get('max_percent'),
         })
 
-        if SUBMIT_URL and code.course_id:
-            academic_integrity = build_academic_integrity_payload(code)
-            requests.post(SUBMIT_URL, json={
-                "points": code.check_points,
-                "comments": code.check_comments,
-                "solution": APP_URL + f"/?id={code.id}",
-                "course_id": code.course_id,
-                "token": generate_jwt(code.user_id, code.task_id),
-                "academic_integrity": academic_integrity,
-                "has_ai_warning": academic_integrity['ai'].get('warning'),
-                "ai_warning_reasons": academic_integrity['ai'].get('reasons'),
-                "ai_confidence": academic_integrity['ai'].get('confidence'),
-                "gpt_llm_probability": academic_integrity['ai'].get('llm_probability'),
-                "similarity_checked": academic_integrity['similarity'].get('checked'),
-                "has_similarity_warning": academic_integrity['similarity'].get('warning'),
-                "has_critical_similarity_warning": academic_integrity['similarity'].get('critical'),
-                "similarity_matches_count": academic_integrity['similarity'].get('matches_count'),
-                "similarity_max_percent": academic_integrity['similarity'].get('max_percent'),
-            })
-
-        # Clean up session
-        db.session.expire_all()
+    # Clean up session
+    db.session.expire_all()
 
 
 @celery.task()
@@ -290,7 +297,7 @@ def fetch_github_and_check(code_id, github_repo_url, task_id):
                 code.check_comments = f"Не удалось загрузить репозиторий: {error_msg}"
             db.session.commit()
             if task_id:
-                _emit_submission_status(code)
+                _publish_checked_submission(code)
             return
 
         if task_id:
@@ -415,6 +422,10 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
                     return  # retry scheduled, don't send callback
                 except self.MaxRetriesExceededError:
                     pass
+
+        if result['points'] == 0 and str(code or '').strip():
+            result['points'] = 1
+            result['comment'] = attempt_comment(result['comment'])
 
         try:
             callback_headers = {'Authorization': f'Bearer {_make_callback_service_token()}'}

@@ -88,10 +88,10 @@ class BrokenFunctionGptMigrationTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "unexpected check_type"):
                     self.migration.upgrade()
 
-    def test_gpt_rubric_preserves_a_real_zero(self):
-        self.assertTrue(set(TASK_IDS).issubset(ZERO_SCORE_GPT_TASK_IDS))
-        self.assertEqual(normalize_gpt_points(2457, "python", 0, 15), 0)
-        self.assertEqual(normalize_gpt_points(2787, "python", 0, 15), 0)
+    def test_gpt_rubric_receives_attempt_point(self):
+        self.assertFalse(set(TASK_IDS) & ZERO_SCORE_GPT_TASK_IDS)
+        self.assertEqual(normalize_gpt_points(2457, "python", 0, 15), 1)
+        self.assertEqual(normalize_gpt_points(2787, "python", 0, 15), 1)
 
 
 if __name__ == "__main__":

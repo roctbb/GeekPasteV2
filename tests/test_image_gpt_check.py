@@ -69,7 +69,7 @@ class ImageGptCheckTests(unittest.TestCase):
         'methods.requests.post',
         return_value=_GatewayResponse('0\nИзображение не содержит решения.'),
     )
-    def test_preserves_zero_points_from_image_gpt(self, post):
+    def test_zero_image_score_receives_attempt_point(self, post):
         task = SimpleNamespace(
             id=2567,
             text='Решите задачу на листе.',
@@ -92,12 +92,10 @@ class ImageGptCheckTests(unittest.TestCase):
 
         check_task_with_gpt(task, code)
 
-        self.assertEqual(code.check_points, 0)
+        self.assertEqual(code.check_points, 1)
         self.assertEqual(code.check_state, 'partially done')
-        self.assertEqual(
-            code.check_comments,
-            'Изображение не содержит решения.',
-        )
+        self.assertIn('Изображение не содержит решения.', code.check_comments)
+        self.assertIn('1 балл за сданную попытку', code.check_comments)
 
 
 if __name__ == '__main__':

@@ -53,16 +53,16 @@ class QuestGithubTests(unittest.TestCase):
         self.assertEqual(code.check_points, 75)
         self.assertEqual(code.check_state, 'done')
 
-    def test_unrelated_or_foreign_project_gets_no_credit(self):
+    def test_unrelated_project_gets_attempt_but_not_publication_credit(self):
         code, _ = self.check('70\nQUEST_SUBMISSION: NO\nЭто сторонняя библиотека, а не квест.')
-        self.assertEqual(code.check_points, 0)
+        self.assertEqual(code.check_points, 1)
         self.assertIn('0/5', code.check_comments)
 
-    def test_missing_or_ambiguous_eligibility_does_not_grant_points(self):
+    def test_missing_eligibility_never_grants_publication_credit(self):
         for reply in ['70\nВсе хорошо.', '70\nQUEST_SUBMISSION: YES\nQUEST_SUBMISSION: NO']:
             with self.subTest(reply=reply):
                 code, _ = self.check(reply)
-                self.assertEqual(code.check_points, 0)
+                self.assertEqual(code.check_points, 1)
                 self.assertEqual(code.check_state, 'execution error')
 
     def test_score_is_bounded_and_in_steps_of_five(self):
@@ -77,11 +77,11 @@ class QuestGithubTests(unittest.TestCase):
                       [{'name': 'main.py', 'content': '  '}]]:
             code = submission(files)
             check_task_with_gpt(task(), code)
-            self.assertEqual(code.check_points, 0)
+            self.assertEqual(code.check_points, 1)
         code = submission()
         code.code = json.dumps({'repo_url': 'https://github.com/student/quest', 'files': []})
         check_task_with_gpt(task(), code)
-        self.assertEqual(code.check_points, 0)
+        self.assertEqual(code.check_points, 1)
         post.assert_not_called()
 
     def test_unrelated_task_keeps_existing_policy(self):
