@@ -9,6 +9,7 @@ from config import *
 from methods import *
 from manage import app, socketio, redis_client
 from similarity_candidates import similarity_candidates_query
+from github_similarity import prepare_github_source, source_similarity
 from score_policy import finalize_submission_score, attempt_comment
 from datetime import datetime
 
@@ -132,7 +133,14 @@ def save_similarities(id):
 
         raw_code = code.code or ''
         raw_size = len(raw_code)
-        if raw_size > MAX_SIMILARITY_CODE_SIZE:
+        github_source = None
+        if code.lang == 'github':
+            try:
+                github_source = prepare_github_source(raw_code, MAX_SIMILARITY_CODE_SIZE)
+            except ValueError:
+                # Not loaded, invalid, or too large: never compare the envelope.
+                return
+        if code.lang != 'github' and raw_size > MAX_SIMILARITY_CODE_SIZE:
             code.similarity_checked = True
             db.session.commit()
             _push_system_check_event('similarity_check', {
@@ -160,6 +168,16 @@ def save_similarities(id):
         # Process in batches to avoid memory overflow
         batch_count = 0
         for alternative in query.yield_per(100):
+            if code.lang == 'github':
+                try:
+                    other_source = prepare_github_source(alternative.code or '', MAX_SIMILARITY_CODE_SIZE)
+                except ValueError:
+                    continue
+                n = source_similarity(github_source, other_source)
+                if n >= SIMILARITY_LEVEL:
+                    save_similarity(code, alternative, n, send_notification=False)
+                    found_similarities.append((alternative, n))
+                continue
             alternative_code = alternative.code
             if alternative.lang == 'ipynb':
                 alternative_code = extract_code_from_ipynb(alternative.code)
@@ -279,6 +297,7 @@ def fetch_github_and_check(code_id, github_repo_url, task_id):
         try:
             data = extract_data_from_github_repository(github_repo_url)
             code.code = data
+            code.similarity_checked = False
             db.session.commit()
         except Exception as e:
             error_msg = str(e)
@@ -300,6 +319,7 @@ def fetch_github_and_check(code_id, github_repo_url, task_id):
                 _publish_checked_submission(code)
             return
 
+        save_similarities.delay(code_id)
         if task_id:
             check_task.delay(code_id)
 

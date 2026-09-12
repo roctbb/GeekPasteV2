@@ -269,12 +269,13 @@ def submit():
     except Exception:
         pass
 
-    save_similarities.delay(id)
     if lang == 'github':
         # Загрузка репозитория и последующая проверка — в Celery, чтобы не блокировать web
         fetch_github_and_check.delay(id, github_repo_url, task_id)
-    elif task_id:
-        check_task.delay(id)
+    else:
+        save_similarities.delay(id)
+        if task_id:
+            check_task.delay(id)
 
     flash("Теперь код доступен по адресу: https://paste.geekclass.ru/?id=" + str(id), 'success')
 
