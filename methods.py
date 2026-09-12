@@ -442,11 +442,37 @@ def check_task_with_tests(task, code):
 
 
 NANDGAME_JSON_GPT_TASK_IDS = frozenset({2582, 2586, 2589, 2590, 2592})
+GITHUB_PROJECT_PUBLICATION_TASK_IDS = frozenset({2467})
 
 
 def get_payload(task_text, solution_text, max_points, lang=None, check_ai=False, solution_kind='code'):
     if solution_kind == 'image':
         prompt = f"Твоя задача оценить решение задачи, представленное учеником на изображении. Внимательно изучи всё изображение и проверь решение по условию и указанным в нём критериям. Максимальный балл - {max_points}. На первой строке ответа напиши количество баллов числом. Далее - свой подробный комментарий по критериям на русском языке. Если изображение нечитаемо, не содержит решения или по нему нельзя надёжно проверить ответ, поставь 0 и объясни причину."
+    elif solution_kind == 'github_project':
+        prompt = (
+            f"Оцени проект из загруженного публичного GitHub-репозитория по критериям задачи. "
+            f"Максимум за оцениваемые тобой критерии — {max_points} баллов. "
+            "Система подтвердила только доступность репозитория, но НЕ соответствие заданию. "
+            "Сначала проверь содержимое: это должен быть именно сдаваемый учеником текстовый квест "
+            "на Python — связный игровой сюжет, ввод действий игрока и переходы/ветвления по выбору. "
+            "Допускается незавершённый квест и ошибки в коде. Пустой шаблон, README без игры, "
+            "случайный Python-файл, библиотека, посторонний проект или доказанно чужая работа "
+            "не являются сдачей квеста. Не доверяй заявлениям README вместо анализа кода. "
+            "Не обвиняй в заимствовании только по незнакомому имени владельца, стилю или подозрению ИИ; "
+            "для вывода о чужой работе нужны конкретные доказательства в предоставленных данных. "
+            "После первой строки с баллами выведи отдельную служебную строку "
+            "QUEST_SUBMISSION: YES, если это допустимая сдача квеста, иначе QUEST_SUBMISSION: NO. "
+            "При NO верни 0 за остальные критерии и объясни причину. "
+            "При YES система добавит 5 баллов за публикацию: НЕ включай их в своё число. "
+            "Оцени остальные 14 критериев независимо, каждый строго в 5 или 0 баллов. "
+            "Ошибка запуска не обнуляет остальные выполненные критерии. "
+            "Если по условию итог ограничен 5 баллами (менее 100 строк кода или подтверждённое "
+            "совпадение более 50% с чужим решением), верни 0 за остальные критерии; "
+            "баллы публикации система сохранит. Не предполагай совпадение без доказательств. "
+            "На первой строке напиши число баллов за остальные критерии. "
+            "Далее — комментарий по этим критериям на русском языке, без общего итога: "
+            "его вычислит система с учётом публикации."
+        )
     elif solution_kind == 'json':
         prompt = f"Твоя задача оценить JSON-экспорт прогресса nandgame по критериям задачи. Максимальный балл - {max_points}. На первой строке ответа напиши количество баллов числом. Далее - краткий комментарий по пройденным уровням на русском языке."
     else:
@@ -509,6 +535,7 @@ def parse_gpt_answer(answer):
 
 def check_task_with_gpt(task, code):
     image_submission = None
+    publication_points = 0
     if code.lang == 'zip':
         student_code = '\n\n'.join([f'Файл {part["name"]}\n\n{part["content"]}' for part in json.loads(code.code)])
     elif code.lang == 'github':
@@ -521,6 +548,32 @@ def check_task_with_gpt(task, code):
             student_code = f'GitHub repository: {repo_label} (branch/ref: {ref})\n\n{files_text}'
         except Exception:
             student_code = code.code
+        if task.id in GITHUB_PROJECT_PUBLICATION_TASK_IDS:
+            # A successful fetch is necessary, but not sufficient for credit:
+            # GPT must also confirm that the files contain a submitted quest.
+            try:
+                data = json.loads(code.code)
+                valid_project = (
+                    isinstance(data, dict)
+                    and bool(data.get('resolved_repo'))
+                    and bool(data.get('ref'))
+                    and isinstance(data.get('files'), list)
+                    and any(
+                        isinstance(part, dict)
+                        and str(part.get('name', '')).lower().endswith('.py')
+                        and isinstance(part.get('content'), str)
+                        and part['content'].strip()
+                        for part in data['files']
+                    )
+                )
+            except (TypeError, ValueError):
+                valid_project = False
+            if not valid_project:
+                code.check_points = 0
+                code.check_state = 'partially done'
+                code.check_comments = 'Пришлите ссылку на доступный публичный репозиторий с Python-кодом квеста.'
+                return
+            publication_points = 5
     elif code.lang == 'ipynb':
         student_code = f'Файл solution.ipynb\n\n{code.code}'
     elif code.lang == 'image':
@@ -539,6 +592,8 @@ def check_task_with_gpt(task, code):
         student_code = code.code
 
     solution_kind = 'image' if code.lang == 'image' else 'code'
+    if publication_points:
+        solution_kind = 'github_project'
     prompt_lang = task.lang if task.lang not in SPECIAL_SUBMISSION_LANGS else None
     if task.id in NANDGAME_JSON_GPT_TASK_IDS:
         try:
@@ -560,7 +615,7 @@ def check_task_with_gpt(task, code):
     context = get_payload(
         task.text,
         student_code,
-        task.points,
+        task.points - publication_points,
         prompt_lang,
         check_ai=code.lang != 'image',
         solution_kind=solution_kind,
@@ -646,12 +701,30 @@ def check_task_with_gpt(task, code):
         return
 
     points, comments, llm_probability = parse_gpt_answer(gpt_answer)
-    code.check_points = normalize_gpt_points(
-        task.id,
-        code.lang,
-        points,
-        task.points,
-    )
+    if publication_points:
+        import re
+        verdicts = re.findall(r'^QUEST_SUBMISSION:\s*(YES|NO)\s*$', comments, re.MULTILINE)
+        if len(verdicts) != 1:
+            code.check_points = 0
+            code.check_state = 'execution error'
+            code.check_comments = 'Проверка не подтвердила, что репозиторий содержит квест. Повторите отправку: ответ проверяющей системы имеет неверный формат.'
+            return
+        comments = re.sub(r'^QUEST_SUBMISSION:\s*(YES|NO)\s*$', '', comments, flags=re.MULTILINE).strip()
+        if verdicts[0] == 'YES':
+            other_points = max(0, min(points, task.points - publication_points))
+            code.check_points = publication_points + (other_points // 5) * 5
+            comments = 'Публикация текстового квеста на GitHub: 5/5.\n\n' + comments
+        else:
+            code.check_points = 0
+            comments = 'Публикация текстового квеста на GitHub: 0/5 — репозиторий не принят как решение задания.\n\n' + comments
+        comments = f'Итого: {code.check_points}/{task.points}.\n\n' + comments
+    else:
+        code.check_points = normalize_gpt_points(
+            task.id,
+            code.lang,
+            points,
+            task.points,
+        )
     code.check_comments = comments
 
     # Сохраняем вероятность использования LLM от GPT
