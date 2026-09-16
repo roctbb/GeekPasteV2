@@ -44,7 +44,9 @@ class TestScoreNormalizationTests(unittest.TestCase):
         self.assertEqual(normalize_gpt_points(2769, 'zip', 0, 20), 1)
         self.assertEqual(normalize_gpt_points(2002, 'image', 0, 10), 1)
         self.assertEqual(normalize_gpt_points(2457, 'python', 0, 15), 1)
+        self.assertEqual(normalize_gpt_points(2787, 'python', 0, 15), 1)
         self.assertEqual(normalize_gpt_points(2462, 'python', 0, 20), 1)
+        self.assertEqual(normalize_gpt_points(2792, 'python', 0, 20), 1)
         self.assertEqual(normalize_gpt_points(2002, 'cpp', 0, 10), 1)
 
     @patch('methods.TestExecutor', _ZeroScoreExecutor)

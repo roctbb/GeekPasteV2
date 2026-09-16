@@ -1,1 +1,11 @@
 Single-database configuration for Flask.
+
+Alembic migrations contain schema changes only. Update task content and other
+application data directly in the database, independently of schema upgrades.
+
+The data-only migration tail was removed on 2026-09-16. The final schema
+migration (adding tasks.gpt_rate_limit) keeps the deployed head f3a5c7e9b1d4,
+so a database already at that revision needs no migration or restamping.
+Fresh databases receive the same schema without requiring existing task rows.
+Databases at an intermediate revision from the removed history must have their
+schema checked and revision reconciled before upgrading with this history.

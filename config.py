@@ -69,10 +69,10 @@ AUTH_URL = GEEKCLASS_HOST + '/insider/jwt?redirect_url='
 USER_URL = GEEKCLASS_HOST + '/insider/profile/'
 TASK_URL = GEEKCLASS_HOST + '/insider/courses/{course_id}/tasks/{task_id}/student/{user_id}'
 
-GPT_MODEL = os.getenv('GPT_MODEL', 'gpt-5-mini')
+GPT_MODEL = os.getenv('GPT_MODEL', 'gpt-5.6-luna')
 GPT_KEY = os.getenv('GPT_KEY')
 GPT_GATEWAY = os.getenv('GPT_GATEWAY', 'https://gpt-gateway.ai.medsenger.ru:4443/v1/responses')
-GPT_MAX_OUTPUT_TOKENS = max(16, int(os.getenv('GPT_MAX_OUTPUT_TOKENS', 1024)))
+GPT_MAX_OUTPUT_TOKENS = max(16, int(os.getenv('GPT_MAX_OUTPUT_TOKENS', 8192)))
 MAX_IMAGE_SUBMISSION_BYTES = max(1, int(os.getenv('MAX_IMAGE_SUBMISSION_BYTES', 10 * 1024 * 1024)))
 
 # GPT Rate Limiting

@@ -1,6 +1,6 @@
 """add_gpt_rate_limit_to_tasks
 
-Revision ID: 5b3d67532215
+Revision ID: f3a5c7e9b1d4
 Revises: 5613318ab013
 Create Date: 2026-03-19 22:24:02.302372
 
@@ -10,7 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '5b3d67532215'
+# Keep the deployed head after removing the subsequent data-only migrations.
+revision = 'f3a5c7e9b1d4'
 down_revision = '5613318ab013'
 branch_labels = None
 depends_on = None
