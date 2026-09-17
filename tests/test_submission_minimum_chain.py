@@ -57,7 +57,7 @@ class SubmissionMinimumTests(unittest.TestCase):
         finalize_submission_score(value)
         self.assertEqual(value.check_points, 1)
 
-    def test_external_tests_and_gpt_callbacks_also_have_floor(self):
+    def test_external_tests_and_gpt_callbacks_preserve_zero(self):
         response = Mock(status_code=200)
         response.json.return_value = {'result': {'output': [
             {'type': 'message', 'content': [{'text': '0\nНеверно.'}]}]}}
@@ -73,8 +73,11 @@ class SubmissionMinimumTests(unittest.TestCase):
                     check_config={'tests': [{'expected': 'right'}], 'max_points': 10},
                     callback_url='https://example.test/callback', callback_id='test')
             callback = post.call_args.kwargs['json']
-            self.assertEqual(callback['points'], 1)
-            self.assertIn(ATTEMPT_COMMENT, callback['comment'])
+            self.assertEqual(callback['points'], 0)
+            self.assertEqual(callback['status'], 'success')
+            self.assertEqual(callback['comment'],
+                             'Неверно.' if check_type == 'gpt' else '0 из 1 тестов пройдено')
+            self.assertNotIn(ATTEMPT_COMMENT, callback['comment'])
 
 
 if __name__ == '__main__':

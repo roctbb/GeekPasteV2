@@ -10,7 +10,7 @@ from methods import *
 from manage import app, socketio, redis_client
 from similarity_candidates import similarity_candidates_query
 from github_similarity import prepare_github_source, source_similarity
-from score_policy import finalize_submission_score, attempt_comment
+from score_policy import finalize_submission_score
 from datetime import datetime
 
 celery = Celery('app', broker=CELERY_BROKER)
@@ -403,7 +403,17 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
                     len(raw_answer_text),
                     len(raw_prompt_extra),
                 )
-                context = get_payload(task_text_limited + ('\n\nЭталонный ответ: ' + answer_text if answer_text else '') + ('\n\n' + prompt_extra if prompt_extra else ''), code, max_points, lang)
+                assessment_mode = check_config.get('assessment_mode', 'code')
+                if assessment_mode == 'rubric':
+                    from grading_prompts import get_rubric_payload
+                    context = get_rubric_payload(
+                        task_text_limited, code, max_points, lang,
+                        reference_answer=answer_text, rubric=prompt_extra,
+                    )
+                elif assessment_mode == 'code':
+                    context = get_payload(task_text_limited + ('\n\nЭталонный ответ: ' + answer_text if answer_text else '') + ('\n\n' + prompt_extra if prompt_extra else ''), code, max_points, lang)
+                else:
+                    raise ValueError(f'Unknown assessment_mode: {assessment_mode}')
                 input_messages = [{"role": m["role"], "content": m["content"]} for m in context]
                 resp = requests.post(GPT_GATEWAY, json={
                     "token": GPT_KEY,
@@ -443,10 +453,8 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
                 except self.MaxRetriesExceededError:
                     pass
 
-        if result['points'] == 0 and str(code or '').strip():
-            result['points'] = 1
-            result['comment'] = attempt_comment(result['comment'])
-
+        # External callers receive the checker's score, including zero.
+        # The participation minimum belongs only to native GeekPaste submissions.
         try:
             callback_headers = {'Authorization': f'Bearer {_make_callback_service_token()}'}
             app.logger.info(
