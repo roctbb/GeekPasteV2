@@ -11,6 +11,7 @@ from manage import app, socketio, redis_client
 from similarity_candidates import similarity_candidates_query
 from github_similarity import prepare_github_source, source_similarity
 from score_policy import finalize_submission_score
+from grading_prompts import get_rubric_payload
 from datetime import datetime
 
 celery = Celery('app', broker=CELERY_BROKER)
@@ -405,7 +406,6 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
                 )
                 assessment_mode = check_config.get('assessment_mode', 'code')
                 if assessment_mode == 'rubric':
-                    from grading_prompts import get_rubric_payload
                     context = get_rubric_payload(
                         task_text_limited, code, max_points, lang,
                         reference_answer=answer_text, rubric=prompt_extra,
