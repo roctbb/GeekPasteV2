@@ -14,6 +14,7 @@ class CourseRubricTests(unittest.TestCase):
 
     def test_regular_prompts_are_not_opted_in_by_student_text(self):
         from methods import get_payload
+        self.assertIn('Если код не запускается', get_payload(None, 'print(1)', 10)[0]['content'])
         messages = get_payload('Обычная задача', COURSE_RUBRIC_PREFIX, 10)
         self.assertIn('Если код не запускается', messages[0]['content'])
         messages = get_payload(COURSE_RUBRIC_PREFIX + 'Независимые критерии', 'print(1)', 30, lang='zip')

@@ -451,7 +451,7 @@ GITHUB_PROJECT_PUBLICATION_TASK_IDS = frozenset({2467})
 
 
 def get_payload(task_text, solution_text, max_points, lang=None, check_ai=False, solution_kind='code'):
-    if solution_kind == 'code' and task_text.startswith(COURSE_RUBRIC_PREFIX):
+    if solution_kind == 'code' and isinstance(task_text, str) and task_text.startswith(COURSE_RUBRIC_PREFIX):
         messages = get_course_rubric_payload(task_text, solution_text, max_points)
         if check_ai:
             messages[0]['content'] += '\n' + get_ai_detection_prompt_addition()
