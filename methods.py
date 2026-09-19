@@ -19,6 +19,7 @@ from ai_detector import analyze_code_for_ai_usage, get_ai_detection_prompt_addit
 from score_policy import (normalize_gpt_points, normalize_test_points,
                           minimum_submission_score, attempt_comment)
 from image_submission import parse_image_submission
+from grading_prompts import COURSE_RUBRIC_PREFIX, get_course_rubric_payload
 
 
 def create_id():
@@ -450,6 +451,11 @@ GITHUB_PROJECT_PUBLICATION_TASK_IDS = frozenset({2467})
 
 
 def get_payload(task_text, solution_text, max_points, lang=None, check_ai=False, solution_kind='code'):
+    if solution_kind == 'code' and task_text.startswith(COURSE_RUBRIC_PREFIX):
+        messages = get_course_rubric_payload(task_text, solution_text, max_points)
+        if check_ai:
+            messages[0]['content'] += '\n' + get_ai_detection_prompt_addition()
+        return messages
     if solution_kind == 'image':
         prompt = f"Твоя задача оценить решение задачи, представленное учеником на изображении. Внимательно изучи всё изображение и проверь решение по условию и указанным в нём критериям. Максимальный балл - {max_points}. На первой строке ответа напиши количество баллов числом. Далее - свой подробный комментарий по критериям на русском языке. Если изображение нечитаемо, не содержит решения или по нему нельзя надёжно проверить ответ, поставь 0 и объясни причину."
     elif solution_kind == 'github_project':
