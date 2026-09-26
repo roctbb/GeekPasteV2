@@ -402,7 +402,7 @@ def check_task_with_tests(task, code):
     try:
         with TestExecutor(code) as executor:
             points, comments = executor.perform()
-            if points == 0:
+            if points == 0 and normalize_test_points(task.id, 0) > 0:
                 comments = attempt_comment(comments)
             points = normalize_test_points(task.id, points)
 
@@ -418,7 +418,7 @@ def check_task_with_tests(task, code):
                 code.check_state = 'partially done'
 
     except ExecutionException as e:
-        code.check_points = 1
+        code.check_points = normalize_test_points(task.id, 0)
         code.check_state = 'execution error'
         code.check_comments = str(e)
         try:

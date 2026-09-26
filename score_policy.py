@@ -1,4 +1,5 @@
 from functools import wraps
+from olympiad_policy import full_solution_points
 
 
 # Kept as compatibility names for callers of older release policies.
@@ -7,6 +8,9 @@ ZERO_SCORE_TEST_TASK_IDS = frozenset()
 
 def normalize_test_points(task_id, points):
     """Every graded submission receives at least one attempt point."""
+    contest_points = full_solution_points(task_id, points)
+    if contest_points is not None:
+        return contest_points
     return max(1, points or 0)
 
 
@@ -29,6 +33,11 @@ def attempt_comment(comments):
 
 def finalize_submission_score(code):
     """Defence at checker/callback boundaries; never award missing/pending work."""
+    if getattr(code, 'check_points', None) is not None:
+        contest_points = full_solution_points(getattr(code, 'task_id', None), code.check_points)
+        if contest_points is not None:
+            code.check_points = contest_points
+            return
     if (getattr(code, 'check_points', None) == 0
             and str(getattr(code, 'code', '') or '').strip()
             and getattr(code, 'check_state', None) not in (
