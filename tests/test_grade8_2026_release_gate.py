@@ -108,6 +108,11 @@ class Grade8ReleaseGateTests(unittest.TestCase):
             self.assertFalse(set(handlers).intersection(module.TASKS))
             handlers.update(module.TASKS)
         expected = {task["id"]: task["points"] for task in self.test_tasks}
+        # Post-publication split (2026-10-06); retain the original manifest as an archive.
+        expected[2611] = 5
+        expected[2915] = 5
+        wrapper = ENVIRONMENTS / "task_2915" / "tester.py"
+        self.assertIn("return perform_task(2915, runner, source_code)", wrapper.read_text())
         actual = {task_id: value[0] for task_id, value in handlers.items()}
         self.assertEqual(actual, expected)
         self.assertTrue(all(callable(value[1]) for value in handlers.values()))

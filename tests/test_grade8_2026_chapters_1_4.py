@@ -182,9 +182,9 @@ def perform(task_id, runner, source_code="int main() { return 0; }"):
 
 
 class RegistryTests(unittest.TestCase):
-    def test_registry_has_exactly_the_57_test_tasks(self):
+    def test_registry_has_exactly_the_58_test_tasks(self):
         self.assertEqual(set(chapter.TASKS), set(chapter.EXPECTED_TASK_IDS))
-        self.assertEqual(len(chapter.TASKS), 57)
+        self.assertEqual(len(chapter.TASKS), 58)
         self.assertNotIn(2622, chapter.TASKS)  # Секундомер is a GPT report task.
 
     def test_group_count_matches_five_point_scoring(self):
@@ -200,7 +200,8 @@ class RegistryTests(unittest.TestCase):
             2570: 15,
             2593: 5,
             2599: 10,
-            2611: 10,
+            2611: 5,
+            2915: 5,
             2638: 15,
             2646: 15,
             2662: 10,
@@ -541,7 +542,7 @@ class MutantRejectionTests(unittest.TestCase):
 
 class AmbiguityAndCaptureTests(unittest.TestCase):
     def test_magic_non_sample_diagnostics_are_semantic_and_nonnegative(self):
-        cases = [case for group in chapter.materialize_task_groups(2611) for case in group]
+        cases = [case for group in chapter.materialize_task_groups(2915) for case in group]
         non_row = [case for case in cases if "NO: col" in case["expected"] or "NO: diag" in case["expected"]]
         self.assertTrue(non_row)
         self.assertTrue(all("-" not in case["input"] for case in cases))

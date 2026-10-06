@@ -1098,30 +1098,54 @@ _add_harness(
 )
 
 
-_add_program(
-    2611,
-    10,
-    [
-        [
-            _case(_matrix_input([[7]]), "YES\n"),
-            _case(_matrix_input([[2, 7, 6], [9, 5, 1], [4, 3, 8]]), "YES\n"),
-            _case(_matrix_input([[2, 9, 6], [7, 5, 1], [4, 3, 8]]),
-                  "NO: row 2 (sum 13, expected 17)\n"),
-            _case(_matrix_input([[1, 2], [0, 3]]),
-                  "NO: col 1 (sum 1, expected 3)\n",
-                  comparator=_semantic_mismatch_equal),
-        ],
-        [
-            _case(_matrix_input([[1, 2], [2, 1]]),
-                  "NO: diag 1 (sum 2, expected 3)\n",
-                  comparator=_semantic_mismatch_equal),
-            _case(_matrix_input([[0, 0, 1], [0, 1, 0], [1, 0, 0]]),
-                  "NO: diag 2 (sum 3, expected 1)\n",
-                  comparator=_semantic_mismatch_equal),
-        ],
-    ],
-    comparator=strict_text_equal,
-)
+def _magic_answer(matrix):
+    expected = sum(matrix[0])
+    checks = [("row", i + 1, sum(row)) for i, row in enumerate(matrix)]
+    checks += [("col", j + 1, sum(row[j] for row in matrix))
+               for j in range(len(matrix))]
+    checks += [("diag", 1, sum(matrix[i][i] for i in range(len(matrix)))),
+               ("diag", 2, sum(matrix[i][-1 - i] for i in range(len(matrix))))]
+    for kind, number, total in checks:
+        if total != expected:
+            return f"NO: {kind} {number} (sum {total}, expected {expected})\n"
+    return "YES\n"
+
+
+def _magic_cases(diagnostic=False):
+    matrices = [
+        [[7]], [[0]],
+        [[2, 7, 6], [9, 5, 1], [4, 3, 8]],
+        [[2, 9, 6], [7, 5, 1], [4, 3, 8]],
+        [[1, 2], [0, 3]],
+        [[1, 2], [2, 1]],
+        [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
+        [[0, 0, 1], [0, 1, 0], [1, 0, 0]],
+        # A later row/column mismatch must not be reported as number 1.
+        [[2, 7, 6], [9, 5, 1], [4, 3, 9]],
+        [[1, 2, 0], [1, 2, 0], [1, 2, 0]],
+        [[10000] * 100 for _ in range(100)],
+    ]
+    changed = [[10000] * 100 for _ in range(100)]
+    changed[-1][-1] = 9999
+    matrices.append(changed)
+    rng = random.Random(2611)
+    matrices.extend([[[rng.randrange(11) for _ in range(n)] for _ in range(n)]
+                     for n in (2, 3, 4, 7)])
+    cases = []
+    for matrix in matrices:
+        answer = _magic_answer(matrix)
+        if diagnostic:
+            comparator = _semantic_mismatch_equal if answer.startswith("NO") else tokens_equal
+        else:
+            answer = "NO\n" if answer.startswith("NO") else "YES\n"
+            comparator = tokens_equal
+        cases.append(_case(_matrix_input(matrix), answer, comparator=comparator))
+    return cases
+
+
+# Separate submissions: 5 points for the verdict, 5 optional points for diagnostics.
+_add_program(2611, 5, [_magic_cases()], comparator=tokens_equal)
+_add_program(2915, 5, [_magic_cases(diagnostic=True)], comparator=tokens_equal)
 
 
 def _mine_case(grid, *, time_limit=1):
@@ -2607,7 +2631,7 @@ EXPECTED_TASK_IDS = frozenset({
     2620, 2621, 2624, 2625, 2626, 2627, 2629, 2630, 2631, 2632,
     2633, 2634, 2635, 2636, 2637, 2638, 2640, 2641, 2642, 2643,
     2644, 2645, 2646, 2648, 2649, 2651, 2652, 2656, 2657, 2658,
-    2660, 2662,
+    2660, 2662, 2915,
 })
 
 if set(TASKS) != EXPECTED_TASK_IDS:
