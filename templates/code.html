@@ -151,16 +151,14 @@
             {% endif %}
             <div class="card-body p-0 position-relative gray">
                 <span class="top-badge badge bg-primary float-end" id="submission-status-points">Очков: {{ code.check_points or 0 }}</span>
-                {% if session['role'] == 'teacher' or session['role'] == 'admin' %}
-                    <div class="submission-slot-wrap {% if initial_state != 'not checked' %}d-none{% endif %}" id="submission-slot-wrap">
-                        <div class="submission-slot-machine" id="submission-slot-machine" aria-label="Комбинация ИИ-слотов">
-                            <div class="slot-reel" data-reel-index="0"><img class="slot-logo" alt=""></div>
-                            <div class="slot-reel" data-reel-index="1"><img class="slot-logo" alt=""></div>
-                            <div class="slot-reel" data-reel-index="2"><img class="slot-logo" alt=""></div>
-                            <div class="slot-reel" data-reel-index="3"><img class="slot-logo" alt=""></div>
-                        </div>
+                <div class="submission-slot-wrap {% if initial_state != 'not checked' %}d-none{% endif %}" id="submission-slot-wrap">
+                    <div class="submission-slot-machine" id="submission-slot-machine" aria-label="Комбинация ИИ-слотов">
+                        <div class="slot-reel" data-reel-index="0"><img class="slot-logo" alt=""></div>
+                        <div class="slot-reel" data-reel-index="1"><img class="slot-logo" alt=""></div>
+                        <div class="slot-reel" data-reel-index="2"><img class="slot-logo" alt=""></div>
+                        <div class="slot-reel" data-reel-index="3"><img class="slot-logo" alt=""></div>
                     </div>
-                {% endif %}
+                </div>
                 {% if code.task.check_type == 'tests' %}
                     <pre class="m-0 flat-pre" id="submission-status-comments-pre"><code class="p-2 py-3 txt" id="submission-status-comments-text">{{ code.check_comments or '' }}</code></pre>
                     <div class="p-3 txt submission-markdown d-none" id="submission-status-comments-html"></div>
