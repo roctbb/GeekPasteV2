@@ -48,8 +48,8 @@ def finalize_submission_score(code):
 
 def minimum_submission_score(checker):
     @wraps(checker)
-    def checked(task, code):
-        result = checker(task, code)
+    def checked(task, code, *args, **kwargs):
+        result = checker(task, code, *args, **kwargs)
         finalize_submission_score(code)
         return result
     return checked

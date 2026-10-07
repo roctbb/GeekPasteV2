@@ -214,8 +214,8 @@ def save_similarities(id):
         db.session.expire_all()
 
 
-@celery.task()
-def check_task(id):
+@celery.task(bind=True, max_retries=3)
+def check_task(self, id):
     with app.app_context():
         code = get_code(id)
         task = code.task
@@ -227,7 +227,13 @@ def check_task(id):
             check_task_with_tests(task, code)
 
         if task.check_type == 'gpt':
-            check_task_with_gpt(task, code)
+            try:
+                check_task_with_gpt(
+                    task, code,
+                    retry_on_connection_error=self.request.retries < self.max_retries,
+                )
+            except (requests.Timeout, requests.ConnectionError) as exc:
+                raise self.retry(exc=exc, countdown=5)
 
         # Auto-mark as viewed by teacher if bypass flag is set on the task
         if task.bypass_similarity_check and code.check_state == 'done':
@@ -442,7 +448,13 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
                 str(e),
             )
             error_text = str(e).lower()
-            if 'request timed out' in error_text or 'read timed out' in error_text or 'connect timeout' in error_text:
+            if check_type == 'gpt' and isinstance(e, (requests.Timeout, requests.ConnectionError)):
+                try:
+                    self.retry(countdown=5)
+                    return  # Publish only the final result, after retries finish.
+                except self.MaxRetriesExceededError:
+                    pass
+            elif 'request timed out' in error_text or 'read timed out' in error_text or 'connect timeout' in error_text:
                 # Upstream timeout is deterministic for oversized/slow requests.
                 # Do not spend retries on the same payload.
                 pass

@@ -559,7 +559,7 @@ def parse_gpt_answer(answer):
 
 
 @minimum_submission_score
-def check_task_with_gpt(task, code):
+def check_task_with_gpt(task, code, *, retry_on_connection_error=False):
     image_submission = None
     publication_points = 0
     if code.lang == 'zip':
@@ -667,6 +667,9 @@ def check_task_with_gpt(task, code):
     try:
         answer = requests.post(GPT_GATEWAY, json=payload, timeout=180)
     except Exception as e:
+        if retry_on_connection_error and isinstance(e, (requests.Timeout, requests.ConnectionError)):
+            # Let Celery retry before changing the score or notifying anyone.
+            raise
         code.check_points = 1
         code.check_state = 'execution error'
         code.check_comments = str(e)
