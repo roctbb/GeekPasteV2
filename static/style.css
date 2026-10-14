@@ -1292,7 +1292,7 @@ select,
 .form-select {
     border: 1.5px solid #e2e8f0 !important;
     border-radius: 10px !important;
-    background: rgba(255, 255, 255, 0.94) !important;
+    background-color: rgba(255, 255, 255, 0.94) !important;
     color: var(--text-main) !important;
 }
 
