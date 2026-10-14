@@ -58,8 +58,9 @@
         toggle('io-test-settings', isIO);
         byId('environment-help').hidden = isIO;
         toggle('test-group-settings', scoring.value === 'groups');
-        toggle('exact-settings', comparison.value === 'exact');
-        toggle('float-settings', comparison.value === 'float');
+        const comparisons = [comparison.value, ...[...cases.querySelectorAll('[name="test_case_comparison"]')].map(select => select.value)];
+        toggle('exact-settings', comparisons.includes('exact'));
+        toggle('float-settings', comparisons.includes('float'));
         byId('scoring-help').textContent = {
             proportional: 'Максимум × доля пройденных тестов, с округлением вниз.',
             all_or_nothing: 'Полный балл за все пройденные тесты. Иначе — только действующий минимальный балл за попытку.',
@@ -68,6 +69,9 @@
         if (isIO && !cases.children.length) addCase();
         refreshGroups();
     }
+    cases.addEventListener('change', event => {
+        if (event.target.name === 'test_case_comparison') refreshSettings();
+    });
     add.addEventListener('click', () => {
         addCase();
         cases.lastElementChild.querySelector('textarea').focus();
@@ -80,6 +84,7 @@
         if (button.dataset.action === 'up' && row.previousElementSibling) row.previousElementSibling.before(row);
         if (button.dataset.action === 'down' && row.nextElementSibling) row.nextElementSibling.after(row);
         refreshCases();
+        refreshSettings();
     });
     byId('add-group').addEventListener('click', () => {
         if (groups.children.length >= 50) return;

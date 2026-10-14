@@ -1,0 +1,891 @@
+{
+  "format": 1,
+  "source_commit": "2be117c788f405a9fa1e702c09f13f5dbe178af1",
+  "tasks": {
+    "2604": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 9,
+      "sha256": "fef0e631013470195c349f6ef565c6d521ff6922c01fe670103ce5e470fbd363",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2606": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 5,
+      "sha256": "625a29798ad9eb073ae7741bfd1ac810998f4788aa7c160839991e2cf6b0b86e",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2607": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 5,
+      "sha256": "ca06356c4abe4ae2f2b056dc669bd78d2d0abbb04a256b3c0f047fbf1e76eed7",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2608": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 6,
+      "sha256": "d5d43548ec19546b05805bf1f71d830ca46cc7f03c80f17444e86e6fc8efae2a",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2612": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 6,
+      "sha256": "81aed697c7be557d08117d6f5532392265e7a977461b2d6d70573804a887a23c",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "strict_text_equal"
+    },
+    "2613": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 7,
+      "sha256": "e5f941271eaddcf1303b1c23c6ace723a347cd7d2d7e2d95f74cae1565569445",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "strict_text_equal"
+    },
+    "2619": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 7,
+      "sha256": "907da8822e4f2c0ddac8e954a60fe9714a606a71c50b38d432b182e342e4018a",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "strict_text_equal"
+    },
+    "2620": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 3,
+      "sha256": "1c21615b9dd6bedb21366773ab73949c137032e36982ad625a4f15124a305e5b",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2624": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 12,
+      "sha256": "cf65aa188e1c419b965adc0b4dcd0c8715f85ce40a1eef3e7089c5db34389b02",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2625": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 7,
+      "sha256": "f028a4ddd42a8483da925d9febc79a9de81cb5ad2fa5674ede2588fd7713c05d",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "strict_text_equal"
+    },
+    "2627": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 7,
+      "sha256": "8067004d7bc8d0264ee72b7b38301c32cfc328a508d126108c0fe90baac38718",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "strict_text_equal"
+    },
+    "2629": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 5,
+      "sha256": "571abff0704c077d51fdd1848043273e29ca42233b1776e9a2b0be416e720427",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2630": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 7,
+      "sha256": "0a4a0fffe2218131734e8bb8e867a4b02fd7b5cb50b3832e923744edc9578d7b",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "strict_text_equal"
+    },
+    "2631": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 3,
+      "sha256": "835184dcbd05c4530f7974a8bfb43ccc16b09c18970958dc605e8b56b8febe13",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2632": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 4,
+      "sha256": "c2bc0cfb749dc6612d3208ff08e65154b4aceacb8557e673c2453a2923765452",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2633": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 6,
+      "sha256": "ea5f912fc85fc83a529da5d9bb76a07eef1358bb8b580391d547fac9a39cd5b2",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "strict_text_equal"
+    },
+    "2634": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 7,
+      "sha256": "6fe1cb3ba894aaa7b5cbbd0eb3ce11ed3ef9686f34128b294b689c1e22615db4",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2635": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 6,
+      "sha256": "99f5f88e348a183a24a2e49f677273d88ceedd1c495ed650582c0fb2651cefe2",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2637": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 4,
+      "sha256": "bb15a83b4a96e6955a18c6444a0fafd41cfb5a83d767aad8b2734a825e888e3f",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "strict_text_equal"
+    },
+    "2640": {
+      "language": "cpp",
+      "points": 15,
+      "test_count": 4,
+      "sha256": "49e270d0aaa8a8e36e196af524aebec892699677e7089e60acf1c14a635d8e9e",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "strict_text_equal"
+    },
+    "2641": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 4,
+      "sha256": "f94d6f98a165b40548b65ccec751d12be50d982c00c59f99cbafbb684af24dbe",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "strict_text_equal"
+    },
+    "2642": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 4,
+      "sha256": "a16320de04cbf7041f71af4adbd195d3a6b353c1ca8abd4375d338448d4910da",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2643": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 5,
+      "sha256": "a00d3e63885c82258787c564ee30a87a29749acbf0f12e51e76551861496707b",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2644": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 6,
+      "sha256": "df030deb2f5e2f365f465064a8a8b5823d0ac5a3a733731ff4f662fc10aa445e",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2645": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 6,
+      "sha256": "d90e4a110f8a9c8a739d611b0e6fc91460de2976307a987925b0084455c4c132",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2646": {
+      "language": "cpp",
+      "points": 15,
+      "test_count": 8,
+      "sha256": "c43379022dc2c783934155fc1d85862f48680738b2faddf23d08f408b7186405",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2648": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 6,
+      "sha256": "8b8be76fa562c38342d2b3969bdd0cd913ea9ed4ec343753a2850a92fa572cf5",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2649": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 6,
+      "sha256": "fa354dce4efd9e82935988cf10f747b99c05885c1d577b00d23246c913bb7650",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "strict_text_equal"
+    },
+    "2651": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 6,
+      "sha256": "63a03790b4368ea91337e30cadfd85c2f7eb28264f5f394728ffbb35e0465dde",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "strict_text_equal"
+    },
+    "2652": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 6,
+      "sha256": "3d7078f45486e556f874c5469dc04832e571f2bc2e24172a566516129167d5b8",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2657": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 4,
+      "sha256": "4da4f70ca79fc3908d4e860da105aca091d117470d7599582b7961d87fa9905e",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "strict_text_equal"
+    },
+    "2660": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 9,
+      "sha256": "991b1ed0d54e6bdb50e46886d680429c1977d1f205f2ed3d75b0bef1509bb5a2",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "strict_text_equal"
+    },
+    "2662": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 6,
+      "sha256": "e08201b1071e238de8bbe260c21e6689cfece032daffed7efe1377656dd3f3fb",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "strict_text_equal"
+    },
+    "2699": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 5,
+      "sha256": "f1c110b1cd79df68df54305bcc1735aa41bc0a82bf90b83e53af552f5670e64c",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "exact_text_equal"
+    },
+    "2718": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 4,
+      "sha256": "ce87a6236a64621ba55b1a2de82dd82f02411c3857a0469bf8633d47e64db576",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2720": {
+      "language": "cpp",
+      "points": 15,
+      "test_count": 5,
+      "sha256": "d2f31c2d8afdf7956a35c65a39f63f73f7d1e940d0176c8b89b51ee1ee903637",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "random",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2721": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 3,
+      "sha256": "b097ed37328fb1d46cc5b994ae07fd7806f5e8ffb4fceec5bc75e2452c5e2dcf",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2722": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 4,
+      "sha256": "3cabced843760e101242097032c4faa2c5c45e57c0cad59c9787350c5431a096",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2723": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 4,
+      "sha256": "158dc13ab2b2fc4a2791b602fd2af10b4d87dbe37c492809eab5481ebb3379c8",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2725": {
+      "language": "cpp",
+      "points": 15,
+      "test_count": 4,
+      "sha256": "edcce31a7ef29fdbd0dab78582ebd94006ce2410972b991bba4e351c5e3ac403",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2726": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 3,
+      "sha256": "68430923f21d9b93bccd61320e70d08c70ae04368116ec4220a6454be02104d1",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2727": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 2,
+      "sha256": "aeea2ac03740a35768c96d3ee938ef93a520a387115a469c1f7255a23c1cacb0",
+      "kinds": [
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2728": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 4,
+      "sha256": "0892c4fc17f749b4e24ff101524ba89c4ffe675d249df7243363dbed7b832f86",
+      "kinds": [
+        "hidden",
+        "stress",
+        "hidden",
+        "random"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2729": {
+      "language": "cpp",
+      "points": 15,
+      "test_count": 3,
+      "sha256": "c7083ac73926bfd63723d590049a633d34d87d6a02ad6e519c2ece2f54bcd203",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2730": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 3,
+      "sha256": "f54d78e814c9ce19cdbabaf8578a0e2542c89808f56af4148e8f4208a7ab5896",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2731": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 3,
+      "sha256": "95b9b003a7a0862ce67b21d0c1ac8fc25ae7d6d6bd9670c73f01f3d10c6a5c4c",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2732": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 4,
+      "sha256": "9781c4aa60c6a9410dfe726ea4fed8ae8465624504363d044151995c75e4b42a",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2733": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 3,
+      "sha256": "766b0390bfba5aa173474b8996c55539308bc06be2b0f9a34d4007a5f2ee47bb",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2734": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 4,
+      "sha256": "2ce48c4b53cd4cf4b76091aedb3c6ab0ba7edfc2e86a393ba7c24c0364d4b5b3",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2735": {
+      "language": "cpp",
+      "points": 15,
+      "test_count": 5,
+      "sha256": "cd3c0b02a514993d32a31b59ef69a839a8fdcf7d7f3f3000afa90e8209e83cac",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "random",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2736": {
+      "language": "cpp",
+      "points": 15,
+      "test_count": 5,
+      "sha256": "44cb2c8ec3182dde3aeb1089fc15afbf28f864752404d3f157e64b63bd60e0e8",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "random",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2737": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 3,
+      "sha256": "beed7022967409c1a4603f59ef4c5f82085a3a84687df0d8eb7c57eefdf860b7",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2738": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 5,
+      "sha256": "d833bd593c4056062b0dacda2fcc519cf018743bab39e0885543ae0912f5dfaf",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "stress",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2739": {
+      "language": "cpp",
+      "points": 20,
+      "test_count": 5,
+      "sha256": "d8bf71a7f67b75bbe2b357e198dd282f5c7893fff2ff7adcfc0ca67104a848fa",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "random",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2740": {
+      "language": "cpp",
+      "points": 10,
+      "test_count": 4,
+      "sha256": "257b0edbb3d4dadc3adc9567958873e65814378528efe1b0d52ba325a3be614f",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2741": {
+      "language": "cpp",
+      "points": 15,
+      "test_count": 6,
+      "sha256": "e36733c252c944171c1c2558802522df816c4f6ccec672ca259f01a847a9b2a7",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "random",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2742": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 4,
+      "sha256": "8c335d067b031ec54566d25118386924b571a63e82d44a9066cd579f1c4c6b5c",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "random",
+        "stress"
+      ],
+      "source_comparator": "float_tokens_equal"
+    },
+    "2743": {
+      "language": "cpp",
+      "points": 15,
+      "test_count": 4,
+      "sha256": "c219e8dd8e34ad898f155a4a4e55be087595c0f179951c5f44e4affd75036b84",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "random",
+        "stress"
+      ],
+      "source_comparator": "float_tokens_equal"
+    },
+    "2744": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 4,
+      "sha256": "46353ffee2254ac21c3793ad5807bd08c1a2e4cea83a2d944e8ff32b18b2ea63",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2745": {
+      "language": "cpp",
+      "points": 15,
+      "test_count": 5,
+      "sha256": "01ef6bbceb055e363f9f89dfa2382182b7434c89efe75155ed6f5db9be76c77c",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2747": {
+      "language": "cpp",
+      "points": 15,
+      "test_count": 7,
+      "sha256": "98265b454571b35933e10c460564f416b707b21f81be3a07c699f43c6bca360e",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "random",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2749": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 3,
+      "sha256": "cbdc0364f9cb6cee684b7b040cfbbae3d839d669d4586b16811f81b56c83cd21",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    },
+    "2750": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 4,
+      "sha256": "b8f376c5dc388f7e831e5892232d7249cfe8e7fa6ea896b66559247871f17d36",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "stress"
+      ],
+      "source_comparator": "tokens_equal"
+    }
+  }
+}

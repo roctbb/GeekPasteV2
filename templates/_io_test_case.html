@@ -26,6 +26,14 @@
             <input name="test_case_output_limit" type="number" min="1" max="8192" step="1" placeholder="Общий лимит" value="{{ case.output_limit if case.output_limit is defined else '' }}" class="form-control form-control-sm">
         </label>
     </div>
+    <label class="d-block mb-2">Сравнение вывода этого теста
+        <select name="test_case_comparison" class="form-select form-select-sm">
+            <option value="">Общее правило задачи</option>
+            {% for value, label in [('tokens', 'По словам и числам'), ('exact', 'Точное — общая настройка конечных пробелов'), ('float', 'Числа — общая настройка погрешности'), ('tokens_ignore_cr', 'По словам — CR игнорируется'), ('exact_crlf', 'Точное, без конечных пробелов — прежнее правило курса'), ('float_binary64', 'Числа с погрешностью 10⁻⁶ — прежнее правило курса')] %}
+            <option value="{{ value }}" {{ 'selected' if case.comparison == value else '' }}>{{ label }}</option>
+            {% endfor %}
+        </select>
+    </label>
     <div class="row g-2">
         <label class="col-md-6">Ввод (stdin)
             <textarea name="test_input" class="form-control form-control-sm font-monospace mt-1" rows="4" spellcheck="false">{{ '\n' ~ case.input }}</textarea>

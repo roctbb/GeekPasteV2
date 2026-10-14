@@ -12,7 +12,8 @@ from werkzeug.datastructures import MultiDict
 
 import io_tests as io_checks
 import methods
-from io_test_import import PILOT_TASK_IDS, PRESETS_PATH, import_environment_tests
+from io_test_import import (PILOT_TASK_IDS, PRESETS_PATH, ADDITIONAL_TASK_IDS,
+                            REMAINING_PATH, REMAINING_PRESETS, import_environment_tests)
 import paste_server as server
 from models import Task, db
 from runner import ExecutionException, SolutionException
@@ -383,7 +384,70 @@ class IOAdvancedTests(unittest.TestCase):
         self.assertNotEqual(import_environment_tests(2611, 'cpp', 5)['tests'][0]['input'], 'edited')
 
 
+class IOAdditionalPresetTests(unittest.TestCase):
+    def test_all_frozen_presets_keep_limits_groups_and_complete_inputs(self):
+        self.assertEqual(hashlib.sha256((REMAINING_PATH / 'index.json').read_bytes()).hexdigest(),
+                         'c9bd764fee8cb61679cea10b62994c79930d870e2a699ca90f5398cf757a299d')
+        self.assertEqual(len(ADDITIONAL_TASK_IDS), 63)
+        self.assertEqual(sum(meta['test_count'] for meta in REMAINING_PRESETS.values()), 318)
+        for task_id in sorted(ADDITIONAL_TASK_IDS):
+            meta = REMAINING_PRESETS[str(task_id)]
+            with self.subTest(task_id=task_id):
+                config = import_environment_tests(task_id, meta['language'], meta['points'])
+                self.assertEqual(len(config['tests']), meta['test_count'])
+                self.assertTrue(all(not test['is_public'] for test in config['tests']))
+                for test in config['tests']:
+                    self.assertGreater(test['time_limit'], 0)
+                    self.assertGreaterEqual(test['output_limit'], 102400)
+                count = len(config['tests'])
+                self.assertEqual(io_checks.score_results(config, [True] * count, meta['points'])[0], meta['points'])
+                self.assertEqual(io_checks.score_results(config, [False] * count, meta['points'])[0], 0)
+                for failed in range(count):
+                    expected = meta['points'] - 5 if config['scoring'] == 'groups' else 0
+                    self.assertEqual(io_checks.score_results(config, [i != failed for i in range(count)], meta['points'])[0], expected)
+        large = import_environment_tests(2652, 'cpp', 5)
+        self.assertGreater(max(len(t['input']) for t in large['tests']), 3_000_000)
+        self.assertGreater(max(len(t['output']) for t in large['tests']), 3_000_000)
+
+    def test_compatibility_comparators_preserve_boundary_behavior(self):
+        from environments.grade8_2026_common import exact_text_equal, float_tokens_equal
+        pairs = [('a\rb', 'a\nb'), ('a\r\nb  \n', 'a\nb'), ('a  b', 'a b'),
+                 ('1_000', '1000'), ('1.000001', '1'), ('1.0000010000000001', '1'),
+                 ('nan', 'nan'), ('inf', 'inf'), ('words', 'words'), ('', ''),
+                 ('1\r2', '12'), ('1e999999', '1e999999'), ('١.٥', '1.5')]
+        for mode, original in [('exact_crlf', exact_text_equal), ('float_binary64', float_tokens_equal)]:
+            for actual, expected in pairs:
+                with self.subTest(mode=mode, actual=actual):
+                    self.assertEqual(io_checks.outputs_equal(actual, expected, mode), original(actual, expected))
+
+    @patch('io_tests.ExecutionContainer')
+    def test_per_case_comparison_is_used_and_private_output_stays_hidden(self, factory):
+        config = {**CONFIG, 'scoring': 'groups', 'groups': [
+            {'id': 'a', 'name': 'a', 'points': 5}, {'id': 'b', 'name': 'b', 'points': 5}],
+            'tests': [{'input': 'public', 'output': 'a  b', 'is_public': True, 'group': 'a', 'comparison': 'exact_crlf'},
+                      {'input': 'SECRET_INPUT', 'output': 'a  b', 'is_public': False, 'group': 'b'}]}
+        factory.return_value.__enter__.return_value.run.return_value = 'a b'
+        code = make_code(config=config)
+        points, report = io_checks.IOTestExecutor(code).perform()
+        self.assertEqual(points, 5)
+        self.assertIn('неверный ответ', report)
+        self.assertIn('Ожидаемый вывод', report)
+        self.assertNotIn('SECRET_INPUT', report)
+
+
 class IOAdvancedWebTests(IOWebBase):
+    def test_per_case_comparison_survives_editor_save_and_validation_error(self):
+        task = self.create()
+        data = self.form(test_case_comparison=['exact_crlf', 'float_binary64'])
+        self.assertEqual(self.client.post(f'/tasks/{task.id}', data=data).status_code, 302)
+        self.assertEqual([row['comparison'] for row in task.test_config['tests']], ['exact_crlf', 'float_binary64'])
+        response = self.client.get(f'/tasks/{task.id}/edit')
+        self.assertIn(b'value="exact_crlf" selected', response.data)
+        self.assertIn(b'value="float_binary64" selected', response.data)
+        data['test_case_comparison'] = ['unknown', '']
+        self.assertEqual(self.client.post(f'/tasks/{task.id}', data=data).status_code, 400)
+        self.assertEqual(task.test_config['tests'][0]['comparison'], 'exact_crlf')
+
     def test_group_settings_round_trip_and_failed_validation_keeps_upload(self):
         task = self.create()
         data = self.form(test_scoring='groups', group_id=['a', 'b'], group_name=['SECRET_GROUP', 'Основные'],

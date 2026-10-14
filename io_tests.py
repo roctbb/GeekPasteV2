@@ -1,6 +1,7 @@
 """Configuration and execution of teacher-authored stdin/stdout tests."""
 from decimal import Decimal, DecimalException, InvalidOperation, localcontext
 from html import escape
+import math
 import re
 
 from runner import ExecutionContainer, ExecutionException, SolutionException
@@ -14,6 +15,7 @@ MAX_REQUEST_BYTES = 2 * MAX_TOTAL_BYTES + 2 * 1024 * 1024
 DEFAULT_OUTPUT_LIMIT = 100 * 1024
 MAX_OUTPUT_LIMIT = 8 * 1024 * 1024
 SUPPORTED_LANGUAGES = {'python', 'cpp'}
+COMPARISONS = ('tokens', 'tokens_ignore_cr', 'exact', 'float', 'exact_crlf', 'float_binary64')
 NUMBER_PATTERN = re.compile(r'[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?\Z')
 
 
@@ -42,7 +44,7 @@ def validate_test_config(config, maximum_points=None):
     if not isinstance(config, dict):
         raise ValueError('Не заданы настройки тестов ввода/вывода.')
     comparison = config.get('comparison', 'tokens')
-    if comparison not in ('tokens', 'tokens_ignore_cr', 'exact', 'float'):
+    if comparison not in COMPARISONS:
         raise ValueError('Выберите допустимый способ сравнения вывода.')
     trailing = config.get('trailing_whitespace', 'one_newline')
     if trailing not in ('one_newline', 'newlines', 'all'):
@@ -87,6 +89,10 @@ def validate_test_config(config, maximum_points=None):
         if not isinstance(test, dict) or type(test.get('is_public')) is not bool:
             raise ValueError(f'Тест {number}: выберите публичность.')
         row = {'is_public': test['is_public']}
+        if test.get('comparison'):
+            if test['comparison'] not in COMPARISONS:
+                raise ValueError(f'Тест {number}: выберите допустимый способ сравнения.')
+            row['comparison'] = test['comparison']
         for key in ('input', 'output'):
             value = test.get(key)
             if not isinstance(value, str):
@@ -142,11 +148,13 @@ def draft_test_config_from_form(form, files=None):
     group_ids = optional_list('test_group')
     times = optional_list('test_case_time_limit')
     limits = optional_list('test_case_output_limit')
+    comparisons = optional_list('test_case_comparison')
     rows = []
     file_error = None
     for i, (stdin, stdout, public) in enumerate(zip(inputs, outputs, visibility)):
         row = {'input': stdin, 'output': stdout, 'is_public': public == 'public',
-               'group': group_ids[i], 'time_limit': times[i], 'output_limit': limits[i]}
+               'group': group_ids[i], 'time_limit': times[i], 'output_limit': limits[i],
+               'comparison': comparisons[i]}
         for key in ('input', 'output'):
             uploaded = files.get(f'test_{key}_file_{i}') if files else None
             if uploaded and uploaded.filename:
@@ -213,6 +221,21 @@ def public_tests(task):
 
 def outputs_equal(actual, expected, comparison, *, trailing_whitespace='one_newline',
                   absolute_tolerance='0.000001', relative_tolerance='0.000001'):
+    if comparison == 'exact_crlf':
+        # Preserve the course checker: a lone CR inside a line is significant.
+        return actual.replace('\r\n', '\n').rstrip() == expected.replace('\r\n', '\n').rstrip()
+    if comparison == 'float_binary64':
+        # Compatibility with the original float_tokens_equal, including float
+        # parsing/rounding and rejection of nonnumeric and nonfinite tokens.
+        left, right = actual.replace('\r', '').split(), expected.replace('\r', '').split()
+        if len(left) != len(right):
+            return False
+        try:
+            return all(math.isfinite(a) and math.isfinite(b)
+                       and abs(a - b) <= 1e-6 * max(1.0, abs(b))
+                       for a, b in zip(map(float, left), map(float, right)))
+        except (ValueError, OverflowError):
+            return False
     if comparison == 'tokens_ignore_cr':
         return actual.replace('\r', '').split() == expected.replace('\r', '').split()
     if comparison == 'tokens':
@@ -318,7 +341,7 @@ class IOTestExecutor:
             except ExecutionException:
                 raise ExecutionException('Не удалось запустить проверку ввода/вывода. Повторите позже.') from None
 
-            passed = outputs_equal(actual, test['output'], config['comparison'],
+            passed = outputs_equal(actual, test['output'], test.get('comparison', config['comparison']),
                                    trailing_whitespace=config['trailing_whitespace'],
                                    absolute_tolerance=config['absolute_tolerance'],
                                    relative_tolerance=config['relative_tolerance'])

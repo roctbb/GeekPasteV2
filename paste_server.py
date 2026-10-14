@@ -20,7 +20,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from recheck_request import codingprojects_recheck
 from io_tests import (public_tests, draft_test_config_from_form, validate_form_draft,
                       SUPPORTED_LANGUAGES, MAX_REQUEST_BYTES, DEFAULT_OUTPUT_LIMIT)
-from io_test_import import PILOT_TASK_IDS, import_environment_tests
+from io_test_import import IMPORTABLE_TASK_IDS, RETIRED_TASK_IDS, import_environment_tests
 
 SOCKET_SUBMISSION_ROOM_PREFIX = "submission:"
 SYSTEM_RECENT_CHECKS_KEY = "system:recent_checks"
@@ -1697,7 +1697,8 @@ def _render_task_form(task=None, error=None, imported_config=None):
             cases, groups = draft['tests'], draft['groups']
     next_url = _safe_next_tasks_url(request.values.get('next')) or '/tasks'
     return render_template('task_form.html', task=task, values=values, test_cases=cases,
-                           test_groups=groups, import_available=bool(task and task.id in PILOT_TASK_IDS),
+                           test_groups=groups, import_available=bool(task and task.id in IMPORTABLE_TASK_IDS),
+                           environment_retired=bool(task and task.id in RETIRED_TASK_IDS),
                            imported=imported_config is not None,
                            langs=LANGS, next_url=next_url, form_error=error), 400 if error else 200
 
@@ -1725,7 +1726,7 @@ def _fill_task(task):
         raise ValueError('ID, баллы и лимит GPT должны быть целыми числами.') from None
     if task.id is not None and task_id != task.id:
         raise ValueError('ID существующей задачи нельзя изменить.')
-    if task_id in PILOT_TASK_IDS and check_type == 'tests' and mode == 'environment':
+    if task_id in RETIRED_TASK_IDS and check_type == 'tests' and mode == 'environment':
         raise ValueError('Окружение этой задачи перенесено. Используйте режим «Ввод / вывод».')
     config = task.test_config
     if mode == 'io' and check_type == 'tests':

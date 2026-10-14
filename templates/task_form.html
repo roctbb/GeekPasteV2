@@ -91,7 +91,7 @@
             <section id="test-settings" class="border rounded p-3 my-3">
                 <label class="form-label" for="test-mode">Режим тестов</label>
                 <select id="test-mode" name="test_mode" class="form-select form-select-sm mb-2">
-                    <option value="environment" {{ 'selected' if values.test_mode != 'io' else '' }} {{ 'disabled' if import_available else '' }}>Проверка через environments</option>
+                    <option value="environment" {{ 'selected' if values.test_mode != 'io' else '' }} {{ 'disabled' if environment_retired else '' }}>Проверка через environments</option>
                     <option value="io" {{ 'selected' if values.test_mode == 'io' else '' }}>Ввод / вывод — настройка в браузере</option>
                 </select>
                 {% if import_available %}<a class="btn btn-sm btn-outline-primary mb-2" href="{{ url_for('tasks_import_tests', task_id=task.id, next=next_url) }}">Загрузить исходный набор тестов</a><div class="form-text mb-2">Откроется новая форма с исходным набором. Сначала сохраните текущие изменения, если они нужны.</div>{% endif %}
@@ -117,6 +117,8 @@
                         <option value="exact" {{ 'selected' if values.test_comparison == 'exact' else '' }}>Точное — с учётом пробелов и строк</option>
                         <option value="float" {{ 'selected' if values.test_comparison == 'float' else '' }}>Числа с погрешностью</option>
                         <option value="tokens_ignore_cr" {{ 'selected' if values.test_comparison == 'tokens_ignore_cr' else '' }}>По словам — совместимость с environments (CR игнорируется)</option>
+                        <option value="exact_crlf" {{ 'selected' if values.test_comparison == 'exact_crlf' else '' }}>Точное, без конечных пробелов — прежнее правило курса</option>
+                        <option value="float_binary64" {{ 'selected' if values.test_comparison == 'float_binary64' else '' }}>Числа с погрешностью 10⁻⁶ — прежнее правило курса</option>
                     </select>
                     <div class="form-text mb-2">Регистр учитывается. В режиме «По словам и числам» значения 1 и 1.0 различаются.</div>
                     <fieldset id="exact-settings" class="mb-3">
