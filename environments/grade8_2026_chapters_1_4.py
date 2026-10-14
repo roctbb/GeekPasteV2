@@ -731,155 +731,6 @@ TASKS[2570] = (15, _nand_handler)
 
 # Chapter 2: procedural C++ -------------------------------------------------
 
-_add_program(
-    2593,
-    5,
-    [[_case(
-        "",
-        "A byte, a bit, a line of code,\n"
-        "a compiler on a rainy road.\n"
-        "It printed nothing at the start,\n"
-        "and now it prints this work of art!\n",
-    )]],
-    comparator=strict_text_equal,
-)
-
-
-def _elapsed(seconds):
-    return "{} h {} m {} s\n".format(
-        seconds // 3600,
-        seconds % 3600 // 60,
-        seconds % 60,
-    )
-
-
-_add_program(
-    2594,
-    5,
-    [[
-        *[_case("{}\n".format(value), _elapsed(value)) for value in
-          (0, 59, 60, 3599, 3600, 86399, 86400, 1000000000)],
-    ]],
-    comparator=strict_text_equal,
-)
-
-
-def _cpp_division(a, b):
-    quotient = abs(a) // abs(b)
-    if (a < 0) != (b < 0):
-        quotient = -quotient
-    remainder = a - quotient * b
-    return "{} / {} = {} (rem {})\n".format(a, b, quotient, remainder)
-
-
-_division_pairs = (
-    (7, 2), (-7, 2), (7, -2), (-7, -2), (0, -3),
-    (10000, 1), (-10000, 37), (9999, -10000),
-)
-_add_program(
-    2595,
-    5,
-    [[
-        *[
-            _case("{} {}\n".format(a, b), _cpp_division(a, b))
-            for a, b in _division_pairs
-        ],
-    ]],
-    comparator=strict_text_equal,
-)
-
-
-_add_program(
-    2596,
-    5,
-    [[
-        *[
-            _case(
-                "{} {}\n".format(x, y),
-                "{}\n".format("white" if (x + y) % 2 == 0 else "black"),
-            )
-            for x, y in ((1, 1), (1, 8), (8, 1), (8, 8),
-                         (2, 1), (2, 2), (3, 4), (4, 3))
-        ],
-    ]],
-    comparator=strict_text_equal,
-)
-
-
-def _fib(number):
-    left = right = 1
-    for _ in range(3, number + 1):
-        left, right = right, left + right
-    return left if number == 1 else right
-
-
-_add_program(
-    2597,
-    5,
-    [[
-        *[
-            _case("{}\n".format(number), "{}\n".format(_fib(number)))
-            for number in (1, 2, 3, 6, 20, 46, 47, 50, 89, 90)
-        ],
-    ]],
-)
-
-
-def _dog_field(rows, columns):
-    return "\n".join(
-        "".join("%" if (row + column) % 2 == 0 else "@"
-                for column in range(columns))
-        for row in range(rows)
-    ) + "\n"
-
-
-_add_program(
-    2598,
-    5,
-    [[
-        *[
-            _case("{} {}\n".format(rows, columns), _dog_field(rows, columns))
-            for rows, columns in ((1, 1), (1, 8), (2, 2), (3, 4), (4, 5), (100, 100))
-        ],
-    ]],
-    comparator=strict_text_equal,
-)
-
-
-def _emergency(number):
-    total = number * (number + 1) // 2
-    average = str((number + 1) // 2) if number % 2 else "{}.5".format(number // 2)
-    return "Sum: {}\nAverage: {}\n".format(total, average)
-
-
-_add_program(
-    2599,
-    10,
-    [
-        [_case("{}\n".format(number), _emergency(number)) for number in (1, 3, 5, 9999)],
-        [_case("{}\n".format(number), _emergency(number)) for number in (2, 4, 9998, 10000)],
-    ],
-    comparator=strict_text_equal,
-)
-
-
-def _digit_answer(number):
-    text = str(number)
-    return "{}\n{}\n".format(sum(map(int, text)), len(text))
-
-
-_add_program(
-    2600,
-    5,
-    [[
-        *[
-            _case("{}\n".format(number), _digit_answer(number))
-            for number in (0, 7, 10, 1005, 999999999, 1000000000)
-        ],
-    ]],
-    comparator=strict_text_equal,
-)
-
 
 def _swap_harness(a, b, key):
     return _hcase(
@@ -962,23 +813,6 @@ _add_program(
          for limit in (1, 5, 6, 27, 28, 495, 496, 8128)],
         [_case("100000\n", _perfect_expected(100000), time_limit=5)],
     ],
-)
-
-
-_add_program(
-    2605,
-    5,
-    [[
-        _case(
-            _numbers(values) + "\n",
-            _numbers(reversed(values)) + "\n",
-        )
-        for values in (
-            list(range(1, 11)),
-            [0] * 10,
-            [0, 10000, 3, 3, 7, 1, 9, 2, 8, 5],
-        )
-    ]],
 )
 
 
@@ -1144,7 +978,6 @@ def _magic_cases(diagnostic=False):
 
 
 # Separate submissions: 5 points for the verdict, 5 optional points for diagnostics.
-_add_program(2611, 5, [_magic_cases()], comparator=tokens_equal)
 _add_program(2915, 5, [_magic_cases(diagnostic=True)], comparator=tokens_equal)
 
 
@@ -1889,38 +1722,6 @@ _add_program(
 )
 
 
-def _word_count(text):
-    inside = False
-    result = 0
-    for character in text:
-        if character != " " and not inside:
-            result += 1
-            inside = True
-        elif character == " ":
-            inside = False
-    return result
-
-
-_add_program(
-    2636,
-    5,
-    [[
-        *[
-            _case(text + "\n", "{}\n".format(_word_count(text)))
-            for text in (
-                "to be or not to be",
-                "   hello   world   ",
-                "",
-                "          ",
-                "a,b  c!",
-                "one",
-                "a " * 100,
-            )
-        ],
-    ]],
-)
-
-
 _NUMBER_RE = re.compile(r"[+-]?[0-9]+(?:\.[0-9]+)?\Z")
 
 
@@ -2625,11 +2426,10 @@ _add_program(
 
 EXPECTED_TASK_IDS = frozenset({
     2570,
-    *range(2593, 2601),
-    *range(2602, 2609),
-    2610, 2611, 2612, 2613, 2614, 2615, 2616, 2617, 2619,
+    2602, 2603, 2604, 2606, 2607, 2608,
+    2610, 2612, 2613, 2614, 2615, 2616, 2617, 2619,
     2620, 2621, 2624, 2625, 2626, 2627, 2629, 2630, 2631, 2632,
-    2633, 2634, 2635, 2636, 2637, 2638, 2640, 2641, 2642, 2643,
+    2633, 2634, 2635, 2637, 2638, 2640, 2641, 2642, 2643,
     2644, 2645, 2646, 2648, 2649, 2651, 2652, 2656, 2657, 2658,
     2660, 2662, 2915,
 })

@@ -1,6 +1,7 @@
 import unittest
 
 from environments import grade8_2026_chapters_1_4 as chapter
+from tests.io_preset_helpers import perform_io_preset
 
 
 def reference(input_data, diagnostic=False, omit_diagonal=None):
@@ -23,6 +24,8 @@ def reference(input_data, diagnostic=False, omit_diagonal=None):
 
 class MagicSquareSplitTests(unittest.TestCase):
     def score(self, task_id, answer):
+        if task_id == 2611:
+            return perform_io_preset(task_id, lambda data, limit: answer(data))[1]
         return chapter.TASKS[task_id][1](lambda data, limit: answer(data), "")[0]
 
     def test_verdict_only_gets_all_base_points_and_no_bonus(self):

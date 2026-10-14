@@ -91,10 +91,10 @@
             <section id="test-settings" class="border rounded p-3 my-3">
                 <label class="form-label" for="test-mode">Режим тестов</label>
                 <select id="test-mode" name="test_mode" class="form-select form-select-sm mb-2">
-                    <option value="environment" {{ 'selected' if values.test_mode != 'io' else '' }}>Проверка через environments</option>
+                    <option value="environment" {{ 'selected' if values.test_mode != 'io' else '' }} {{ 'disabled' if import_available else '' }}>Проверка через environments</option>
                     <option value="io" {{ 'selected' if values.test_mode == 'io' else '' }}>Ввод / вывод — настройка в браузере</option>
                 </select>
-                {% if import_available %}<a class="btn btn-sm btn-outline-primary mb-2" href="{{ url_for('tasks_import_tests', task_id=task.id, next=next_url) }}">Загрузить исходные тесты из environments</a><div class="form-text mb-2">Откроется новая форма с исходным набором. Сначала сохраните текущие изменения, если они нужны.</div>{% endif %}
+                {% if import_available %}<a class="btn btn-sm btn-outline-primary mb-2" href="{{ url_for('tasks_import_tests', task_id=task.id, next=next_url) }}">Загрузить исходный набор тестов</a><div class="form-text mb-2">Откроется новая форма с исходным набором. Сначала сохраните текущие изменения, если они нужны.</div>{% endif %}
                 <p id="environment-help" class="small text-muted mb-0">Используется существующий программный проверяющий модуль задачи.</p>
                 <fieldset id="io-test-settings">
                     <p class="small text-muted">Для Python и C++. Публичные тесты видны ученику до отправки; у приватных виден только результат проверки.

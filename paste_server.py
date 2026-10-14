@@ -1725,6 +1725,8 @@ def _fill_task(task):
         raise ValueError('ID, баллы и лимит GPT должны быть целыми числами.') from None
     if task.id is not None and task_id != task.id:
         raise ValueError('ID существующей задачи нельзя изменить.')
+    if task_id in PILOT_TASK_IDS and check_type == 'tests' and mode == 'environment':
+        raise ValueError('Окружение этой задачи перенесено. Используйте режим «Ввод / вывод».')
     config = task.test_config
     if mode == 'io' and check_type == 'tests':
         if request.form.get('lang') not in SUPPORTED_LANGUAGES:

@@ -5,6 +5,8 @@ import unittest
 
 from environments import grade8_2026_chapters_1_4 as chapter
 from runner import SolutionException
+from io_test_import import PILOT_TASK_IDS
+from tests.io_preset_helpers import preset, program_groups, perform_io_preset
 
 
 BUFFER_OVERFLOW_COMMENT = (
@@ -132,7 +134,7 @@ class ReferenceRunner:
 
     def __init__(self, task_id, *, program_override=None, failed_harness_keys=()):
         self.task_id = task_id
-        self.groups = chapter.materialize_task_groups(task_id)
+        self.groups = program_groups(task_id) if task_id in PILOT_TASK_IDS else chapter.materialize_task_groups(task_id)
         self.expected_by_input = {}
         for group in self.groups:
             for case in group:
@@ -176,15 +178,18 @@ class ReferenceRunner:
 
 
 def perform(task_id, runner, source_code="int main() { return 0; }"):
+    if task_id in PILOT_TASK_IDS:
+        return perform_io_preset(task_id, runner)
     maximum, handler = chapter.TASKS[task_id]
     points, feedback = handler(runner, source_code)
     return maximum, points, feedback
 
 
 class RegistryTests(unittest.TestCase):
-    def test_registry_has_exactly_the_58_test_tasks(self):
+    def test_registry_has_exactly_the_47_remaining_environment_tasks(self):
         self.assertEqual(set(chapter.TASKS), set(chapter.EXPECTED_TASK_IDS))
-        self.assertEqual(len(chapter.TASKS), 58)
+        self.assertEqual(len(chapter.TASKS), 47)
+        self.assertFalse(set(chapter.TASKS) & PILOT_TASK_IDS)
         self.assertNotIn(2622, chapter.TASKS)  # Секундомер is a GPT report task.
 
     def test_group_count_matches_five_point_scoring(self):
@@ -207,7 +212,7 @@ class RegistryTests(unittest.TestCase):
             2662: 10,
         }
         for task_id, maximum in expected.items():
-            self.assertEqual(chapter.TASKS[task_id][0], maximum)
+            self.assertEqual(preset(task_id)[0] if task_id in PILOT_TASK_IDS else chapter.TASKS[task_id][0], maximum)
 
     def test_large_cases_are_lazy_at_import_time(self):
         for task_id in (2607, 2620, 2631, 2641, 2652, 2656):

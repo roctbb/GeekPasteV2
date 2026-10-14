@@ -1,4 +1,5 @@
 import copy
+import hashlib
 from io import BytesIO
 import os
 from pathlib import Path
@@ -11,7 +12,7 @@ from werkzeug.datastructures import MultiDict
 
 import io_tests as io_checks
 import methods
-from io_test_import import PILOT_TASK_IDS, import_environment_tests
+from io_test_import import PILOT_TASK_IDS, PRESETS_PATH, import_environment_tests
 import paste_server as server
 from models import Task, db
 from runner import ExecutionException, SolutionException
@@ -345,45 +346,41 @@ class IOAdvancedTests(unittest.TestCase):
         methods.check_task_with_tests(code.task, code)
         self.assertEqual((code.check_points, code.check_state), (1, 'partially done'))
 
-    def test_pilot_imports_match_environment_scores_comparisons_and_limits(self):
-        from environments import grade8_2026_chapters_1_4 as source
-        from inspect import getclosurevars
-        for task_id in sorted(PILOT_TASK_IDS):
-            maximum, handler = source.TASKS[task_id]
+    def test_frozen_presets_keep_migrated_cases_scores_and_limits(self):
+        # Exported from ae5f534, compared against the old handlers before retirement.
+        self.assertEqual(hashlib.sha256(PRESETS_PATH.read_bytes()).hexdigest(),
+                         '760b385451994b3526bd470da58246332f936f5bf7b97307b6435d5c554a63c3')
+        counts = {2593: 1, 2594: 8, 2595: 8, 2596: 8, 2597: 10, 2598: 6,
+                  2599: 8, 2600: 6, 2605: 3, 2611: 16, 2636: 7}
+        self.assertEqual(set(counts), PILOT_TASK_IDS)
+        for task_id, count in counts.items():
+            maximum = 10 if task_id == 2599 else 5
             config = import_environment_tests(task_id, 'cpp', maximum)
-            original = [case for group in source.materialize_task_groups(task_id) for case in group]
-            self.assertEqual(len(original), len(config['tests']))
-            comparator = getclosurevars(handler).nonlocals['comparator']
-            expected = {}
-            for old, new in zip(original, config['tests']):
-                self.assertFalse(new['is_public'])
-                self.assertEqual((new['input'], new['output']), (old['input'], old['expected']))
-                self.assertEqual(new['time_limit'], old['time_limit'])
-                self.assertEqual(new['output_limit'], old.get('capture_limit', 102400))
-                if old['input'] in expected:
-                    self.assertEqual(expected[old['input']], old['expected'])
-                expected[old['input']] = old['expected']
-                for actual in (old['expected'], old['expected'] + '\n\n', old['expected'] + ' ',
-                               old['expected'].replace(' ', '\r'), 'WRONG'):
-                    self.assertEqual(comparator(actual, old['expected']),
-                                     io_checks.outputs_equal(actual, new['output'], config['comparison'],
-                                                             trailing_whitespace=config['trailing_whitespace']))
-            # Every individual failing input, full credit, and complete failure.
-            for failed in [None, *expected, object()]:
-                all_wrong = type(failed) is object
-                def runner(stdin, *_limits):
-                    return 'WRONG' if all_wrong or stdin == failed else expected[stdin]
-                old_points, _ = handler(runner, '')
-                results = [not all_wrong and row['input'] != failed for row in config['tests']]
-                new_points, _ = io_checks.score_results(config, results, maximum)
-                with self.subTest(task_id=task_id, failed=str(failed)[:40]):
-                    self.assertEqual(new_points, old_points)
+            self.assertEqual(len(config['tests']), count)
+            expected_comparison = 'tokens_ignore_cr' if task_id in (2597, 2605, 2611, 2636) else 'exact'
+            self.assertEqual(config['comparison'], expected_comparison)
+            self.assertEqual(config['trailing_whitespace'], 'newlines')
+            for case in config['tests']:
+                self.assertFalse(case['is_public'])
+                self.assertEqual(case['time_limit'], 1)
+                self.assertEqual(case['output_limit'], 102400)
+            self.assertEqual(io_checks.score_results(config, [True] * count, maximum)[0], maximum)
+            self.assertEqual(io_checks.score_results(config, [False] * count, maximum)[0], 0)
+            for failed in range(count):
+                results = [i != failed for i in range(count)]
+                self.assertEqual(io_checks.score_results(config, results, maximum)[0], 5 if task_id == 2599 else 0)
         with self.assertRaises(ValueError):
             import_environment_tests(9999, 'cpp', 5)
         with self.assertRaises(ValueError):
             import_environment_tests(2593, 'python', 5)
         with self.assertRaises(ValueError):
             import_environment_tests(2593, 'cpp', 10)
+
+    def test_import_does_not_depend_on_retired_environment_module(self):
+        with patch.dict('sys.modules', {'environments.grade8_2026_chapters_1_4': None}):
+            config = import_environment_tests(2611, 'cpp', 5)
+        config['tests'][0]['input'] = 'edited'
+        self.assertNotEqual(import_environment_tests(2611, 'cpp', 5)['tests'][0]['input'], 'edited')
 
 
 class IOAdvancedWebTests(IOWebBase):
@@ -453,6 +450,18 @@ class IOAdvancedWebTests(IOWebBase):
         self.assertEqual(self.client.get('/tasks/2599/import-tests').status_code, 400)
         self.login('student')
         self.assertEqual(self.client.get('/tasks/2599/import-tests').status_code, 403)
+
+    def test_migrated_task_cannot_switch_to_deleted_environment(self):
+        task = Task(id=2593, name='Poem', lang='cpp', points=5, check_type='tests', test_mode='io',
+                    test_config=import_environment_tests(2593, 'cpp', 5))
+        db.session.add(task)
+        db.session.commit()
+        response = self.client.post('/tasks/2593', data=self.form(
+            id='2593', lang='cpp', points='5', test_mode='environment'))
+        self.assertEqual(response.status_code, 400)
+        self.assertIn('Окружение этой задачи перенесено', response.text)
+        db.session.expire_all()
+        self.assertEqual(task.test_mode, 'io')
 
 
 @unittest.skipUnless(os.getenv('RUN_IO_DOCKER_INTEGRATION') == '1', 'requires Docker')
