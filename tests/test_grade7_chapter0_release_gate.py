@@ -4,6 +4,8 @@ import unittest
 
 from environments.grade7_chapter0_common import TASK_MAX_POINTS
 from environments.grade7_chapter0_io import TASK_SPECS
+from tests.python_io_preset_helpers import MIGRATED_GRADE7_IDS
+from io_test_import import import_environment_tests, preset_metadata
 from score_policy import normalize_test_points
 
 
@@ -12,7 +14,8 @@ EXPECTED_TEST_TASK_IDS = frozenset(range(2440, 2463))
 
 class Grade7Chapter0ReleaseGateTests(unittest.TestCase):
     def test_checker_specs_cover_exactly_the_expected_tasks(self):
-        io_ids = frozenset(TASK_SPECS)
+        io_ids = frozenset(TASK_SPECS) | MIGRATED_GRADE7_IDS
+        self.assertFalse(set(TASK_SPECS) & MIGRATED_GRADE7_IDS)
         common_ids = frozenset(TASK_MAX_POINTS)
 
         self.assertFalse(io_ids & common_ids)
@@ -24,6 +27,11 @@ class Grade7Chapter0ReleaseGateTests(unittest.TestCase):
     def test_every_expected_task_has_an_importable_tester(self):
         for task_id in EXPECTED_TEST_TASK_IDS:
             with self.subTest(task_id=task_id):
+                if task_id in MIGRATED_GRADE7_IDS:
+                    self.assertFalse((Path(__file__).resolve().parents[1] / 'environments' /
+                                      f'task_{task_id}' / 'tester.py').exists())
+                    self.assertTrue(import_environment_tests(task_id, 'python', preset_metadata(task_id)['points'])['tests'])
+                    continue
                 module = importlib.import_module(
                     f"environments.task_{task_id}.tester"
                 )

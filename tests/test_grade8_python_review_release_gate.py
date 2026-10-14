@@ -3,6 +3,8 @@ from pathlib import Path
 import unittest
 
 from score_policy import GRADE8_2026_TASK_IDS, normalize_test_points
+from tests.python_io_preset_helpers import MIGRATED_GRADE7_IDS
+from io_test_import import import_environment_tests, preset_metadata
 
 
 TARGET_TASK_IDS = tuple(range(2770, 2794))
@@ -16,6 +18,14 @@ class Grade8PythonReviewReleaseGateTests(unittest.TestCase):
             TARGET_TEST_TASK_IDS,
         ):
             with self.subTest(source_id=source_id, target_id=target_id):
+                if source_id in MIGRATED_GRADE7_IDS:
+                    repository = Path(__file__).resolve().parents[1]
+                    for task_id in (source_id, target_id):
+                        self.assertFalse((repository / 'environments' / f'task_{task_id}' / 'tester.py').exists())
+                    points = preset_metadata(source_id)['points']
+                    self.assertEqual(import_environment_tests(source_id, 'python', points),
+                                     import_environment_tests(target_id, 'python', points))
+                    continue
                 source = importlib.import_module(
                     f"environments.task_{source_id}.tester"
                 )

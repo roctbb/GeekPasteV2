@@ -112,7 +112,7 @@ class Grade8ReleaseGateTests(unittest.TestCase):
         expected = {task["id"]: task["points"] for task in self.test_tasks}
         # Post-publication split (2026-10-06); retain the original manifest as an archive.
         for task_id in RETIRED_TASK_IDS:
-            del expected[task_id]
+            expected.pop(task_id, None)
         expected[2915] = 5
         wrapper = ENVIRONMENTS / "task_2915" / "tester.py"
         self.assertIn("return perform_task(2915, runner, source_code)", wrapper.read_text())
@@ -121,10 +121,11 @@ class Grade8ReleaseGateTests(unittest.TestCase):
         self.assertTrue(all(callable(value[1]) for value in handlers.values()))
 
     def test_migrated_tasks_have_presets_and_no_environment_wrappers(self):
-        self.assertEqual(len(RETIRED_TASK_IDS), 74)
+        self.assertEqual(len(RETIRED_TASK_IDS), 130)
         for task_id in RETIRED_TASK_IDS:
             self.assertFalse((ENVIRONMENTS / f'task_{task_id}' / 'tester.py').exists())
-            config = import_environment_tests(task_id, 'cpp', preset_metadata(task_id)['points'])
+            metadata = preset_metadata(task_id)
+            config = import_environment_tests(task_id, metadata['language'], metadata['points'])
             self.assertTrue(config['tests'])
 
 

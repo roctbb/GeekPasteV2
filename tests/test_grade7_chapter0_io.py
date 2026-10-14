@@ -1,11 +1,8 @@
 import importlib
 import unittest
 
-from environments.grade7_chapter0_io import (
-    MAX_STDOUT_BYTES,
-    TASK_SPECS,
-    perform_task,
-)
+from environments.grade7_chapter0_io import MAX_STDOUT_BYTES
+from tests.python_io_preset_helpers import TASK_SPECS, perform_task, MIGRATED_GRADE7_IDS
 from runner import ExecutionException
 
 
@@ -127,7 +124,7 @@ class Grade7Chapter0IOTests(unittest.TestCase):
             with self.subTest(task_id=task_id):
                 points, feedback = perform_task(task_id, runner_for(spec))
                 self.assertEqual(points, spec.max_points)
-                self.assertIn("Все", feedback)
+                self.assertIn("Пройдено тестов" if task_id in MIGRATED_GRADE7_IDS else "Все", feedback)
 
     def test_each_failed_required_case_reduces_non_caesar_score(self):
         for task_id, spec in TASK_SPECS.items():
@@ -139,8 +136,12 @@ class Grade7Chapter0IOTests(unittest.TestCase):
                         task_id,
                         runner_for(spec, failed_key=case.key),
                     )
-                    self.assertIn("Проблемные проверки", feedback)
-                    self.assertIn(case.label, feedback)
+                    if task_id in MIGRATED_GRADE7_IDS:
+                        self.assertIn('неверный ответ', feedback)
+                        self.assertNotIn(case.label, feedback)
+                    else:
+                        self.assertIn("Проблемные проверки", feedback)
+                        self.assertIn(case.label, feedback)
 
     def test_completely_wrong_solution_receives_zero(self):
         def wrong_runner(input_data):
@@ -270,8 +271,9 @@ for symbol in text:
             2447,
             runner_with_override(TASK_SPECS[2447], "9", "неверно\n"),
         )
-        self.assertIn("Ввод: ␠␠a␠", edge_spaces_feedback)
-        self.assertIn("␠ — пробел на краю строки", edge_spaces_feedback)
+        self.assertNotIn("Ввод:", edge_spaces_feedback)
+        self.assertIn("Тест 9 (приватный): неверный ответ.", edge_spaces_feedback)
+        self.assertNotIn("␠␠a␠", edge_spaces_feedback)
 
     def test_turnstile_requires_the_three_exact_answers(self):
         spec = TASK_SPECS[2441]
@@ -777,15 +779,15 @@ for symbol in text:
 
         feedback = self.assert_not_max(2440, crashing_runner)
         self.assertEqual(len(calls), len(spec.cases))
-        self.assertIn("RuntimeError", feedback)
-        self.assertIn("авария в решении", feedback)
+        self.assertIn('ошибка выполнения', feedback)
+        self.assertNotIn("авария в решении", feedback)
 
     def test_infrastructure_exception_is_not_graded_as_a_student_failure(self):
         def unavailable_runner(input_data):
             del input_data
             raise ExecutionException("Docker unavailable")
 
-        with self.assertRaisesRegex(ExecutionException, "Docker unavailable"):
+        with self.assertRaisesRegex(ExecutionException, "Не удалось запустить"):
             perform_task(2440, unavailable_runner)
 
     def test_oversized_stdout_is_rejected_without_echoing_payload(self):
@@ -793,12 +795,16 @@ for symbol in text:
         payload = "СЕКРЕТ" * (MAX_STDOUT_BYTES // 2)
         runner = runner_with_override(spec, "1", payload)
         feedback = self.assert_not_max(2440, runner)
-        self.assertIn("Вывод отклонён", feedback)
+        self.assertIn("превышение лимита", feedback)
         self.assertNotIn("СЕКРЕТ", feedback)
 
     def test_each_tiny_wrapper_uses_standard_api(self):
         for task_id, (max_points, _) in EXPECTED_TASKS.items():
             with self.subTest(task_id=task_id):
+                if task_id in MIGRATED_GRADE7_IDS:
+                    points, _ = perform_task(task_id, runner_for(TASK_SPECS[task_id]))
+                    self.assertEqual(points, max_points)
+                    continue
                 module = importlib.import_module(
                     "environments.task_{}.tester".format(task_id)
                 )

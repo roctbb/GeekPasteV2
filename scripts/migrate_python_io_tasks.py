@@ -36,6 +36,14 @@ def main():
                 metadata = preset_metadata(task_id)
                 assert (task.lang, task.points, task.check_type) == ('python', metadata['points'], 'tests'), task_id
                 config = import_environment_tests(task_id, task.lang, task.points)
+                if task_id == 2914:
+                    old_header = '**Python 3.11 · 6 с на тест · 512 МБ.**'
+                    new_header = '**Python 3.11 · 12 с на тест · 512 МБ.**'
+                    assert old_header in (task.text or '') or new_header in (task.text or ''), task_id
+                    if args.apply:
+                        task.text = task.text.replace(old_header, new_header, 1)
+                    if args.verify:
+                        assert new_header in task.text, task_id
                 if args.verify or task.test_mode == 'io':
                     assert task.test_mode == 'io' and task.test_config == config, f'Changed IO configuration: {task_id}'
                     assert task.test_summary == dict(count=len(config['tests']), public_tests=[]), task_id
@@ -43,6 +51,7 @@ def main():
                     assert task.test_mode == 'environment', task_id
                     task.test_config = config
                     task.test_mode = 'io'
+                if args.apply:
                     db.session.flush()
                 total += len(config['tests'])
                 print(json.dumps(dict(task=task_id, tests=len(config['tests']), mode=task.test_mode)), flush=True)

@@ -113,12 +113,12 @@ sys.path[:] = [
     if entry not in ("", APPLICATION_ROOT)
 ]
 sys.modules.pop("environments", None)
-sys.modules.pop("environments.task_2770", None)
-sys.modules.pop("environments.task_2770.tester", None)
+sys.modules.pop("environments.task_2771", None)
+sys.modules.pop("environments.task_2771.tester", None)
 
-tester = TestExecutor._load_tester_module(2770)
+tester = TestExecutor._load_tester_module(2771)
 assert callable(tester.perform_tests)
-assert tester.perform_tests.__module__ == "environments.task_2440.tester"
+assert tester.perform_tests.__module__ == "environments.task_2441.tester"
 assert APPLICATION_ROOT in sys.path
 """
 

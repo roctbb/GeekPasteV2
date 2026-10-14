@@ -29,6 +29,16 @@ def input_references(html):
 
 
 class PythonIOContracts(unittest.TestCase):
+    def test_migrated_environments_are_retired_but_custom_checkers_remain(self):
+        root = Path(__file__).resolve().parents[1] / 'environments'
+        for task_id, metadata in PYTHON_PRESETS.items():
+            self.assertFalse((root / f'task_{task_id}' / 'tester.py').exists(), task_id)
+            if metadata['source'].startswith('mkoshp'):
+                self.assertFalse((root / metadata['source'] / 'data' /
+                                  f'{metadata["source_key"]}.json.gz').exists(), task_id)
+        for task_id in (1979, 1998, 2872, 2902):
+            self.assertTrue((root / f'task_{task_id}' / 'tester.py').exists(), task_id)
+
     def test_numeric_and_suffix_boundaries(self):
         cases = [
             ('strip_suffix', 'Ввод: ответ\n', 'ответ', True),
@@ -75,7 +85,12 @@ class PythonIOContracts(unittest.TestCase):
             config = import_environment_tests(task_id, 'python', meta['points'])
             raw = gzip.decompress((PYTHON_PATH / f'{task_id}.json.gz').read_bytes())
             self.assertEqual(hashlib.sha256(raw).hexdigest(), meta['sha256'])
-            self.assertEqual(config, json.loads(raw))
+            frozen = json.loads(raw)
+            if task_id == 2914:
+                self.assertEqual(frozen['time_limit'], 6)
+                self.assertEqual(meta['time_limit_override'], 12)
+                frozen['time_limit'] = 12
+            self.assertEqual(config, frozen)
             self.assertEqual(len(config['tests']), meta['count'])
             self.assertTrue(all(not test['is_public'] for test in config['tests']))
             if task_id >= 2871:
@@ -229,8 +244,12 @@ class PythonIOResourceDockerTests(unittest.TestCase):
         with ExecutionContainer('python', None, 'print(input())', isolated=True, resource_limits=limits) as container:
             import subprocess
             info = json.loads(subprocess.check_output(['docker', 'inspect', container.container_id]))[0]
+            swap_supported = subprocess.check_output(
+                ['docker', 'info', '--format', '{{.SwapLimit}}'], text=True).strip() == 'true'
             self.assertEqual(info['HostConfig']['Memory'], 256 * 1024 * 1024)
-            self.assertEqual(info['HostConfig']['MemorySwap'], 256 * 1024 * 1024)
+            # Older production kernels cannot enforce swap limits; Docker reports -1.
+            self.assertEqual(info['HostConfig']['MemorySwap'],
+                             256 * 1024 * 1024 if swap_supported else -1)
             self.assertEqual(info['HostConfig']['PidsLimit'], 64)
             self.assertEqual(info['HostConfig']['NanoCpus'], 1000000000)
             self.assertEqual(info['HostConfig']['NetworkMode'], 'none')

@@ -16,7 +16,7 @@ PYTHON_PATH = Path(__file__).parent / 'io_test_presets' / 'python_remaining'
 PYTHON_PRESETS = json.loads((PYTHON_PATH / 'index.json').read_text(encoding='utf-8'))['tasks']
 PYTHON_TASK_IDS = frozenset(map(int, PYTHON_PRESETS))
 IMPORTABLE_TASK_IDS = PILOT_TASK_IDS | ADDITIONAL_TASK_IDS | PYTHON_TASK_IDS
-RETIRED_TASK_IDS = PILOT_TASK_IDS | ADDITIONAL_TASK_IDS
+RETIRED_TASK_IDS = IMPORTABLE_TASK_IDS
 PRESETS_PATH = Path(__file__).parent / 'io_test_presets' / 'grade8_2026.json'
 
 
