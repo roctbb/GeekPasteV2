@@ -803,6 +803,37 @@ def uncheck_warning(code_id):
     return redirect(f'/warnings?type={warning_type}')
 
 
+@app.context_processor
+def logout_template_context():
+    if not session.get('user_id'):
+        return {}
+    if 'logout_csrf' not in session:
+        session['logout_csrf'] = secrets.token_urlsafe(32)
+    return {'logout_csrf_token': session['logout_csrf']}
+
+
+@app.route('/logout', methods=['POST'])
+def logout():
+    if session.get('user_id'):
+        expected = session.get('logout_csrf', '')
+        supplied = request.form.get('csrf_token', '')
+        if not expected or not hmac.compare_digest(expected.encode(), supplied.encode()):
+            abort(403)
+    session.clear()
+    response = redirect(url_for('logged_out'), code=303)
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
+@app.route('/logged-out', methods=['GET'])
+def logged_out():
+    if session.get('user_id'):
+        return redirect(url_for('index'))
+    response = make_response(render_template('logged_out.html'))
+    response.headers['Cache-Control'] = 'no-store'
+    return response
+
+
 @app.route('/', methods=['GET'])
 def index():
     # Handle JWT token if present

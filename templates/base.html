@@ -68,6 +68,12 @@
                         </a>
                     {% endif %}
                 {% endif %}
+                <form method="post" action="/logout" class="m-0">
+                    <input type="hidden" name="csrf_token" value="{{ logout_csrf_token }}">
+                    <button type="submit" class="btn btn-sm btn-outline-secondary">
+                        <i class="fa-solid fa-right-from-bracket me-1" aria-hidden="true"></i>Выход
+                    </button>
+                </form>
             </div>
         {% endif %}
     </div>

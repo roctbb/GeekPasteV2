@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card flat-card shadow-soft">
+    <div class="card-body p-4">
+        <h1 class="h4 mb-3">Вы вышли из GeekPaste</h1>
+        <p class="text-muted">Чтобы продолжить работу, войдите снова.</p>
+        <a href="{{ url_for('index') }}" class="btn btn-primary">Войти</a>
+    </div>
+</div>
+{% endblock %}
