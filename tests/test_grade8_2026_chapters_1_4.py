@@ -5,7 +5,7 @@ import unittest
 
 from environments import grade8_2026_chapters_1_4 as chapter
 from runner import SolutionException
-from io_test_import import PILOT_TASK_IDS
+from io_test_import import IMPORTABLE_TASK_IDS, REMAINING_PATH
 from tests.io_preset_helpers import preset, program_groups, perform_io_preset
 
 
@@ -129,12 +129,19 @@ def real_nand_export(*, include_xor=True):
     return result
 
 
+CHAPTER_IO_IDS = IMPORTABLE_TASK_IDS & set(range(2593, 2663))
+
+
+def task_groups(task_id):
+    return program_groups(task_id) if task_id in CHAPTER_IO_IDS else chapter.materialize_task_groups(task_id)
+
+
 class ReferenceRunner:
     """Return each hidden case's own oracle output without invoking Docker."""
 
     def __init__(self, task_id, *, program_override=None, failed_harness_keys=()):
         self.task_id = task_id
-        self.groups = program_groups(task_id) if task_id in PILOT_TASK_IDS else chapter.materialize_task_groups(task_id)
+        self.groups = task_groups(task_id)
         self.expected_by_input = {}
         for group in self.groups:
             for case in group:
@@ -178,7 +185,7 @@ class ReferenceRunner:
 
 
 def perform(task_id, runner, source_code="int main() { return 0; }"):
-    if task_id in PILOT_TASK_IDS:
+    if task_id in CHAPTER_IO_IDS:
         return perform_io_preset(task_id, runner)
     maximum, handler = chapter.TASKS[task_id]
     points, feedback = handler(runner, source_code)
@@ -186,10 +193,10 @@ def perform(task_id, runner, source_code="int main() { return 0; }"):
 
 
 class RegistryTests(unittest.TestCase):
-    def test_registry_has_exactly_the_47_remaining_environment_tasks(self):
+    def test_registry_has_exactly_the_14_remaining_environment_tasks(self):
         self.assertEqual(set(chapter.TASKS), set(chapter.EXPECTED_TASK_IDS))
-        self.assertEqual(len(chapter.TASKS), 47)
-        self.assertFalse(set(chapter.TASKS) & PILOT_TASK_IDS)
+        self.assertEqual(len(chapter.TASKS), 14)
+        self.assertFalse(set(chapter.TASKS) & CHAPTER_IO_IDS)
         self.assertNotIn(2622, chapter.TASKS)  # Секундомер is a GPT report task.
 
     def test_group_count_matches_five_point_scoring(self):
@@ -212,14 +219,13 @@ class RegistryTests(unittest.TestCase):
             2662: 10,
         }
         for task_id, maximum in expected.items():
-            self.assertEqual(preset(task_id)[0] if task_id in PILOT_TASK_IDS else chapter.TASKS[task_id][0], maximum)
+            self.assertEqual(preset(task_id)[0] if task_id in CHAPTER_IO_IDS else chapter.TASKS[task_id][0], maximum)
 
-    def test_large_cases_are_lazy_at_import_time(self):
-        for task_id in (2607, 2620, 2631, 2641, 2652, 2656):
-            with self.subTest(task_id=task_id):
-                self.assertTrue(
-                    any(callable(case) for group in chapter.TASK_CASES[task_id] for case in group)
-                )
+    def test_remaining_generators_are_lazy_and_migrated_data_are_frozen(self):
+        for task_id in (2607, 2620, 2631, 2641, 2652):
+            self.assertNotIn(task_id, chapter.TASK_CASES)
+            self.assertTrue((REMAINING_PATH / f'{task_id}.json.gz').is_file())
+        self.assertTrue(any(callable(case) for group in chapter.TASK_CASES[2656] for case in group))
 
 
 class ComparatorAndNandTests(unittest.TestCase):
@@ -547,7 +553,7 @@ class MutantRejectionTests(unittest.TestCase):
 
 class AmbiguityAndCaptureTests(unittest.TestCase):
     def test_magic_non_sample_diagnostics_are_semantic_and_nonnegative(self):
-        cases = [case for group in chapter.materialize_task_groups(2915) for case in group]
+        cases = [case for group in task_groups(2915) for case in group]
         non_row = [case for case in cases if "NO: col" in case["expected"] or "NO: diag" in case["expected"]]
         self.assertTrue(non_row)
         self.assertTrue(all("-" not in case["input"] for case in cases))
@@ -562,7 +568,7 @@ class AmbiguityAndCaptureTests(unittest.TestCase):
             self.assertTrue(case["comparator"](alternative, case["expected"]))
 
     def test_selection_hidden_duplicates_do_not_add_an_unpublished_tie_policy(self):
-        cases = [case for group in chapter.materialize_task_groups(2649) for case in group]
+        cases = [case for group in task_groups(2649) for case in group]
         duplicate_inputs = []
         for case in cases:
             values = list(map(int, case["input"].split()))[1:]
@@ -589,8 +595,8 @@ class AmbiguityAndCaptureTests(unittest.TestCase):
             2658: 393439,
         }
         found = {}
-        for task_id in sorted(chapter.TASK_CASES):
-            for group in chapter.materialize_task_groups(task_id):
+        for task_id in sorted(set(chapter.TASK_CASES) | CHAPTER_IO_IDS):
+            for group in task_groups(task_id):
                 for case in group:
                     size = len(case["expected"].encode("utf-8"))
                     if size > 100 * 1024:
@@ -609,7 +615,7 @@ class StressShapeTests(unittest.TestCase):
     def test_stress_cases_have_relaxed_but_finite_limits(self):
         for task_id in (2604, 2620, 2631, 2641, 2644, 2645, 2652, 2656):
             with self.subTest(task_id=task_id):
-                cases = [case for group in chapter.materialize_task_groups(task_id) for case in group]
+                cases = [case for group in task_groups(task_id) for case in group]
                 limits = [case["time_limit"] for case in cases]
                 self.assertTrue(any(limit >= 3 for limit in limits))
                 self.assertTrue(all(1 <= limit <= 6 for limit in limits))
@@ -625,7 +631,7 @@ class StressShapeTests(unittest.TestCase):
         }
         for task_id, minimum_bytes in thresholds.items():
             with self.subTest(task_id=task_id):
-                cases = [case for group in chapter.materialize_task_groups(task_id) for case in group]
+                cases = [case for group in task_groups(task_id) for case in group]
                 self.assertGreaterEqual(max(len(case["input"]) for case in cases), minimum_bytes)
 
 

@@ -1311,30 +1311,6 @@ int main() {
     )
 
 
-def _task_2699(runner, source_code):
-    cases = [
-        {"input": "1\n", "expected": "0\n0\n"},
-        {"input": "2\n", "expected": "1\n1\n"},
-        {"input": "8\n", "expected": "28\n7\n"},
-        {"input": "1000\n", "expected": "499500\n1023\n"},
-        {
-            "input": "1000000000\n",
-            "expected": "499999999500000000\n1073741823\n",
-            "time_limit": 2,
-        },
-    ]
-    return finish_criteria(
-        2699,
-        5,
-        [
-            (
-                _stdin_cases(runner, cases),
-                "обе стратегии посчитаны формулой и степенями двойки до 10^9",
-            )
-        ],
-    )
-
-
 def _task_2702(runner, source_code):
     hidden = _cpp_case(
         runner,
@@ -1682,7 +1658,6 @@ TASKS = {
     2691: (10, _task_2691),
     2693: (10, _task_2693),
     2698: (15, _task_2698),
-    2699: (5, _task_2699),
     2702: (5, _task_2702),
     2703: (20, _task_2703),
     2706: (10, _task_2706),

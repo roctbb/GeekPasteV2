@@ -9,6 +9,8 @@ import tempfile
 import unittest
 
 from runner import ExecutionException, SolutionException
+from io_test_import import ADDITIONAL_TASK_IDS
+from tests.io_preset_helpers import program_groups, preset_entry, preset
 
 from environments import grade8_2026_chapters_7_8 as chapter
 from environments.grade8_2026_common import exact_text_equal, float_tokens_equal
@@ -48,6 +50,11 @@ EXPECTED_TASKS = {
     2752: 10,
     2753: 20,
 }
+
+
+CHAPTER_IO_IDS = ADDITIONAL_TASK_IDS & set(EXPECTED_TASKS)
+TASK_ENTRIES = {**chapter.TASKS, **{key: preset_entry(key) for key in CHAPTER_IO_IDS}}
+CASE_GROUPS = {**chapter.TASK_CASES, **{key: program_groups(key) for key in CHAPTER_IO_IDS}}
 
 
 class ReplayRunner:
@@ -474,12 +481,14 @@ int main(int argc, char** argv) {
 
 class RegistryTests(unittest.TestCase):
     def test_registry_contains_exactly_the_tester_required_tasks(self):
+        self.assertEqual(set(chapter.TASKS), {2751, 2752, 2753})
+        self.assertEqual(set(chapter.TASK_CASES), {2751, 2752})
         self.assertEqual(
-            {task_id: maximum for task_id, (maximum, _) in chapter.TASKS.items()},
+            {task_id: maximum for task_id, (maximum, _) in TASK_ENTRIES.items()},
             EXPECTED_TASKS,
         )
         self.assertEqual(
-            set(chapter.TASK_CASES),
+            set(CASE_GROUPS),
             set(EXPECTED_TASKS) - {2753},
         )
 
@@ -488,7 +497,7 @@ class RegistryTests(unittest.TestCase):
             if task_id == 2753:
                 continue
             with self.subTest(task_id=task_id):
-                groups = chapter.TASK_CASES[task_id]
+                groups = CASE_GROUPS[task_id]
                 self.assertEqual(len(groups), maximum // 5)
                 self.assertTrue(all(groups))
                 for group in groups:
@@ -502,11 +511,14 @@ class RegistryTests(unittest.TestCase):
             if task_id == 2753:
                 continue
             with self.subTest(task_id=task_id):
-                groups = chapter.TASK_CASES[task_id]
+                groups = CASE_GROUPS[task_id]
                 runner = ReplayRunner(groups)
-                points, comment = chapter.TASKS[task_id][1](runner, "")
+                points, comment = TASK_ENTRIES[task_id][1](runner, "")
                 self.assertEqual(points, maximum)
-                self.assertIn(f"{maximum}/{maximum}", comment)
+                if task_id not in CHAPTER_IO_IDS:
+                    self.assertIn(f"{maximum}/{maximum}", comment)
+                else:
+                    self.assertIn("Пройдено тестов:", comment)
                 self.assertEqual(
                     len(runner.calls),
                     sum(len(group) for group in groups),
@@ -515,13 +527,13 @@ class RegistryTests(unittest.TestCase):
     def test_wrong_output_awards_no_credit_for_every_case_task(self):
         for task_id in set(EXPECTED_TASKS) - {2753}:
             with self.subTest(task_id=task_id):
-                points, _ = chapter.TASKS[task_id][1](WrongRunner(), "")
+                points, _ = TASK_ENTRIES[task_id][1](WrongRunner(), "")
                 self.assertEqual(points, 0)
 
     def test_hidden_suite_has_deterministic_random_and_stress_inputs(self):
         cases = [
             case
-            for groups in chapter.TASK_CASES.values()
+            for groups in CASE_GROUPS.values()
             for group in groups
             for case in group
         ]
@@ -531,7 +543,7 @@ class RegistryTests(unittest.TestCase):
             sum(case["kind"] == "random" for case in cases),
             8,
         )
-        for task_id, groups in chapter.TASK_CASES.items():
+        for task_id, groups in CASE_GROUPS.items():
             with self.subTest(task_id=task_id):
                 self.assertTrue(
                     any(
@@ -555,7 +567,7 @@ class RegistryTests(unittest.TestCase):
         for task_id, minimum in minimum_input_sizes.items():
             stress = [
                 case
-                for group in chapter.TASK_CASES[task_id]
+                for group in CASE_GROUPS[task_id]
                 for case in group
                 if case["kind"] == "stress"
             ]
@@ -566,7 +578,7 @@ class RegistryTests(unittest.TestCase):
     def test_log_whitespace_and_pagerank_use_special_comparators(self):
         log_cases = [
             case
-            for group in chapter.TASK_CASES[2718]
+            for group in CASE_GROUPS[2718]
             for case in group
             if "  " in case["expected"]
         ]
@@ -574,21 +586,21 @@ class RegistryTests(unittest.TestCase):
         self.assertTrue(
             all(case.get("comparator") is exact_text_equal for case in log_cases)
         )
-        self.assertIs(chapter.TASK_COMPARATORS[2742], float_tokens_equal)
-        self.assertIs(chapter.TASK_COMPARATORS[2743], float_tokens_equal)
+        self.assertEqual(preset(2742)[1]["comparison"], "float_binary64")
+        self.assertEqual(preset(2743)[1]["comparison"], "float_binary64")
         self.assertTrue(
             float_tokens_equal("1 0.3333334", "1 0.333333", tolerance=1e-6)
         )
 
     def test_canonical_code_cases_require_the_bits_confirmation(self):
-        for group in chapter.TASK_CASES[2752]:
+        for group in CASE_GROUPS[2752]:
             for case in group:
                 self.assertIn("\nbits ", case["expected"])
 
     def test_training_stress_uses_the_largest_legal_64_bit_sum(self):
         stress = next(
             case
-            for group in chapter.TASK_CASES[2728]
+            for group in CASE_GROUPS[2728]
             for case in group
             if case["kind"] == "stress"
         )
@@ -607,7 +619,7 @@ class RegistryTests(unittest.TestCase):
     def test_reducto_stress_respects_the_published_edge_limit(self):
         stress = next(
             case
-            for group in chapter.TASK_CASES[2741]
+            for group in CASE_GROUPS[2741]
             for case in group
             if case["kind"] == "stress"
         )
@@ -620,7 +632,7 @@ class RegistryTests(unittest.TestCase):
     def test_metro_cases_require_undirected_reverse_traversal(self):
         reverse_case = next(
             case
-            for group in chapter.TASK_CASES[2747]
+            for group in CASE_GROUPS[2747]
             for case in group
             if case["input"].endswith("3 1\n")
         )
@@ -696,10 +708,10 @@ class HuffmanValidatorTests(unittest.TestCase):
         }
         for task_id, alternative in alternatives.items():
             with self.subTest(task_id=task_id):
-                groups = chapter.TASK_CASES[task_id]
+                groups = CASE_GROUPS[task_id]
                 runner = ReplayRunner(groups)
                 runner.answers["abracadabra\n"] = alternative
-                points, _ = chapter.TASKS[task_id][1](runner, "")
+                points, _ = TASK_ENTRIES[task_id][1](runner, "")
                 self.assertEqual(points, EXPECTED_TASKS[task_id])
 
 
@@ -707,7 +719,7 @@ class ArchiveHarnessTests(unittest.TestCase):
     def test_archive_handler_round_trips_every_payload_group(self):
         runner = ArchiveRunner()
 
-        points, comment = chapter.TASKS[2753][1](runner, "student source")
+        points, comment = TASK_ENTRIES[2753][1](runner, "student source")
 
         self.assertEqual(points, 20)
         self.assertIn("20/20", comment)
@@ -860,11 +872,11 @@ class ArchiveHarnessTests(unittest.TestCase):
             self.assertEqual(raw_copy.stdout.strip(), "FAIL")
 
     def test_archive_mismatch_awards_no_credit(self):
-        points, _ = chapter.TASKS[2753][1](ArchiveRunner(result="FAIL"), "")
+        points, _ = TASK_ENTRIES[2753][1](ArchiveRunner(result="FAIL"), "")
         self.assertEqual(points, 0)
 
     def test_archive_student_failure_is_a_failed_criterion(self):
-        points, _ = chapter.TASKS[2753][1](
+        points, _ = TASK_ENTRIES[2753][1](
             ArchiveRunner(error=SolutionException("student failed")),
             "",
         )
@@ -872,7 +884,7 @@ class ArchiveHarnessTests(unittest.TestCase):
 
     def test_archive_infrastructure_failure_is_not_hidden(self):
         with self.assertRaises(ExecutionException):
-            chapter.TASKS[2753][1](
+            TASK_ENTRIES[2753][1](
                 ArchiveRunner(error=ExecutionException("docker failed")),
                 "",
             )

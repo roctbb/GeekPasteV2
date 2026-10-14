@@ -6,7 +6,11 @@ import tempfile
 import unittest
 
 from environments import grade8_2026_chapters_5_6 as target
+from tests.io_preset_helpers import preset_entry
 from runner import SolutionException
+
+
+TASK_ENTRIES = {**target.TASKS, 2699: preset_entry(2699)}
 
 
 TASK_MAXIMA = {
@@ -922,30 +926,35 @@ class Grade8ChaptersFiveSixTests(unittest.TestCase):
         return PASSING_SOURCES.get(task_id, "// trusted fixture source\n")
 
     def test_exact_task_set_and_maxima(self):
-        self.assertEqual(set(target.TASKS), set(TASK_MAXIMA))
+        self.assertEqual(set(target.TASKS), set(TASK_MAXIMA) - {2699})
+        self.assertEqual(len(target.TASKS), 15)
+        self.assertEqual(set(TASK_ENTRIES), set(TASK_MAXIMA))
         self.assertEqual(
-            {task_id: maximum for task_id, (maximum, _) in target.TASKS.items()},
+            {task_id: maximum for task_id, (maximum, _) in TASK_ENTRIES.items()},
             TASK_MAXIMA,
         )
-        self.assertEqual(len(target.TASKS), 16)
+        self.assertEqual(len(TASK_ENTRIES), 16)
         self.assertTrue(all(maximum % 5 == 0 for maximum in TASK_MAXIMA.values()))
 
     def test_all_contract_fixtures_receive_full_credit(self):
         for task_id, expected_maximum in TASK_MAXIMA.items():
             with self.subTest(task_id=task_id):
                 runner = ContractRunner(task_id)
-                _, handler = target.TASKS[task_id]
+                _, handler = TASK_ENTRIES[task_id]
                 points, comment = handler(runner, self.source_for(task_id))
                 self.assertEqual(points, expected_maximum, comment)
-                self.assertIn(f"/{expected_maximum} баллов", comment)
-                criteria = [line for line in comment.splitlines()[1:] if line]
-                self.assertEqual(len(criteria), expected_maximum // 5)
+                if task_id != 2699:
+                    self.assertIn(f"/{expected_maximum} баллов", comment)
+                    criteria = [line for line in comment.splitlines()[1:] if line]
+                    self.assertEqual(len(criteria), expected_maximum // 5)
+                else:
+                    self.assertIn("Пройдено тестов: 5 из 5", comment)
 
     def test_a_broken_hidden_or_stdin_result_never_gets_full_credit(self):
         for task_id, expected_maximum in TASK_MAXIMA.items():
             with self.subTest(task_id=task_id):
                 runner = ContractRunner(task_id, fail=True)
-                _, handler = target.TASKS[task_id]
+                _, handler = TASK_ENTRIES[task_id]
                 points, _ = handler(runner, self.source_for(task_id))
                 self.assertLess(points, expected_maximum)
 
@@ -954,7 +963,7 @@ class Grade8ChaptersFiveSixTests(unittest.TestCase):
         for task_id in sorted(harness_tasks):
             with self.subTest(task_id=task_id):
                 runner = ContractRunner(task_id)
-                target.TASKS[task_id][1](runner, self.source_for(task_id))
+                TASK_ENTRIES[task_id][1](runner, self.source_for(task_id))
                 self.assertGreater(len(runner.harness_calls), 0)
                 self.assertTrue(
                     all(key[0] == task_id for key, *_ in runner.harness_calls)
@@ -966,7 +975,7 @@ class Grade8ChaptersFiveSixTests(unittest.TestCase):
             with self.subTest(task_id=task_id):
                 runner = HostCppRunner(source_code)
                 try:
-                    points, comment = target.TASKS[task_id][1](runner, source_code)
+                    points, comment = TASK_ENTRIES[task_id][1](runner, source_code)
                 finally:
                     runner.close()
                 self.assertEqual(points, TASK_MAXIMA[task_id], comment)
@@ -980,7 +989,7 @@ class Grade8ChaptersFiveSixTests(unittest.TestCase):
             with self.subTest(task_id=task_id):
                 runner = HostCppRunner(source_code, sanitize=True)
                 try:
-                    points, comment = target.TASKS[task_id][1](runner, source_code)
+                    points, comment = TASK_ENTRIES[task_id][1](runner, source_code)
                 finally:
                     runner.close()
                 self.assertEqual(points, TASK_MAXIMA[task_id], comment)
@@ -1010,7 +1019,7 @@ int main() {
         )
         runner = HostCppRunner(invalid_analyze)
         try:
-            points, _ = target.TASKS[2688][1](runner, invalid_analyze)
+            points, _ = TASK_ENTRIES[2688][1](runner, invalid_analyze)
         finally:
             runner.close()
         self.assertEqual(points, 0)
@@ -1027,21 +1036,21 @@ int main() {
         self.assertNotEqual(unchecked_string, CPP_REFERENCE_SOURCES[2703])
         runner = HostCppRunner(unchecked_string)
         try:
-            points, _ = target.TASKS[2703][1](runner, unchecked_string)
+            points, _ = TASK_ENTRIES[2703][1](runner, unchecked_string)
         finally:
             runner.close()
         self.assertEqual(points, 15)
 
     def test_large_inputs_are_present_without_tight_subsecond_limits(self):
         growth_runner = ContractRunner(2699)
-        target.TASKS[2699][1](growth_runner, self.source_for(2699))
+        TASK_ENTRIES[2699][1](growth_runner, self.source_for(2699))
         growth_case = next(
             call for call in growth_runner.program_calls if call[0].strip() == "1000000000"
         )
         self.assertGreaterEqual(growth_case[1], 2)
 
         brackets_runner = ContractRunner(2706)
-        target.TASKS[2706][1](brackets_runner, self.source_for(2706))
+        TASK_ENTRIES[2706][1](brackets_runner, self.source_for(2706))
         long_cases = [call for call in brackets_runner.program_calls if len(call[0]) >= 200000]
         self.assertEqual(len(long_cases), 2)
         self.assertTrue(all(limit >= 3 for _, limit in long_cases))
@@ -1076,7 +1085,7 @@ class String { private: std::string data; public: int length() const { return da
         for task_id, source in restricted_sources.items():
             with self.subTest(task_id=task_id):
                 runner = ContractRunner(task_id)
-                points, _ = target.TASKS[task_id][1](runner, source)
+                points, _ = TASK_ENTRIES[task_id][1](runner, source)
                 self.assertEqual(points, expected_points[task_id])
 
     def test_allocation_wrappers_cannot_be_decoys_for_raw_new_and_delete(self):
@@ -1092,7 +1101,7 @@ int main() {
 }
 """
         runner = ContractRunner(2693)
-        points, _ = target.TASKS[2693][1](runner, source)
+        points, _ = TASK_ENTRIES[2693][1](runner, source)
         self.assertEqual(points, 5)
 
 

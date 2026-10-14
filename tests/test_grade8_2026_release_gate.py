@@ -5,7 +5,7 @@ import re
 import unittest
 from pathlib import Path
 
-from io_test_import import PILOT_TASK_IDS, import_environment_tests
+from io_test_import import RETIRED_TASK_IDS, import_environment_tests, preset_metadata
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -87,7 +87,7 @@ class Grade8ReleaseGateTests(unittest.TestCase):
                 self.assertNotIn(marker, text, f"{path}: {marker}")
 
     def test_wrappers_exactly_cover_deterministic_tasks(self):
-        expected_ids = {task["id"] for task in self.test_tasks} - PILOT_TASK_IDS
+        expected_ids = {task["id"] for task in self.test_tasks} - RETIRED_TASK_IDS
         actual_ids = {
             int(match.group(1))
             for directory in ENVIRONMENTS.glob("task_*")
@@ -111,7 +111,7 @@ class Grade8ReleaseGateTests(unittest.TestCase):
             handlers.update(module.TASKS)
         expected = {task["id"]: task["points"] for task in self.test_tasks}
         # Post-publication split (2026-10-06); retain the original manifest as an archive.
-        for task_id in PILOT_TASK_IDS:
+        for task_id in RETIRED_TASK_IDS:
             del expected[task_id]
         expected[2915] = 5
         wrapper = ENVIRONMENTS / "task_2915" / "tester.py"
@@ -121,10 +121,10 @@ class Grade8ReleaseGateTests(unittest.TestCase):
         self.assertTrue(all(callable(value[1]) for value in handlers.values()))
 
     def test_migrated_tasks_have_presets_and_no_environment_wrappers(self):
-        self.assertEqual(len(PILOT_TASK_IDS), 11)
-        for task_id in PILOT_TASK_IDS:
+        self.assertEqual(len(RETIRED_TASK_IDS), 74)
+        for task_id in RETIRED_TASK_IDS:
             self.assertFalse((ENVIRONMENTS / f'task_{task_id}' / 'tester.py').exists())
-            config = import_environment_tests(task_id, 'cpp', 10 if task_id == 2599 else 5)
+            config = import_environment_tests(task_id, 'cpp', preset_metadata(task_id)['points'])
             self.assertTrue(config['tests'])
 
 
