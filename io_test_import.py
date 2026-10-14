@@ -12,8 +12,11 @@ PILOT_TASK_IDS = frozenset((*range(2593, 2601), 2605, 2611, 2636))
 REMAINING_PATH = Path(__file__).parent / 'io_test_presets' / 'grade8_remaining'
 REMAINING_PRESETS = json.loads((REMAINING_PATH / 'index.json').read_text(encoding='utf-8'))['tasks']
 ADDITIONAL_TASK_IDS = frozenset(map(int, REMAINING_PRESETS))
-IMPORTABLE_TASK_IDS = PILOT_TASK_IDS | ADDITIONAL_TASK_IDS
-RETIRED_TASK_IDS = IMPORTABLE_TASK_IDS
+PYTHON_PATH = Path(__file__).parent / 'io_test_presets' / 'python_remaining'
+PYTHON_PRESETS = json.loads((PYTHON_PATH / 'index.json').read_text(encoding='utf-8'))['tasks']
+PYTHON_TASK_IDS = frozenset(map(int, PYTHON_PRESETS))
+IMPORTABLE_TASK_IDS = PILOT_TASK_IDS | ADDITIONAL_TASK_IDS | PYTHON_TASK_IDS
+RETIRED_TASK_IDS = PILOT_TASK_IDS | ADDITIONAL_TASK_IDS
 PRESETS_PATH = Path(__file__).parent / 'io_test_presets' / 'grade8_2026.json'
 
 
@@ -39,6 +42,8 @@ def preset_metadata(task_id):
         return {'language': preset['language'], 'points': preset['points']}
     if task_id in ADDITIONAL_TASK_IDS:
         return dict(REMAINING_PRESETS[str(task_id)])
+    if task_id in PYTHON_TASK_IDS:
+        return dict(PYTHON_PRESETS[str(task_id)])
     raise ValueError('Для этой задачи перенос тестов пока не подготовлен.')
 
 
@@ -47,6 +52,13 @@ def import_environment_tests(task_id, language, maximum_points):
     metadata = preset_metadata(task_id)
     if language != metadata['language'] or maximum_points != metadata['points']:
         raise ValueError(f'Исходные тесты рассчитаны на {metadata["language"]} и {metadata["points"]} баллов. Проверьте параметры задачи.')
-    config = (_presets()[str(task_id)]['config'] if task_id in PILOT_TASK_IDS
-              else _additional_config(task_id))
+    if task_id in PYTHON_TASK_IDS:
+        # Large stress suites are deliberately not kept in a process-wide cache.
+        raw = gzip.decompress((PYTHON_PATH / f'{task_id}.json.gz').read_bytes())
+        if hashlib.sha256(raw).hexdigest() != PYTHON_PRESETS[str(task_id)]['sha256']:
+            raise ValueError('Повреждён исходный набор тестов.')
+        config = json.loads(raw)
+    else:
+        config = (_presets()[str(task_id)]['config'] if task_id in PILOT_TASK_IDS
+                  else _additional_config(task_id))
     return validate_test_config(config, maximum_points)

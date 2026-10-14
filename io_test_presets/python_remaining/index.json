@@ -1,0 +1,684 @@
+{
+  "format": 1,
+  "source_commit": "31762b7b4956dcb85439fe25cea8a9437e453405",
+  "tasks": {
+    "1952": {
+      "points": 5,
+      "source": "legacy",
+      "language": "python",
+      "count": 4,
+      "sha256": "1370f228005681c578d4a897f305d3f8f850269912e4097e3dc24a9a594e6f45"
+    },
+    "1953": {
+      "points": 5,
+      "source": "legacy",
+      "language": "python",
+      "count": 4,
+      "sha256": "8f73ddce0fe2045dd5b818810a370de9795e347d45e0a35b584cd28040833a6c"
+    },
+    "1957": {
+      "points": 5,
+      "source": "legacy",
+      "language": "python",
+      "count": 4,
+      "sha256": "ff0a77a4cc3b2de555b7beeea9e83a8e8f554d3277baff6c1c35f7a87508cf74"
+    },
+    "1981": {
+      "points": 5,
+      "source": "legacy",
+      "language": "python",
+      "count": 5,
+      "sha256": "8ce339fa3f9e4a052e350e639a0d27f1539886c2ecbaaeb6763239a6a73ff3c9"
+    },
+    "1983": {
+      "points": 5,
+      "source": "legacy",
+      "language": "python",
+      "count": 3,
+      "sha256": "edede440e036ad996d66e2a3ca164c9a1ca7b888679738139d1af7d992e0229d"
+    },
+    "1984": {
+      "points": 5,
+      "source": "legacy",
+      "language": "python",
+      "count": 8,
+      "sha256": "e5d4eb13ba3f40a3e8b5ca2a47682db4fd9a74cc24e854734ded52ed19a90694"
+    },
+    "1985": {
+      "points": 5,
+      "source": "legacy",
+      "language": "python",
+      "count": 5,
+      "sha256": "aa425d0533c06b017b5d251aaa8873a14fd60631948562064bea5a047894d447"
+    },
+    "1991": {
+      "points": 5,
+      "source": "legacy",
+      "language": "python",
+      "count": 4,
+      "sha256": "4f0ecc8aa3165f4173b229a00eb4c5a9e4c58cd78a426bfd8aa27db276db5552"
+    },
+    "1996": {
+      "points": 5,
+      "source": "legacy",
+      "language": "python",
+      "count": 4,
+      "sha256": "2c5bb8efff1a5778066ce398202d239259413efeebc32d97530a6fa780c994e6"
+    },
+    "1997": {
+      "points": 5,
+      "source": "legacy",
+      "language": "python",
+      "count": 4,
+      "sha256": "874b7e0ff094a7bb66ff6a40927c8ae8162353c7f629efcebaea0222ab0f949e"
+    },
+    "1999": {
+      "points": 5,
+      "source": "legacy",
+      "language": "python",
+      "count": 7,
+      "sha256": "b8743176c6c2aacaa276625c8d2c9d823256343fbd9840eb5b86a96f20dbd44f"
+    },
+    "2440": {
+      "points": 5,
+      "source": "grade7",
+      "source_task": 2440,
+      "case_keys": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "case_labels": [
+        "135 минут",
+        "меньше часа",
+        "ровно час",
+        "полные сутки",
+        "ноль минут"
+      ],
+      "language": "python",
+      "count": 5,
+      "sha256": "9f30901b78038aa38ef0cecad56f1208b5b9e7b6531612a6c9f822b07c99e62b"
+    },
+    "2770": {
+      "points": 5,
+      "source": "grade7",
+      "source_task": 2440,
+      "case_keys": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ],
+      "case_labels": [
+        "135 минут",
+        "меньше часа",
+        "ровно час",
+        "полные сутки",
+        "ноль минут"
+      ],
+      "language": "python",
+      "count": 5,
+      "sha256": "9f30901b78038aa38ef0cecad56f1208b5b9e7b6531612a6c9f822b07c99e62b"
+    },
+    "2443": {
+      "points": 15,
+      "source": "grade7",
+      "source_task": 2443,
+      "case_keys": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "case_labels": [
+        "равнобедренный треугольник",
+        "разносторонний треугольник",
+        "равносторонний треугольник",
+        "явно невозможный треугольник",
+        "вырожденный треугольник",
+        "равные вторая и третья стороны",
+        "равные первая и третья стороны",
+        "наибольшая сторона введена первой",
+        "наибольшая сторона введена второй"
+      ],
+      "language": "python",
+      "count": 9,
+      "sha256": "7e0afae4383044eead48fad1cb5256ee77ee766800baf35493c3fd8fc4a69897"
+    },
+    "2773": {
+      "points": 15,
+      "source": "grade7",
+      "source_task": 2443,
+      "case_keys": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "case_labels": [
+        "равнобедренный треугольник",
+        "разносторонний треугольник",
+        "равносторонний треугольник",
+        "явно невозможный треугольник",
+        "вырожденный треугольник",
+        "равные вторая и третья стороны",
+        "равные первая и третья стороны",
+        "наибольшая сторона введена первой",
+        "наибольшая сторона введена второй"
+      ],
+      "language": "python",
+      "count": 9,
+      "sha256": "7e0afae4383044eead48fad1cb5256ee77ee766800baf35493c3fd8fc4a69897"
+    },
+    "2444": {
+      "points": 15,
+      "source": "grade7",
+      "source_task": 2444,
+      "case_keys": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7"
+      ],
+      "case_labels": [
+        "переход через полночь",
+        "продолжительность больше часа",
+        "переход к следующему часу",
+        "полные сутки",
+        "ведущие нули",
+        "последняя минута суток",
+        "продолжительность больше двух суток"
+      ],
+      "language": "python",
+      "count": 7,
+      "sha256": "3cbc49fc80c2684841af1d517f52c206f1958978c7b1f1c2a6436130c69f7bca"
+    },
+    "2774": {
+      "points": 15,
+      "source": "grade7",
+      "source_task": 2444,
+      "case_keys": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7"
+      ],
+      "case_labels": [
+        "переход через полночь",
+        "продолжительность больше часа",
+        "переход к следующему часу",
+        "полные сутки",
+        "ведущие нули",
+        "последняя минута суток",
+        "продолжительность больше двух суток"
+      ],
+      "language": "python",
+      "count": 7,
+      "sha256": "3cbc49fc80c2684841af1d517f52c206f1958978c7b1f1c2a6436130c69f7bca"
+    },
+    "2446": {
+      "points": 10,
+      "source": "grade7",
+      "source_task": 2446,
+      "case_keys": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ],
+      "case_labels": [
+        "фраза с пробелами и разным регистром",
+        "не палиндром",
+        "слово с разным регистром",
+        "дефис не влияет",
+        "цифровой палиндром",
+        "длинная фраза с пробелами",
+        "точка и вопросительный знак не влияют",
+        "запятая и восклицательный знак не влияют"
+      ],
+      "language": "python",
+      "count": 8,
+      "sha256": "49849f5f5c8ac02136bed3b2c8ea8a9597663386e2e4d35fe30174c9d46421c6"
+    },
+    "2776": {
+      "points": 10,
+      "source": "grade7",
+      "source_task": 2446,
+      "case_keys": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8"
+      ],
+      "case_labels": [
+        "фраза с пробелами и разным регистром",
+        "не палиндром",
+        "слово с разным регистром",
+        "дефис не влияет",
+        "цифровой палиндром",
+        "длинная фраза с пробелами",
+        "точка и вопросительный знак не влияют",
+        "запятая и восклицательный знак не влияют"
+      ],
+      "language": "python",
+      "count": 8,
+      "sha256": "49849f5f5c8ac02136bed3b2c8ea8a9597663386e2e4d35fe30174c9d46421c6"
+    },
+    "2447": {
+      "points": 15,
+      "source": "grade7",
+      "source_task": 2447,
+      "case_keys": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "case_labels": [
+        "несколько серий",
+        "один символ",
+        "все символы различны",
+        "серия в начале",
+        "серия в конце",
+        "чередование символов",
+        "самая длинная серия в середине",
+        "регистр символов сохраняется",
+        "пробелы по краям являются символами"
+      ],
+      "language": "python",
+      "count": 9,
+      "sha256": "2d2d5f650a70899905c9ac338d31fd530d2a2bb7c52d352ecc90350a2f3a0547"
+    },
+    "2777": {
+      "points": 15,
+      "source": "grade7",
+      "source_task": 2447,
+      "case_keys": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "case_labels": [
+        "несколько серий",
+        "один символ",
+        "все символы различны",
+        "серия в начале",
+        "серия в конце",
+        "чередование символов",
+        "самая длинная серия в середине",
+        "регистр символов сохраняется",
+        "пробелы по краям являются символами"
+      ],
+      "language": "python",
+      "count": 9,
+      "sha256": "2d2d5f650a70899905c9ac338d31fd530d2a2bb7c52d352ecc90350a2f3a0547"
+    },
+    "2449": {
+      "points": 15,
+      "source": "grade7",
+      "source_task": 2449,
+      "case_keys": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "case_labels": [
+        "несколько серий",
+        "серии длины один",
+        "один символ",
+        "повторная несмежная серия",
+        "одна длинная серия",
+        "серия длины больше девяти",
+        "регистр символов сохраняется",
+        "пробелы в конце являются символами",
+        "пробелы в начале являются символами"
+      ],
+      "language": "python",
+      "count": 9,
+      "sha256": "ab9e6c940f115e5f2710df5627e40eb5bced9adc6127e4f2d659515eddaa218e"
+    },
+    "2779": {
+      "points": 15,
+      "source": "grade7",
+      "source_task": 2449,
+      "case_keys": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9"
+      ],
+      "case_labels": [
+        "несколько серий",
+        "серии длины один",
+        "один символ",
+        "повторная несмежная серия",
+        "одна длинная серия",
+        "серия длины больше девяти",
+        "регистр символов сохраняется",
+        "пробелы в конце являются символами",
+        "пробелы в начале являются символами"
+      ],
+      "language": "python",
+      "count": 9,
+      "sha256": "ab9e6c940f115e5f2710df5627e40eb5bced9adc6127e4f2d659515eddaa218e"
+    },
+    "2871": {
+      "points": 5,
+      "source": "mkoshp_2026",
+      "source_key": "A",
+      "language": "python",
+      "count": 36,
+      "sha256": "5daa9267379fe53ed050e59afb36b070cc61be02f319a3c150433bf83fa65798"
+    },
+    "2873": {
+      "points": 5,
+      "source": "mkoshp_2026",
+      "source_key": "C",
+      "language": "python",
+      "count": 36,
+      "sha256": "67e26fa4c4fcf2d40525ad2362c585516fd5d88bdfd0e113ecba6977566b0199"
+    },
+    "2874": {
+      "points": 5,
+      "source": "mkoshp_2026",
+      "source_key": "D",
+      "language": "python",
+      "count": 36,
+      "sha256": "551db23666a57070e292db12941d66dd1358268732a866122304047a4a4174f9"
+    },
+    "2875": {
+      "points": 5,
+      "source": "mkoshp_2026",
+      "source_key": "E",
+      "language": "python",
+      "count": 36,
+      "sha256": "efe6836bcb3959d7d89e5ac99e8d071aa3fa21a915b5a545888787b55c3ef69d"
+    },
+    "2876": {
+      "points": 5,
+      "source": "mkoshp_2026",
+      "source_key": "F1",
+      "language": "python",
+      "count": 36,
+      "sha256": "9c309dedc000a2c54908da9b49063cf368ade0bd49b57c082bb1853a382f8c99"
+    },
+    "2877": {
+      "points": 5,
+      "source": "mkoshp_2026",
+      "source_key": "F2",
+      "language": "python",
+      "count": 36,
+      "sha256": "8c4937e5df2cc32ff4da1bed5541aa6433925b9c236cfa1e506876a27f6ba13b"
+    },
+    "2880": {
+      "points": 5,
+      "source": "mkoshp_2026",
+      "source_key": "H1",
+      "language": "python",
+      "count": 36,
+      "sha256": "c062adef250adfce8edf85634f189e6f513256186da824ac15e04bb4a78b94da"
+    },
+    "2881": {
+      "points": 5,
+      "source": "mkoshp_2026",
+      "source_key": "H2",
+      "language": "python",
+      "count": 36,
+      "sha256": "d426b114c19aa1427c3a052ba60035a49d23bb03c90f02c3b9891ccc04f29c4b"
+    },
+    "2882": {
+      "points": 5,
+      "source": "mkoshp_2026",
+      "source_key": "I1",
+      "language": "python",
+      "count": 36,
+      "sha256": "ab777b10a3bc3dc883a68acf6ce2ca5bf1915224a640968b76e2a92fe4e6e18e"
+    },
+    "2883": {
+      "points": 5,
+      "source": "mkoshp_2026",
+      "source_key": "I2",
+      "language": "python",
+      "count": 36,
+      "sha256": "94c281aaef7b3cd37054179a44c38c9fbfc941f4ceb732923a5c41d0f1f72125"
+    },
+    "2886": {
+      "points": 5,
+      "source": "mkoshp_2026",
+      "source_key": "K",
+      "language": "python",
+      "count": 36,
+      "sha256": "29c3e469db5fe095e6a0b07d8d8207ec514498b701fabb2d781d8715e9be2ab1"
+    },
+    "2887": {
+      "points": 5,
+      "source": "mkoshp_2026",
+      "source_key": "L1",
+      "language": "python",
+      "count": 36,
+      "sha256": "22b93bb6539088d62e5828b748a7083ab33bb599fe595874ecf4e33b6b75ad77"
+    },
+    "2888": {
+      "points": 5,
+      "source": "mkoshp_2026",
+      "source_key": "L2",
+      "language": "python",
+      "count": 36,
+      "sha256": "0ba21d780c3d302dbbf4ea83fa5ea37b4b45c0652f97821381dcce3559add5df"
+    },
+    "2889": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2017A",
+      "language": "python",
+      "count": 36,
+      "sha256": "cbebc0d32ecd9c367f03fd554278fbda4246fa4ec597a4a7c7ed14755bebdda7"
+    },
+    "2891": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2017C",
+      "language": "python",
+      "count": 36,
+      "sha256": "cd7035de8c5cdfc9d742ff000e141ff48ac2fc24415c8e6ad1fa44b30c01c824"
+    },
+    "2892": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2017D",
+      "language": "python",
+      "count": 36,
+      "sha256": "7945e6a8e2875a35c5e901267ba963cb69479c57b08737577dc67181db109a69"
+    },
+    "2893": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2017E",
+      "language": "python",
+      "count": 36,
+      "sha256": "9b6a273a530871d4c7a32eeb7298cd727dea1740270c2db5a5d2898d920e79c9"
+    },
+    "2894": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2017F",
+      "language": "python",
+      "count": 36,
+      "sha256": "8e7b2dfd452796fe68a2e571cb8daf2d5c41fce00552fab48929690e790bc503"
+    },
+    "2895": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2017G",
+      "language": "python",
+      "count": 36,
+      "sha256": "05efc32bca7ff0dd79832fbbe2f547df35861b4c4f2d55ff9dd34157b0f9f68b"
+    },
+    "2897": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2017I",
+      "language": "python",
+      "count": 36,
+      "sha256": "f9a97a1d256f9ee74c3279e100f35e11801a6705d0dba172e2d27567d034dc9c"
+    },
+    "2898": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2018A",
+      "language": "python",
+      "count": 36,
+      "sha256": "942c2aecc312817529909f95f7838028c662408ce6cc7ab0198973b73c0e1df9"
+    },
+    "2900": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2018C",
+      "language": "python",
+      "count": 36,
+      "sha256": "3f5ddd1750de5b04d1c9da2106d898bd6f51c1bc3593696c047f82215ec5696e"
+    },
+    "2901": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2018D",
+      "language": "python",
+      "count": 36,
+      "sha256": "2119196370c291c92a25491a0db430837d7317d7f404dc960f6fb895ac2d5385"
+    },
+    "2903": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2018F",
+      "language": "python",
+      "count": 36,
+      "sha256": "d7b16487adc784972cb4d5afc6dfee9a0992b9df5fe41fa7095e6c13d76983f9"
+    },
+    "2904": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2018G",
+      "language": "python",
+      "count": 36,
+      "sha256": "7e799ec85eb52af357880639c56c8e596b6448a7499079f98ad7bbdd4f63bb93"
+    },
+    "2905": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2018H",
+      "language": "python",
+      "count": 36,
+      "sha256": "65108f192e575154b6c1e6e6dfd51070cc6a2a8502ab0ce7e653fde878c96592"
+    },
+    "2906": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2018I",
+      "language": "python",
+      "count": 36,
+      "sha256": "1b92bf6762fbdab44b069d18bc6982fd77e17806dced832cb9c4175adde2d96f"
+    },
+    "2907": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2019A",
+      "language": "python",
+      "count": 36,
+      "sha256": "785f4a8f29234c02d5e8a889296c71d0e6f1c8f122643d1f9baac3e5d3997771"
+    },
+    "2908": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2019B",
+      "language": "python",
+      "count": 37,
+      "sha256": "a4d2c26266d432b6bb707a2bb7adf19b338ce6a261369d243fb7c7194dc6e6ab"
+    },
+    "2909": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2019C",
+      "language": "python",
+      "count": 36,
+      "sha256": "02054a3afab3a8088dfe086f5e372c3f6ce6e13a0c5f2b642d35dffeb4482a7b"
+    },
+    "2912": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2019F",
+      "language": "python",
+      "count": 36,
+      "sha256": "1760df8f146d1ba58039349ec4ebd8efff3f45ceccd093bab450e22ba84f67c3"
+    },
+    "2913": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2019G",
+      "language": "python",
+      "count": 36,
+      "sha256": "0fcf550e0d71978f189a12f1a7f8fe36f5ece4636cc621421504f5add098a8c5"
+    },
+    "2914": {
+      "points": 5,
+      "source": "mkoshp_finals",
+      "source_key": "2019H",
+      "language": "python",
+      "count": 36,
+      "sha256": "7636ea2a36eebf638a8f54762f344b2b34bdcc26aedd8a87c1425e645c72b5c9"
+    }
+  },
+  "verification": {
+    "comparisons": 50584,
+    "grading_scenarios": 5711,
+    "tests": 1335
+  }
+}

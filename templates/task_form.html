@@ -113,14 +113,11 @@
                     </fieldset>
                     <label class="form-label" for="test-comparison">Сравнение вывода</label>
                     <select id="test-comparison" name="test_comparison" class="form-select form-select-sm mb-2">
-                        <option value="tokens" {{ 'selected' if values.test_comparison == 'tokens' else '' }}>По словам и числам — без учёта разделяющих пробелов</option>
-                        <option value="exact" {{ 'selected' if values.test_comparison == 'exact' else '' }}>Точное — с учётом пробелов и строк</option>
-                        <option value="float" {{ 'selected' if values.test_comparison == 'float' else '' }}>Числа с погрешностью</option>
-                        <option value="tokens_ignore_cr" {{ 'selected' if values.test_comparison == 'tokens_ignore_cr' else '' }}>По словам — совместимость с environments (CR игнорируется)</option>
-                        <option value="exact_crlf" {{ 'selected' if values.test_comparison == 'exact_crlf' else '' }}>Точное, без конечных пробелов — прежнее правило курса</option>
-                        <option value="float_binary64" {{ 'selected' if values.test_comparison == 'float_binary64' else '' }}>Числа с погрешностью 10⁻⁶ — прежнее правило курса</option>
+                        {% for value, label in comparison_labels.items() %}
+                        <option value="{{ value }}" {{ 'selected' if values.test_comparison == value else '' }}>{{ label }}</option>
+                        {% endfor %}
                     </select>
-                    <div class="form-text mb-2">Регистр учитывается. В режиме «По словам и числам» значения 1 и 1.0 различаются.</div>
+                    <div id="comparison-help" class="form-text mb-2"></div>
                     <fieldset id="exact-settings" class="mb-3">
                         <label class="form-label" for="test-trailing-whitespace">В конце вывода игнорировать</label>
                         <select id="test-trailing-whitespace" name="test_trailing_whitespace" class="form-select form-select-sm">
@@ -146,15 +143,24 @@
                             <input id="test-time-limit" name="test_time_limit" type="number" min="1" max="30" step="1" required class="form-control form-control-sm" value="{{ values.test_time_limit }}">
                         </label>
                         <label class="col-md-6" for="test-output-limit">Лимит вывода на тест, КиБ
-                            <input id="test-output-limit" name="test_output_limit" type="number" min="1" max="8192" step="1" required class="form-control form-control-sm" value="{{ values.test_output_limit }}">
+                            <input id="test-output-limit" name="test_output_limit" type="number" min="1" max="8192" step="any" required class="form-control form-control-sm" value="{{ values.test_output_limit }}">
                         </label>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <label class="col-md-6">Память, МиБ
+                            <input name="test_memory_limit" type="number" min="128" max="2048" step="1" required class="form-control form-control-sm" value="{{ values.test_memory_limit }}">
+                        </label>
+                        <label class="col-md-6">Максимум процессов
+                            <input name="test_process_limit" type="number" min="16" max="256" step="1" required class="form-control form-control-sm" value="{{ values.test_process_limit }}">
+                        </label>
+                        <label class="col-12"><input name="test_disable_swap" type="checkbox" class="form-check-input" {{ 'checked' if values.test_disable_swap else '' }}> Запретить подкачку памяти (swap)</label>
                     </div>
                     <div id="test-cases">
                         {% for case in test_cases %}{% include '_io_test_case.html' %}{% endfor %}
                     </div>
                     <button type="button" id="add-test" class="btn btn-sm btn-outline-primary">Добавить тест</button>
                     <span id="test-count" class="small text-muted ms-2" aria-live="polite"></span>
-                    <div class="form-text">До 50 тестов, до 8 МиБ в каждом поле и до 64 МиБ на весь набор. Пустой ввод и вывод допустимы.</div>
+                    <div class="form-text">До 50 тестов, до 32 МиБ в каждом поле и до 256 МиБ на весь набор. Пустой ввод и вывод допустимы.</div>
                 </fieldset>
             </section>
 

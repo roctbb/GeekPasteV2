@@ -70,7 +70,7 @@
                     <td>
                         <span class="badge bg-light text-dark">{{ t.check_type or '—' }}</span>
                         {% if t.check_type == 'tests' and t.test_mode == 'io' %}
-                            <div class="task-compact-note">Ввод / вывод · тестов: {{ (t.test_config or {}).get('tests', []) | length }}</div>
+                            <div class="task-compact-note">Ввод / вывод · тестов: {{ t.test_summary['count'] if t.test_summary is not none else (t.test_config or {}).get('tests', []) | length }}</div>
                         {% endif %}
                         {% if t.check_type == 'gpt' %}
                             <div class="task-compact-note">

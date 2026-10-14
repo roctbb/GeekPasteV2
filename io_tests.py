@@ -5,17 +5,27 @@ import math
 import re
 
 from runner import ExecutionContainer, ExecutionException, SolutionException
+from io_test_comparisons import COMPATIBILITY_LABELS, compatibility_equal, rational_parts
 
 
 MAX_TESTS = 50
-MAX_TEXT_BYTES = 8 * 1024 * 1024
-MAX_TOTAL_BYTES = 64 * 1024 * 1024
+MAX_TEXT_BYTES = 32 * 1024 * 1024
+MAX_TOTAL_BYTES = 256 * 1024 * 1024
 # An edit can contain both the saved text and replacement files.
 MAX_REQUEST_BYTES = 2 * MAX_TOTAL_BYTES + 2 * 1024 * 1024
 DEFAULT_OUTPUT_LIMIT = 100 * 1024
 MAX_OUTPUT_LIMIT = 8 * 1024 * 1024
 SUPPORTED_LANGUAGES = {'python', 'cpp'}
-COMPARISONS = ('tokens', 'tokens_ignore_cr', 'exact', 'float', 'exact_crlf', 'float_binary64')
+COMPARISON_LABELS = {
+    'tokens': 'По словам и числам — без учёта разделяющих пробелов',
+    'exact': 'Точное — с учётом пробелов и строк',
+    'float': 'Числа с погрешностью',
+    'tokens_ignore_cr': 'По словам — CR игнорируется',
+    'exact_crlf': 'Точное, без конечных пробелов — прежнее правило курса',
+    'float_binary64': 'Числа с погрешностью 10⁻⁶ — прежнее правило курса',
+    **COMPATIBILITY_LABELS,
+}
+COMPARISONS = tuple(COMPARISON_LABELS)
 NUMBER_PATTERN = re.compile(r'[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?\Z')
 
 
@@ -56,6 +66,13 @@ def validate_test_config(config, maximum_points=None):
                           'Лимит времени должен быть целым числом от 1 до 30 секунд.')
     output_limit = _integer(config.get('output_limit', DEFAULT_OUTPUT_LIMIT),
                             1024, MAX_OUTPUT_LIMIT, 'Лимит вывода должен быть от 1 КиБ до 8 МиБ.')
+    memory_limit = _integer(config.get('memory_limit', 512), 128, 2048,
+                            'Память должна быть целым числом от 128 до 2048 МиБ.')
+    process_limit = _integer(config.get('process_limit', 128), 16, 256,
+                             'Число процессов должно быть от 16 до 256.')
+    disable_swap = config.get('disable_swap', False)
+    if type(disable_swap) is not bool:
+        raise ValueError('Выберите ограничение подкачки памяти.')
     tests = config.get('tests')
     if not isinstance(tests, list) or not 1 <= len(tests) <= MAX_TESTS:
         raise ValueError(f'Добавьте от 1 до {MAX_TESTS} тестов.')
@@ -100,11 +117,13 @@ def validate_test_config(config, maximum_points=None):
             value = value.replace('\r\n', '\n').replace('\r', '\n')
             size = len(value.encode('utf-8'))
             if size > MAX_TEXT_BYTES:
-                raise ValueError(f'Тест {number}: каждое поле должно быть не больше 8 МиБ.')
+                raise ValueError(f'Тест {number}: каждое поле должно быть не больше 32 МиБ.')
             total_bytes += size
             row[key] = value
         if total_bytes > MAX_TOTAL_BYTES:
-            raise ValueError('Общий размер тестов должен быть не больше 64 МиБ.')
+            raise ValueError('Общий размер тестов должен быть не больше 256 МиБ.')
+        if row.get('comparison', comparison) == 'rational_absolute':
+            rational_parts(row['output'])
         for key, low, high, message in (
             ('time_limit', 1, 30, f'Тест {number}: время должно быть от 1 до 30 секунд.'),
             ('output_limit', 1024, MAX_OUTPUT_LIMIT, f'Тест {number}: лимит вывода должен быть от 1 КиБ до 8 МиБ.'),
@@ -125,11 +144,12 @@ def validate_test_config(config, maximum_points=None):
         'absolute_tolerance': _tolerance(config.get('absolute_tolerance', '0.000001')),
         'relative_tolerance': _tolerance(config.get('relative_tolerance', '0.000001')),
         'time_limit': time_limit, 'output_limit': output_limit,
+        'memory_limit': memory_limit, 'process_limit': process_limit, 'disable_swap': disable_swap,
         'scoring': scoring, 'groups': groups, 'tests': normalized,
     }
 
 
-def draft_test_config_from_form(form, files=None):
+def draft_test_config_from_form(form, files=None, resolve_field=None):
     """Read the draft once, retaining uploaded text when later validation fails."""
     inputs = form.getlist('test_input')
     outputs = form.getlist('test_output')
@@ -149,6 +169,7 @@ def draft_test_config_from_form(form, files=None):
     times = optional_list('test_case_time_limit')
     limits = optional_list('test_case_output_limit')
     comparisons = optional_list('test_case_comparison')
+    references = {key: optional_list(f'test_{key}_ref') for key in ('input', 'output')}
     rows = []
     file_error = None
     for i, (stdin, stdout, public) in enumerate(zip(inputs, outputs, visibility)):
@@ -156,14 +177,21 @@ def draft_test_config_from_form(form, files=None):
                'group': group_ids[i], 'time_limit': times[i], 'output_limit': limits[i],
                'comparison': comparisons[i]}
         for key in ('input', 'output'):
+            reference = references[key][i]
+            if reference:
+                if resolve_field is None:
+                    raise ValueError('Не удалось восстановить сохранённый тест. Обновите страницу.')
+                row[key] = resolve_field(reference, key)
+                row[f'{key}_ref'] = reference
             uploaded = files.get(f'test_{key}_file_{i}') if files else None
             if uploaded and uploaded.filename:
                 content = uploaded.read(MAX_TEXT_BYTES + 1)
                 if len(content) > MAX_TEXT_BYTES:
-                    file_error = f'Тест {i + 1}: файл должен быть не больше 8 МиБ.'
+                    file_error = f'Тест {i + 1}: файл должен быть не больше 32 МиБ.'
                     continue
                 try:
                     row[key] = content.decode('utf-8-sig')
+                    row.pop(f'{key}_ref', None)
                 except UnicodeDecodeError:
                     file_error = f'Тест {i + 1}: сохраните файл в кодировке UTF-8.'
         rows.append(row)
@@ -177,6 +205,9 @@ def draft_test_config_from_form(form, files=None):
         'relative_tolerance': form.get('test_relative_tolerance', '0.000001'),
         'time_limit': form.get('test_time_limit', '2'),
         'output_limit': form.get('test_output_limit', '100'),
+        'memory_limit': form.get('test_memory_limit', '512'),
+        'process_limit': form.get('test_process_limit', '128'),
+        'disable_swap': form.get('test_disable_swap') == 'on',
         'scoring': form.get('test_scoring', 'proportional'),
         'groups': [{'id': key, 'name': name, 'points': score}
                    for key, name, score in zip(ids, names, points)],
@@ -188,12 +219,21 @@ def draft_test_config_from_form(form, files=None):
 def validate_form_draft(draft, maximum_points=None):
     def number(value, label, factor=1):
         try:
+            if factor != 1:
+                exact = Decimal(str(value)) * factor
+                if not exact.is_finite() or exact != exact.to_integral_value():
+                    raise ValueError
+                return int(exact)
             return int(value) * factor
-        except (TypeError, ValueError):
-            raise ValueError(f'{label}: введите целое число.') from None
+        except (TypeError, ValueError, DecimalException):
+            raise ValueError(f'{label}: укажите точное число байт.' if factor != 1
+                             else f'{label}: введите целое число.') from None
     config = dict(draft)
     config['time_limit'] = number(draft['time_limit'], 'Лимит времени')
     config['output_limit'] = number(draft['output_limit'], 'Лимит вывода', 1024)
+    config['memory_limit'] = number(draft.get('memory_limit', '512'), 'Память')
+    config['process_limit'] = number(draft.get('process_limit', '128'), 'Число процессов')
+    config['disable_swap'] = draft.get('disable_swap', False)
     config['groups'] = [dict(group, points=number(group['points'], 'Баллы группы'))
                         for group in draft['groups']] if draft['scoring'] == 'groups' else []
     config['tests'] = []
@@ -215,12 +255,17 @@ def test_config_from_form(form, files=None, maximum_points=None):
 def public_tests(task):
     if not task or task.check_type != 'tests' or task.test_mode != 'io':
         return []
+    summary = getattr(task, 'test_summary', None)
+    if summary is not None:
+        return summary.get('public_tests', [])
     return [test for test in (task.test_config or {}).get('tests', [])
             if test.get('is_public') is True]
 
 
 def outputs_equal(actual, expected, comparison, *, trailing_whitespace='one_newline',
                   absolute_tolerance='0.000001', relative_tolerance='0.000001'):
+    if comparison in COMPATIBILITY_LABELS:
+        return compatibility_equal(actual, expected, comparison)
     if comparison == 'exact_crlf':
         # Preserve the course checker: a lone CR inside a line is significant.
         return actual.replace('\r\n', '\n').rstrip() == expected.replace('\r\n', '\n').rstrip()
@@ -323,12 +368,18 @@ class IOTestExecutor:
             raise SolutionException('Тесты ввода/вывода поддерживают Python и C++.')
 
         results, comments = [], []
+        limits = {}
+        if (config['memory_limit'], config['process_limit'], config['disable_swap']) != (512, 128, False):
+            limits['resource_limits'] = {
+                'memory_limit': config['memory_limit'], 'process_limit': config['process_limit'],
+                'disable_swap': config['disable_swap'],
+            }
         for number, test in enumerate(config['tests'], 1):
             label = f'Тест {number} ({"публичный" if test["is_public"] else "приватный"})'
             try:
                 # New sandbox per case: no private files or background processes
                 # survive into a later public test. Expected outputs stay outside.
-                with ExecutionContainer(self.code.lang, None, self.code.code, isolated=True) as container:
+                with ExecutionContainer(self.code.lang, None, self.code.code, isolated=True, **limits) as container:
                     actual = container.run(test['input'],
                                            time_limit=test.get('time_limit', config['time_limit']),
                                            capture_limit=test.get('output_limit', config['output_limit']))

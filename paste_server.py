@@ -4,6 +4,7 @@ import hmac
 import secrets
 import json
 from io import BytesIO
+from decimal import Decimal
 
 from flask import *
 from flask_socketio import join_room, emit
@@ -19,8 +20,9 @@ from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 from recheck_request import codingprojects_recheck
 from io_tests import (public_tests, draft_test_config_from_form, validate_form_draft,
-                      SUPPORTED_LANGUAGES, MAX_REQUEST_BYTES, DEFAULT_OUTPUT_LIMIT)
+                      SUPPORTED_LANGUAGES, MAX_REQUEST_BYTES, DEFAULT_OUTPUT_LIMIT, COMPARISON_LABELS)
 from io_test_import import IMPORTABLE_TASK_IDS, RETIRED_TASK_IDS, import_environment_tests
+from io_test_fields import prepare_fields, resolve_field
 
 SOCKET_SUBMISSION_ROOM_PREFIX = "submission:"
 SYSTEM_RECENT_CHECKS_KEY = "system:recent_checks"
@@ -1612,7 +1614,7 @@ def tasks_list():
         query = query.filter(or_(*filters))
 
     query = query.order_by(Task.id.desc())
-    total = query.count()
+    total = query.with_entities(Task.id).count()
     tasks = query.offset((page - 1) * per_page).limit(per_page).all()
 
     current_list_url = f'/tasks?page={page}'
@@ -1702,17 +1704,20 @@ def _render_task_form(task=None, error=None, imported_config=None):
     config = imported_config or (task.test_config if task else None) or {}
     defaults = dict(comparison='tokens', trailing_whitespace='one_newline',
                     absolute_tolerance='0.000001', relative_tolerance='0.000001',
-                    time_limit=2, output_limit=DEFAULT_OUTPUT_LIMIT, scoring='proportional')
+                    time_limit=2, output_limit=DEFAULT_OUTPUT_LIMIT, scoring='proportional',
+                    memory_limit=512, process_limit=128, disable_swap=False)
     values.update({f'test_{key}': config.get(key, value) for key, value in defaults.items()})
-    values['test_output_limit'] //= 1024
-    cases = [dict(case, output_limit=case['output_limit'] // 1024 if 'output_limit' in case else '')
+    values['test_output_limit'] = format(Decimal(values['test_output_limit']) / 1024, 'f')
+    cases = [dict(case, output_limit=format(Decimal(case['output_limit']) / 1024, 'f') if 'output_limit' in case else '')
              for case in config.get('tests', [])]
     groups = config.get('groups', [])
     if imported_config:
         values.update(test_mode='io', check_type='tests')
+    draft = None
     if error and request.method == 'POST':
         values.update(request.form.to_dict())
         values['bypass_similarity_check'] = 'bypass_similarity_check' in request.form
+        values['test_disable_swap'] = 'test_disable_swap' in request.form
         if 'test_mode' in request.form and request.form['test_mode'] == 'io':
             inputs = request.form.getlist('test_input')
             outputs = request.form.getlist('test_output')
@@ -1726,12 +1731,30 @@ def _render_task_form(task=None, error=None, imported_config=None):
             values.update({f'test_{key}': value for key, value in draft.items()
                            if key not in ('groups', 'tests')})
             cases, groups = draft['tests'], draft['groups']
+    cases = prepare_fields(task, cases, source='preset' if imported_config else 'saved', draft=draft is not None)
     next_url = _safe_next_tasks_url(request.values.get('next')) or '/tasks'
     return render_template('task_form.html', task=task, values=values, test_cases=cases,
                            test_groups=groups, import_available=bool(task and task.id in IMPORTABLE_TASK_IDS),
                            environment_retired=bool(task and task.id in RETIRED_TASK_IDS),
                            imported=imported_config is not None,
-                           langs=LANGS, next_url=next_url, form_error=error), 400 if error else 200
+                           langs=LANGS, next_url=next_url, form_error=error,
+                           comparison_labels=COMPARISON_LABELS), 400 if error else 200
+
+
+@app.route('/tasks/<int:task_id>/test-data/<token>')
+@login_required
+def tasks_test_data(task_id, token):
+    if not is_teacher():
+        abort(403)
+    task = Task.query.get_or_404(task_id)
+    try:
+        value = resolve_field(task, token)
+    except ValueError:
+        abort(409)
+    response = send_file(BytesIO(value.encode('utf-8')), mimetype='text/plain; charset=utf-8',
+                         as_attachment=True, download_name=f'task-{task_id}-test.txt', max_age=0)
+    response.headers['Cache-Control'] = 'private, no-store'
+    return response
 
 
 def _fill_task(task):
@@ -1746,7 +1769,8 @@ def _fill_task(task):
     if check_type not in ('tests', 'gpt'):
         raise ValueError('Выберите допустимый тип проверки.')
     if mode == 'io' and check_type == 'tests':
-        g.io_test_draft, file_error = draft_test_config_from_form(request.form, request.files)
+        g.io_test_draft, file_error = draft_test_config_from_form(
+            request.form, request.files, resolve_field=lambda token, key: resolve_field(task, token, key))
         if file_error:
             raise ValueError(file_error)
     try:

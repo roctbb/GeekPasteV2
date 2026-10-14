@@ -1,4 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import event
 
 db = SQLAlchemy()
 
@@ -35,7 +36,18 @@ class Task(db.Model):
     gpt_model = db.Column(db.String(), nullable=True)
     gpt_rate_limit = db.Column(db.Integer, nullable=True)  # None = использовать стандартный лимит
     test_mode = db.Column(db.String(20), nullable=False, server_default='environment')
-    test_config = db.Column(db.JSON, nullable=True)
+    # Stress inputs must not be loaded by ordinary task/submission lists.
+    test_config = db.deferred(db.Column(db.JSON, nullable=True))
+    test_summary = db.Column(db.JSON, nullable=True)
+
+
+@event.listens_for(Task.test_config, 'set')
+def _update_test_summary(task, config, old_value, initiator):
+    tests = config.get('tests', []) if isinstance(config, dict) else []
+    task.test_summary = {
+        'count': len(tests),
+        'public_tests': [test for test in tests if test.get('is_public') is True],
+    }
 
 
 class Code(db.Model):

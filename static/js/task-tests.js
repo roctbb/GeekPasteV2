@@ -61,6 +61,9 @@
         const comparisons = [comparison.value, ...[...cases.querySelectorAll('[name="test_case_comparison"]')].map(select => select.value)];
         toggle('exact-settings', comparisons.includes('exact'));
         toggle('float-settings', comparisons.includes('float'));
+        byId('comparison-help').textContent = comparison.value === 'rational_absolute'
+            ? 'Эталон записывается как числитель/знаменатель (например, 1/3). Ответ программы — десятичное число с абсолютной погрешностью не больше 0.000001.'
+            : 'Правила сравнения применяются буквально. В режиме «По словам и числам» значения 1 и 1.0 различаются. Сравнение конца вывода разрешает текст приглашений перед ответом.';
         byId('scoring-help').textContent = {
             proportional: 'Максимум × доля пройденных тестов, с округлением вниз.',
             all_or_nothing: 'Полный балл за все пройденные тесты. Иначе — только действующий минимальный балл за попытку.',
@@ -71,6 +74,32 @@
     }
     cases.addEventListener('change', event => {
         if (event.target.name === 'test_case_comparison') refreshSettings();
+    });
+    cases.addEventListener('click', async event => {
+        const button = event.target.closest('[data-field-action]');
+        if (!button) return;
+        const field = button.closest('.io-test-field');
+        const textarea = field.querySelector('textarea');
+        const reference = field.querySelector('input[type="hidden"]');
+        const status = field.querySelector('.field-load-status');
+        button.disabled = true;
+        try {
+            let text = '';
+            if (button.dataset.fieldAction === 'load') {
+                status.textContent = 'Загрузка текста…';
+                const response = await fetch(button.dataset.url, {credentials: 'same-origin', redirect: 'error'});
+                if (!response.ok) throw new Error('Не удалось загрузить данные. Возможно, тест изменился — откройте редактор заново.');
+                text = await response.text();
+            }
+            textarea.value = text;
+            textarea.hidden = false;
+            reference.value = '';
+            field.querySelector('.saved-test-field').hidden = true;
+            textarea.focus();
+        } catch (error) {
+            status.textContent = error.message || 'Не удалось загрузить текст.';
+            button.disabled = false;
+        }
     });
     add.addEventListener('click', () => {
         addCase();

@@ -23,24 +23,35 @@
             <input name="test_case_time_limit" type="number" min="1" max="30" step="1" placeholder="Общий лимит" value="{{ case.time_limit if case.time_limit is defined else '' }}" class="form-control form-control-sm">
         </label>
         <label class="col-md-4">Вывод, КиБ
-            <input name="test_case_output_limit" type="number" min="1" max="8192" step="1" placeholder="Общий лимит" value="{{ case.output_limit if case.output_limit is defined else '' }}" class="form-control form-control-sm">
+            <input name="test_case_output_limit" type="number" min="1" max="8192" step="any" placeholder="Общий лимит" value="{{ case.output_limit if case.output_limit is defined else '' }}" class="form-control form-control-sm">
         </label>
     </div>
     <label class="d-block mb-2">Сравнение вывода этого теста
         <select name="test_case_comparison" class="form-select form-select-sm">
             <option value="">Общее правило задачи</option>
-            {% for value, label in [('tokens', 'По словам и числам'), ('exact', 'Точное — общая настройка конечных пробелов'), ('float', 'Числа — общая настройка погрешности'), ('tokens_ignore_cr', 'По словам — CR игнорируется'), ('exact_crlf', 'Точное, без конечных пробелов — прежнее правило курса'), ('float_binary64', 'Числа с погрешностью 10⁻⁶ — прежнее правило курса')] %}
+            {% for value, label in comparison_labels.items() %}
             <option value="{{ value }}" {{ 'selected' if case.comparison == value else '' }}>{{ label }}</option>
             {% endfor %}
         </select>
     </label>
     <div class="row g-2">
-        <label class="col-md-6">Ввод (stdin)
-            <textarea name="test_input" class="form-control form-control-sm font-monospace mt-1" rows="4" spellcheck="false">{{ '\n' ~ case.input }}</textarea>
-        </label>
-        <label class="col-md-6">Ожидаемый вывод (stdout)
-            <textarea name="test_output" class="form-control form-control-sm font-monospace mt-1" rows="4" spellcheck="false">{{ '\n' ~ case.output }}</textarea>
-        </label>
+        {% for key, label in [('input', 'Ввод (stdin)'), ('output', 'Ожидаемый вывод (stdout)')] %}
+        <div class="col-md-6 io-test-field" data-field="{{ key }}">
+            <label class="d-block">{{ label }}
+                <textarea name="test_{{ key }}" class="form-control form-control-sm font-monospace mt-1" rows="4" spellcheck="false" {{ 'hidden' if case.get(key ~ '_ref') else '' }}>{{ '\n' ~ case[key] }}</textarea>
+            </label>
+            <input type="hidden" name="test_{{ key }}_ref" value="{{ case.get(key ~ '_ref', '') }}">
+            {% if case.get(key ~ '_ref') %}
+            <div class="saved-test-field border rounded p-2">
+                <p class="small mb-2">Сохранено {{ '%.2f'|format(case[key ~ '_bytes'] / 1048576) }} МиБ. При сохранении данные останутся целиком. Для замены можно загрузить файл.</p>
+                <a href="{{ case[key ~ '_url'] }}" class="btn btn-sm btn-outline-secondary">Скачать</a>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-field-action="load" data-url="{{ case[key ~ '_url'] }}">Открыть текст</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-field-action="replace">Заменить текст</button>
+                <div class="field-load-status small mt-1" role="status"></div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
     </div>
     <div class="row g-2 mt-1">
         <label class="col-md-6 small">Ввод из файла

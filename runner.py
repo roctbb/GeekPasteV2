@@ -413,13 +413,21 @@ class ExecutionContainer:
         int(os.getenv("CPP_HARNESS_COMPILE_TIMEOUT", "10")),
     )
 
-    def __init__(self, language, template_path, code, isolated=False):
+    def __init__(self, language, template_path, code, isolated=False, resource_limits=None):
         try:
             self.container_id = None
             self.path = None
             self._unusable = False
             self.language = language
             self.isolated = isolated
+            self.resource_limits = resource_limits or {}
+            if self.resource_limits:
+                memory = self.resource_limits.get('memory_limit')
+                processes = self.resource_limits.get('process_limit')
+                if (not isolated or type(memory) is not int or not 128 <= memory <= 2048
+                        or type(processes) is not int or not 16 <= processes <= 256
+                        or type(self.resource_limits.get('disable_swap')) is not bool):
+                    raise ExecutionException('Invalid sandbox resource limits.')
             self.code = code
             self.session_id = str(uuid.uuid4())
             self._template_ignored_parts = set(IGNORED_PARTS) | {"__pycache__"}
@@ -515,16 +523,19 @@ class ExecutionContainer:
             if not restricted:
                 run_command.extend(["-v", f"{self._pip_cache_volume}:/root/.cache/pip"])
             else:
+                limits = getattr(self, 'resource_limits', {})
                 run_command.extend([
                     "--network", "none",
-                    "--memory", "512m",
+                    "--memory", f"{limits.get('memory_limit', 512)}m",
                     "--cpus", "1.0",
-                    "--pids-limit", "128",
+                    "--pids-limit", str(limits.get('process_limit', 128)),
                     "--ulimit", "fsize=67108864:67108864",
                     "--ulimit", "nofile=256:256",
                     "--read-only",
                     "--tmpfs", "/tmp:rw,nosuid,nodev,size=64m",
                 ])
+                if limits.get('disable_swap'):
+                    run_command.extend(['--memory-swap', f"{limits['memory_limit']}m"])
             if self._docker_transfer_mode == "bind":
                 volume_binding = f"{self.path}:/code"
                 run_command.extend(["-v", volume_binding])

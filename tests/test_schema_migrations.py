@@ -44,6 +44,7 @@ def database_at(revision, *, rate_limit_exists):
                 tasks.append_column(sa.Column("test_mode", sa.String(20), nullable=False,
                                               server_default='environment'))
                 tasks.append_column(sa.Column("test_config", sa.JSON))
+                tasks.append_column(sa.Column("test_summary", sa.JSON))
             versions = sa.Table(
                 "alembic_version", metadata,
                 sa.Column("version_num", sa.String(32), primary_key=True),
@@ -82,7 +83,7 @@ class SchemaMigrationTests(unittest.TestCase):
             with engine.connect() as connection:
                 self.assertEqual(
                     connection.execute(sa.text("SELECT * FROM tasks")).one(),
-                    (1, "Existing task", "custom", 12, "environment", None),
+                    (1, "Existing task", "custom", 12, "environment", None, None),
                 )
                 self.assertEqual(
                     connection.execute(sa.text(
@@ -104,7 +105,7 @@ class SchemaMigrationTests(unittest.TestCase):
             with engine.connect() as connection:
                 self.assertEqual(
                     connection.execute(sa.text("SELECT * FROM tasks")).one(),
-                    (1, "Existing task", "custom", None, "environment", None),
+                    (1, "Existing task", "custom", None, "environment", None, None),
                 )
                 self.assertEqual(
                     connection.execute(sa.text(

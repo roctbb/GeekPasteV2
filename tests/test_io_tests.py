@@ -149,6 +149,7 @@ class IOWebBase(unittest.TestCase):
                                    ('/tasks', server.tasks_list, 'GET'),
                                    ('/tasks/<int:task_id>/edit', server.tasks_edit, 'GET'),
                                    ('/tasks/<int:task_id>/import-tests', server.tasks_import_tests, 'GET'),
+                                   ('/tasks/<int:task_id>/test-data/<token>', server.tasks_test_data, 'GET'),
                                    ('/tasks/<int:task_id>', server.tasks_update, 'POST'),
                                    ('/tasks/<int:task_id>/delete', server.tasks_delete, 'POST'),
                                    ('/', server.index, 'GET')]:
@@ -483,7 +484,9 @@ class IOAdvancedWebTests(IOWebBase):
         self.assertEqual(task.test_config['tests'][0]['input'], payload)
         self.assertEqual(task.test_config['tests'][0]['output'], '5\n')
         self.assertEqual(task.test_config['tests'][1]['input'], '')
-        self.assertIn(payload, self.client.get(f'/tasks/{task.id}/edit').text)
+        html = self.client.get(f'/tasks/{task.id}/edit').text
+        self.assertNotIn(payload, html)
+        self.assertIn('Скачать', html)
         response = self.client.post(f'/tasks/{task.id}', data=self.form(
             test_input=[payload, ''], test_output=['5\n', 'SECRET_OUTPUT']), content_type='multipart/form-data')
         self.assertEqual(response.status_code, 302)
