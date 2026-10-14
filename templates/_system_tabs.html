@@ -1,0 +1,8 @@
+<nav class="nav nav-tabs mb-4" aria-label="Разделы системы">
+    <a class="nav-link {% if request.endpoint == 'system_status' %}active{% endif %}"
+       {% if request.endpoint == 'system_status' %}aria-current="page"{% endif %}
+       href="{{ url_for('system_status') }}">Состояние</a>
+    <a class="nav-link {% if request.endpoint == 'system_ai_settings' %}active{% endif %}"
+       {% if request.endpoint == 'system_ai_settings' %}aria-current="page"{% endif %}
+       href="{{ url_for('system_ai_settings') }}">Настройки ИИ</a>
+</nav>

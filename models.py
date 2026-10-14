@@ -2,6 +2,17 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
+
+class AISettings(db.Model):
+    __tablename__ = 'ai_settings'
+    __table_args__ = (db.CheckConstraint('id = 1', name='ai_settings_singleton'),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    encrypted_config = db.Column(db.Text, nullable=False)
+    updated_by = db.Column(db.Integer, nullable=True)
+    updated_at = db.Column(db.DateTime, nullable=True)
+
+
 similarities_table = db.Table('similarities',
                               db.Column('code_id', db.String, db.ForeignKey('codes.id', ondelete='CASCADE'),
                                         primary_key=True),
@@ -23,6 +34,8 @@ class Task(db.Model):
     bypass_similarity_check = db.Column(db.Boolean(), nullable=False, server_default='false')
     gpt_model = db.Column(db.String(), nullable=True)
     gpt_rate_limit = db.Column(db.Integer, nullable=True)  # None = использовать стандартный лимит
+    test_mode = db.Column(db.String(20), nullable=False, server_default='environment')
+    test_config = db.Column(db.JSON, nullable=True)
 
 
 class Code(db.Model):

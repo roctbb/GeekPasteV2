@@ -413,12 +413,13 @@ class ExecutionContainer:
         int(os.getenv("CPP_HARNESS_COMPILE_TIMEOUT", "10")),
     )
 
-    def __init__(self, language, template_path, code):
+    def __init__(self, language, template_path, code, isolated=False):
         try:
             self.container_id = None
             self.path = None
             self._unusable = False
             self.language = language
+            self.isolated = isolated
             self.code = code
             self.session_id = str(uuid.uuid4())
             self._template_ignored_parts = set(IGNORED_PARTS) | {"__pycache__"}
@@ -510,7 +511,8 @@ class ExecutionContainer:
         try:
             container_image = "python:3.11" if self.language == "python" else "gcc:latest"
             run_command = ["docker", "run", "-d", "--pull", "missing"]
-            if self.language == "python":
+            restricted = self.language == "cpp" or getattr(self, "isolated", False)
+            if not restricted:
                 run_command.extend(["-v", f"{self._pip_cache_volume}:/root/.cache/pip"])
             else:
                 run_command.extend([
@@ -526,7 +528,7 @@ class ExecutionContainer:
             if self._docker_transfer_mode == "bind":
                 volume_binding = f"{self.path}:/code"
                 run_command.extend(["-v", volume_binding])
-            elif self.language == "cpp":
+            elif restricted:
                 run_command.extend([
                     "--tmpfs", "/code:rw,exec,nosuid,nodev,size=128m",
                 ])
@@ -548,7 +550,7 @@ class ExecutionContainer:
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE
                 )
-                if self.language == "cpp":
+                if restricted:
                     self._stream_path_into_container(
                         container_id,
                         self.path,

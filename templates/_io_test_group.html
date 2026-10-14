@@ -1,0 +1,10 @@
+<div class="io-test-group row g-2 align-items-end mb-2">
+    <input type="hidden" name="group_id" value="{{ group.id }}">
+    <label class="col-sm-7">Название группы
+        <input name="group_name" class="form-control form-control-sm" maxlength="100" required value="{{ group.name }}">
+    </label>
+    <label class="col-sm-3">Баллы группы
+        <input name="group_points" type="number" min="1" max="1000000" step="1" required class="form-control form-control-sm" value="{{ group.points }}">
+    </label>
+    <div class="col-sm-2"><button type="button" class="btn btn-sm btn-outline-danger" data-action="remove-group">Удалить</button></div>
+</div>

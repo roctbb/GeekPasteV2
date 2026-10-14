@@ -13,6 +13,7 @@ import requests
 import jwt
 from comment_markdown import render_comment_markdown
 from runner import TestExecutor, SolutionException, ExecutionException
+from io_tests import IOTestExecutor
 from submission_archive import extract_data_from_zipfile, rebuild_zip
 from telegram_notifier import send_telegram_message
 from ai_detector import analyze_code_for_ai_usage, get_ai_detection_prompt_addition
@@ -20,6 +21,7 @@ from score_policy import (normalize_gpt_points, normalize_test_points,
                           minimum_submission_score, attempt_comment)
 from image_submission import parse_image_submission
 from grading_prompts import COURSE_RUBRIC_PREFIX, get_course_rubric_payload
+from ai_client import generate_text
 
 
 def create_id():
@@ -400,7 +402,8 @@ def send_similarity_summary_notification(main_code, similarities):
 @minimum_submission_score
 def check_task_with_tests(task, code):
     try:
-        with TestExecutor(code) as executor:
+        executor_class = IOTestExecutor if getattr(task, 'test_mode', None) == 'io' else TestExecutor
+        with executor_class(code) as executor:
             points, comments = executor.perform()
             if points == 0 and normalize_test_points(task.id, 0) > 0:
                 comments = attempt_comment(comments)
@@ -412,7 +415,7 @@ def check_task_with_tests(task, code):
             code.check_points = points
             code.check_comments = comments
 
-            if code.check_points == task.points:
+            if code.check_points == task.points and (executor_class is TestExecutor or executor.all_passed):
                 code.check_state = 'done'
             else:
                 code.check_state = 'partially done'
@@ -526,7 +529,6 @@ def get_payload(task_text, solution_text, max_points, lang=None, check_ai=False,
 
 
 def parse_gpt_answer(answer):
-    print(1, answer)
     try:
         import re
         # Find first integer on its own line or at the start
@@ -637,7 +639,7 @@ def check_task_with_gpt(task, code, *, retry_on_connection_error=False):
         solution_kind = 'json'
         prompt_lang = None
 
-    model = task.gpt_model or GPT_MODEL
+    model = task.gpt_model
     context = get_payload(
         task.text,
         student_code,
@@ -655,17 +657,8 @@ def check_task_with_gpt(task, code, *, retry_on_connection_error=False):
             {"type": "input_image", "image_url": image_submission['data_url'], "detail": "high"},
         ]
 
-    payload = {
-        "token": GPT_KEY,
-        "model": model,
-        "input": input_messages,
-        "params": {
-            "max_output_tokens": GPT_MAX_OUTPUT_TOKENS,
-        },
-    }
-
     try:
-        answer = requests.post(GPT_GATEWAY, json=payload, timeout=180)
+        gpt_answer = generate_text(input_messages, model=model)
     except Exception as e:
         if retry_on_connection_error and isinstance(e, (requests.Timeout, requests.ConnectionError)):
             # Let Celery retry before changing the score or notifying anyone.
@@ -683,41 +676,6 @@ def check_task_with_gpt(task, code, *, retry_on_connection_error=False):
                 extra_links += f"\nСтраница задания: {task_link}"
             text = (
                 "❗ Системная ошибка при проверке (gpt запрос)"
-                f"\nКод: {code.id} (user {code.user_id})"
-                f"\nЗадание: {code.task_id} ({code.task.name if code.task and code.task.name else ''})"
-                f"\nОшибка: {str(e)}"
-                f"\nСсылка: {APP_URL}/?id={code.id}" +
-                f"{extra_links}"
-            )
-            send_telegram_message(text)
-        except Exception:
-            pass
-        return
-
-    try:
-        result = answer.json()
-        message = next(item for item in result['result']['output'] if item['type'] == 'message')
-        gpt_answer = message['content'][0]['text']
-    except Exception as e:
-        print(answer.content)
-        print({
-            'model': payload.get('model'),
-            'input_message_count': len(payload.get('input', [])),
-            'contains_image': bool(image_submission),
-        })
-        code.check_points = 1
-        code.check_state = 'execution error'
-        code.check_comments = str(e)
-        try:
-            profile_url = f"{USER_URL}{code.user_id}" if code.user_id else ""
-            task_link = TASK_URL.format(course_id=code.course_id, task_id=code.task_id, user_id=code.user_id) if code.course_id and code.task_id and code.user_id else ""
-            extra_links = ""
-            if profile_url:
-                extra_links += f"\nПрофиль: {profile_url}"
-            if task_link:
-                extra_links += f"\nСтраница задания: {task_link}"
-            text = (
-                "❗ Системная ошибка при проверке (gpt парсинг ответа)"
                 f"\nКод: {code.id} (user {code.user_id})"
                 f"\nЗадание: {code.task_id} ({code.task.name if code.task and code.task.name else ''})"
                 f"\nОшибка: {str(e)}"

@@ -7,6 +7,7 @@ from methods import check_task_with_gpt
 
 
 class _GatewayResponse:
+    status_code = 200
     content = b''
 
     def json(self):

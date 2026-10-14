@@ -62,8 +62,8 @@
                     </a>
                     {% if session.get('role') == 'admin' %}
                         <a href="/system/status"
-                           class="btn btn-sm btn-outline-secondary {% if request.path.startswith('/system/status') %}active{% endif %}"
-                           {% if request.path.startswith('/system/status') %}aria-current="page"{% endif %}>
+                           class="btn btn-sm btn-outline-secondary {% if request.path.startswith('/system/') %}active{% endif %}"
+                           {% if request.path.startswith('/system/') %}aria-current="page"{% endif %}>
                             Система
                         </a>
                     {% endif %}

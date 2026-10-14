@@ -19,6 +19,23 @@
             </div>
         {% endif %}
 
+        {% if public_tests %}
+            <section class="card flat-card shadow-soft mb-3">
+                <div class="card-body">
+                    <h6>Публичные тесты</h6>
+                    {% for case in public_tests %}
+                        <div class="border rounded p-3 mt-2">
+                            <strong>Пример {{ loop.index }}</strong>
+                            <div class="row g-2 mt-1">
+                                <div class="col-md-6"><div class="small text-muted">Ввод</div><pre class="mb-0">{{ '\n' ~ (case.input or '(пусто)') }}</pre></div>
+                                <div class="col-md-6"><div class="small text-muted">Ожидаемый вывод</div><pre class="mb-0">{{ '\n' ~ (case.output or '(пусто)') }}</pre></div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+        {% endif %}
+
         <div class="card flat-card shadow-soft">
             <div class="card-body">
                 <form method="POST" enctype="multipart/form-data">

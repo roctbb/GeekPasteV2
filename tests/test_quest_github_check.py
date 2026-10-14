@@ -24,7 +24,7 @@ def submission(files=None):
 
 
 def gateway(text):
-    return SimpleNamespace(json=lambda: {'result': {'output': [
+    return SimpleNamespace(status_code=200, json=lambda: {'result': {'output': [
         {'type': 'message', 'content': [{'text': text}]}]}})
 
 

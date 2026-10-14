@@ -69,6 +69,9 @@
                     <td>{{ t.points if t.points is not none else '—' }}</td>
                     <td>
                         <span class="badge bg-light text-dark">{{ t.check_type or '—' }}</span>
+                        {% if t.check_type == 'tests' and t.test_mode == 'io' %}
+                            <div class="task-compact-note">Ввод / вывод · тестов: {{ (t.test_config or {}).get('tests', []) | length }}</div>
+                        {% endif %}
                         {% if t.check_type == 'gpt' %}
                             <div class="task-compact-note">
                                 {{ t.gpt_model or 'model: по умолч.' }} · {{ t.gpt_rate_limit if t.gpt_rate_limit is not none else 'лимит: по умолч.' }}

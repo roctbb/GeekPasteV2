@@ -17,3 +17,4 @@ pyTelegramBotAPI[proxy]
 PySocks
 redis
 Pillow
+cryptography

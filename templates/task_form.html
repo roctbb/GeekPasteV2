@@ -15,17 +15,19 @@
 
 <div class="card flat-card shadow-soft">
     <div class="card-body">
-        <form method="POST" action="{{ ('/tasks/' ~ task.id) if task else '/tasks' }}">
+        {% if imported %}<div class="alert alert-info" role="status">Тесты перенесены в форму. Все тесты приватные; баллы, сравнение и лимиты сохранены. Изменения вступят в силу после нажатия «Сохранить».</div>{% endif %}
+        {% if form_error %}<div class="alert alert-danger" role="alert">{{ form_error }}</div>{% endif %}
+        <form method="POST" enctype="multipart/form-data" id="task-form" action="{{ ('/tasks/' ~ task.id) if task else '/tasks' }}">
             <input type="hidden" name="next" value="{{ next_url }}">
 
             <div class="row g-2 mb-2">
                 <div class="col-sm-3">
                     <label class="form-label">ID</label>
-                    <input type="number" name="id" class="form-control form-control-sm" value="{{ task.id if task else '' }}" placeholder="авто">
+                    <input type="number" name="id" class="form-control form-control-sm" value="{{ values.id or '' }}" placeholder="авто" {{ 'readonly' if task else '' }}>
                 </div>
                 <div class="col-sm-9">
                     <label class="form-label">Название</label>
-                    <input type="text" name="name" class="form-control form-control-sm" value="{{ task.name or '' if task else '' }}">
+                    <input type="text" name="name" class="form-control form-control-sm" value="{{ values.name or '' }}">
                 </div>
             </div>
 
@@ -35,19 +37,19 @@
                     <select name="lang" class="form-select form-select-sm">
                         <option value="">—</option>
                         {% for l in langs + ['zip', 'ipynb', 'github', 'image'] %}
-                            <option value="{{ l }}" {{ 'selected' if task and task.lang == l else '' }}>{{ l }}</option>
+                            <option value="{{ l }}" {{ 'selected' if values.lang == l else '' }}>{{ l }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="col-sm-4">
                     <label class="form-label">Баллы</label>
-                    <input type="number" name="points" class="form-control form-control-sm" value="{{ task.points if task and task.points is not none else '' }}">
+                    <input type="number" name="points" class="form-control form-control-sm" value="{{ values.points if values.points is not none else '' }}">
                 </div>
                 <div class="col-sm-4">
                     <label class="form-label">Тип проверки</label>
                     <select name="check_type" class="form-select form-select-sm">
                         {% for ct in ['tests', 'gpt'] %}
-                            <option value="{{ ct }}" {{ 'selected' if task and task.check_type == ct else '' }}>{{ ct }}</option>
+                            <option value="{{ ct }}" {{ 'selected' if values.check_type == ct else '' }}>{{ ct }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -56,25 +58,25 @@
             <div class="row g-2 mb-2">
                 <div class="col-sm-7">
                     <label class="form-label">GPT модель</label>
-                    <input type="text" name="gpt_model" class="form-control form-control-sm" value="{{ task.gpt_model or '' if task else '' }}">
+                    <input type="text" name="gpt_model" class="form-control form-control-sm" value="{{ values.gpt_model or '' }}">
                 </div>
                 <div class="col-sm-5">
                     <label class="form-label">GPT лимит/час</label>
-                    <input type="number" name="gpt_rate_limit" class="form-control form-control-sm" value="{{ task.gpt_rate_limit if task and task.gpt_rate_limit is not none else '' }}" placeholder="по умолч.">
+                    <input type="number" name="gpt_rate_limit" class="form-control form-control-sm" value="{{ values.gpt_rate_limit if values.gpt_rate_limit is not none else '' }}" placeholder="по умолч.">
                 </div>
             </div>
 
             <div class="row g-2 mb-2">
                 <div class="col-12">
                     <div class="form-check">
-                        <input type="checkbox" name="bypass_similarity_check" class="form-check-input" id="bypass" {{ 'checked' if task and task.bypass_similarity_check else '' }}>
+                        <input type="checkbox" name="bypass_similarity_check" class="form-check-input" id="bypass" {{ 'checked' if values.bypass_similarity_check else '' }}>
                         <label class="form-check-label" for="bypass">Пропуск проверки на списывание</label>
                     </div>
                 </div>
                 {% if task %}
                     <div class="col-12">
                         <div class="form-check">
-                            <input type="checkbox" name="mass_recheck" class="form-check-input" id="mass_recheck">
+                            <input type="checkbox" name="mass_recheck" class="form-check-input" id="mass_recheck" {{ 'checked' if values.get('mass_recheck') else '' }}>
                             <label class="form-check-label" for="mass_recheck">После сохранения запустить массовую перепроверку</label>
                         </div>
                     </div>
@@ -83,13 +85,91 @@
 
             <div class="mb-2">
                 <label class="form-label">Текст задачи (Markdown)</label>
-                <textarea name="text" class="form-control form-control-sm" rows="10">{{ task.text or '' if task else '' }}</textarea>
+                <textarea name="text" class="form-control form-control-sm" rows="10">{{ values.text or '' }}</textarea>
             </div>
+
+            <section id="test-settings" class="border rounded p-3 my-3">
+                <label class="form-label" for="test-mode">Режим тестов</label>
+                <select id="test-mode" name="test_mode" class="form-select form-select-sm mb-2">
+                    <option value="environment" {{ 'selected' if values.test_mode != 'io' else '' }}>Проверка через environments</option>
+                    <option value="io" {{ 'selected' if values.test_mode == 'io' else '' }}>Ввод / вывод — настройка в браузере</option>
+                </select>
+                {% if import_available %}<a class="btn btn-sm btn-outline-primary mb-2" href="{{ url_for('tasks_import_tests', task_id=task.id, next=next_url) }}">Загрузить исходные тесты из environments</a><div class="form-text mb-2">Откроется новая форма с исходным набором. Сначала сохраните текущие изменения, если они нужны.</div>{% endif %}
+                <p id="environment-help" class="small text-muted mb-0">Используется существующий программный проверяющий модуль задачи.</p>
+                <fieldset id="io-test-settings">
+                    <p class="small text-muted">Для Python и C++. Публичные тесты видны ученику до отправки; у приватных виден только результат проверки.
+                        Действующие правила минимального балла за попытку и олимпиад сохраняются.</p>
+                    <label class="form-label" for="test-scoring">Начисление баллов</label>
+                    <select id="test-scoring" name="test_scoring" class="form-select form-select-sm mb-2">
+                        <option value="proportional" {{ 'selected' if values.test_scoring == 'proportional' else '' }}>По доле пройденных тестов</option>
+                        <option value="all_or_nothing" {{ 'selected' if values.test_scoring == 'all_or_nothing' else '' }}>Всё или ничего — нужно пройти все тесты</option>
+                        <option value="groups" {{ 'selected' if values.test_scoring == 'groups' else '' }}>По группам — отдельные баллы за каждую группу</option>
+                    </select>
+                    <p id="scoring-help" class="form-text"></p>
+                    <fieldset id="test-group-settings" class="mb-3">
+                        <div class="form-text mb-2">Группа даёт баллы, только если пройдены все её тесты. Сумма баллов групп должна равняться баллам задачи. Названия видны только преподавателю.</div>
+                        <div id="test-groups">{% for group in test_groups %}{% include '_io_test_group.html' %}{% endfor %}</div>
+                        <button type="button" id="add-group" class="btn btn-sm btn-outline-primary">Добавить группу</button>
+                    </fieldset>
+                    <label class="form-label" for="test-comparison">Сравнение вывода</label>
+                    <select id="test-comparison" name="test_comparison" class="form-select form-select-sm mb-2">
+                        <option value="tokens" {{ 'selected' if values.test_comparison == 'tokens' else '' }}>По словам и числам — без учёта разделяющих пробелов</option>
+                        <option value="exact" {{ 'selected' if values.test_comparison == 'exact' else '' }}>Точное — с учётом пробелов и строк</option>
+                        <option value="float" {{ 'selected' if values.test_comparison == 'float' else '' }}>Числа с погрешностью</option>
+                        <option value="tokens_ignore_cr" {{ 'selected' if values.test_comparison == 'tokens_ignore_cr' else '' }}>По словам — совместимость с environments (CR игнорируется)</option>
+                    </select>
+                    <div class="form-text mb-2">Регистр учитывается. В режиме «По словам и числам» значения 1 и 1.0 различаются.</div>
+                    <fieldset id="exact-settings" class="mb-3">
+                        <label class="form-label" for="test-trailing-whitespace">В конце вывода игнорировать</label>
+                        <select id="test-trailing-whitespace" name="test_trailing_whitespace" class="form-select form-select-sm">
+                            <option value="one_newline" {{ 'selected' if values.test_trailing_whitespace == 'one_newline' else '' }}>Один перенос строки</option>
+                            <option value="newlines" {{ 'selected' if values.test_trailing_whitespace == 'newlines' else '' }}>Все переносы строк</option>
+                            <option value="all" {{ 'selected' if values.test_trailing_whitespace == 'all' else '' }}>Все пробелы и переносы строк</option>
+                        </select>
+                        <div class="form-text">CRLF, CR и LF равнозначны.</div>
+                    </fieldset>
+                    <fieldset id="float-settings" class="mb-3">
+                        <div class="row g-2">
+                            <label class="col-md-6">Абсолютная погрешность
+                                <input name="test_absolute_tolerance" class="form-control form-control-sm" required value="{{ values.test_absolute_tolerance }}">
+                            </label>
+                            <label class="col-md-6">Относительная погрешность
+                                <input name="test_relative_tolerance" class="form-control form-control-sm" required value="{{ values.test_relative_tolerance }}">
+                            </label>
+                        </div>
+                        <div class="form-text">От 0 до 1, например 0.000001 или 1e-6. Допуск: максимум из абсолютной погрешности и относительной × |эталон|. Остальные слова должны совпадать; NaN и бесконечности не принимаются.</div>
+                    </fieldset>
+                    <div class="row g-2 mb-3">
+                        <label class="col-md-6" for="test-time-limit">Время на тест, сек.
+                            <input id="test-time-limit" name="test_time_limit" type="number" min="1" max="30" step="1" required class="form-control form-control-sm" value="{{ values.test_time_limit }}">
+                        </label>
+                        <label class="col-md-6" for="test-output-limit">Лимит вывода на тест, КиБ
+                            <input id="test-output-limit" name="test_output_limit" type="number" min="1" max="8192" step="1" required class="form-control form-control-sm" value="{{ values.test_output_limit }}">
+                        </label>
+                    </div>
+                    <div id="test-cases">
+                        {% for case in test_cases %}{% include '_io_test_case.html' %}{% endfor %}
+                    </div>
+                    <button type="button" id="add-test" class="btn btn-sm btn-outline-primary">Добавить тест</button>
+                    <span id="test-count" class="small text-muted ms-2" aria-live="polite"></span>
+                    <div class="form-text">До 50 тестов, до 8 МиБ в каждом поле и до 64 МиБ на весь набор. Пустой ввод и вывод допустимы.</div>
+                </fieldset>
+            </section>
 
             <button class="btn btn-sm btn-primary">{{ 'Сохранить' if task else 'Создать' }}</button>
             <a href="{{ next_url }}" class="btn btn-sm btn-secondary">Отмена</a>
         </form>
     </div>
 </div>
+
+<template id="test-case-template">
+    {% set case = {'input': '', 'output': '', 'is_public': false} %}
+    {% include '_io_test_case.html' %}
+</template>
+<template id="test-group-template">
+    {% set group = {'id': '', 'name': '', 'points': 5} %}
+    {% include '_io_test_group.html' %}
+</template>
+<script src="{{ url_for('static', filename='js/task-tests.js') }}" defer></script>
 
 {% endblock %}

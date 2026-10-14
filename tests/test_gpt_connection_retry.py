@@ -50,7 +50,8 @@ class GptConnectionRetryTests(unittest.TestCase):
                             paste_celery.check_task.run(code.id)
                     finally:
                         paste_celery.check_task.pop_request()
-                    retry.assert_called_with(exc=error, countdown=5)
+                    self.assertEqual(retry.call_args.kwargs['countdown'], 5)
+                    self.assertIsInstance(retry.call_args.kwargs['exc'], requests.Timeout if isinstance(error, requests.Timeout) else requests.ConnectionError)
                     publish.assert_not_called()
                     notify.assert_not_called()
                     self.assertEqual((code.check_state, code.check_points, code.check_comments),

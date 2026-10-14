@@ -162,6 +162,27 @@ class ExecutionContainerHarnessTests(unittest.TestCase):
         return container
 
     @mock.patch("runner.subprocess.run")
+    def test_isolated_python_tests_have_no_network_or_shared_pip_cache(self, subprocess_run):
+        subprocess_run.return_value = mock.Mock(stdout=b"container-id\n")
+        for transfer_mode in ('cp', 'bind'):
+            with tempfile.TemporaryDirectory() as directory:
+                subprocess_run.reset_mock()
+                container = self._container(directory, transfer_mode)
+                container.isolated = True
+                container._pip_cache_volume = 'must-not-be-mounted'
+                self.assertEqual(container.prepare(), 'container-id')
+                command = subprocess_run.call_args_list[0].args[0]
+                self.assertEqual(command[command.index('--network') + 1], 'none')
+                self.assertIn('--memory', command)
+                self.assertIn('--pids-limit', command)
+                self.assertIn('--read-only', command)
+                self.assertNotIn('must-not-be-mounted:/root/.cache/pip', command)
+                if transfer_mode == 'cp':
+                    self.assertIn('/code:rw,exec,nosuid,nodev,size=128m', command)
+                    self.assertFalse(any(call.args[0][:2] == ['docker', 'cp']
+                                         for call in subprocess_run.call_args_list))
+
+    @mock.patch("runner.subprocess.run")
     def test_cpp_prepare_applies_runtime_resource_boundaries(self, subprocess_run):
         subprocess_run.return_value = mock.Mock(stdout=b"container-id\n")
         with tempfile.TemporaryDirectory() as directory:

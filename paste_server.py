@@ -16,7 +16,11 @@ from config import USER_URL, TASK_URL, AUTH_URL, DEFAULT_GPT_RATE_LIMIT, LANGS, 
 from image_submission import ImageSubmissionError, create_image_submission, parse_image_submission
 from urllib.parse import quote
 from sqlalchemy import or_
+from sqlalchemy.exc import SQLAlchemyError
 from recheck_request import codingprojects_recheck
+from io_tests import (public_tests, draft_test_config_from_form, validate_form_draft,
+                      SUPPORTED_LANGUAGES, MAX_REQUEST_BYTES, DEFAULT_OUTPUT_LIMIT)
+from io_test_import import PILOT_TASK_IDS, import_environment_tests
 
 SOCKET_SUBMISSION_ROOM_PREFIX = "submission:"
 SYSTEM_RECENT_CHECKS_KEY = "system:recent_checks"
@@ -124,6 +128,9 @@ def _gpt_rate_limit_status_payload(user_id, task_id, course_id=None):
 def _task_submission_language_error(task, lang):
     if not task:
         return None
+    if getattr(task, 'check_type', None) == 'tests' and getattr(task, 'test_mode', None) == 'io':
+        if lang not in SUPPORTED_LANGUAGES or lang != task.lang:
+            return 'Для этой задачи отправьте программу на выбранном языке: ' + str(task.lang)
     if task.lang == 'image' and lang != 'image':
         return "Для этой задачи нужно прикрепить изображение решения."
     if lang == 'image' and task.lang != 'image':
@@ -924,7 +931,8 @@ def index():
             'time_left': time_left
         }
 
-    return render_template('index.html', task=task, has_error=has_error, prefered_lang=prefered_lang, gpt_limit_info=gpt_limit_info)
+    return render_template('index.html', task=task, has_error=has_error, prefered_lang=prefered_lang,
+                           gpt_limit_info=gpt_limit_info, public_tests=public_tests(task))
 
 
 @app.route('/zip')
@@ -1506,6 +1514,50 @@ def system_status():
     return render_template('system_status.html')
 
 
+@app.route('/system/ai', methods=['GET', 'POST'])
+@login_required
+def system_ai_settings():
+    if not is_admin():
+        abort(403)
+    from ai_settings import AISettingsError, settings_view, save_ai_settings, reset_ai_settings
+
+    if 'ai_settings_csrf' not in session:
+        session['ai_settings_csrf'] = secrets.token_urlsafe(32)
+    error = None
+    status = 200
+    if request.method == 'POST':
+        if not hmac.compare_digest(session['ai_settings_csrf'].encode(), request.form.get('csrf_token', '').encode()):
+            abort(403)
+        try:
+            action = request.form.get('action', 'save')
+            if action == 'reset':
+                reset_ai_settings()
+                flash('Настройки ИИ сброшены: используются значения окружения сервера.', 'success')
+            elif action == 'save':
+                save_ai_settings(request.form, session.get('user_id'))
+                flash('Настройки ИИ сохранены. Они применятся к следующим проверкам.', 'success')
+            else:
+                abort(400)
+            response = redirect(url_for('system_ai_settings'))
+            response.headers['Cache-Control'] = 'no-store, private'
+            return response
+        except AISettingsError as exc:
+            error, status = str(exc), 400
+        except SQLAlchemyError:
+            error, status = 'Не удалось сохранить настройки ИИ в базе данных.', 503
+    try:
+        view = settings_view()
+    except AISettingsError as exc:
+        view, error, status = None, str(exc), 503
+    except SQLAlchemyError:
+        view, error, status = None, 'Не удалось загрузить настройки ИИ из базы данных.', 503
+    response = make_response(render_template(
+        'system_ai_settings.html', settings=view, error=error,
+        csrf_token=session['ai_settings_csrf']), status)
+    response.headers['Cache-Control'] = 'no-store, private'
+    return response
+
+
 @app.route('/tasks', methods=['GET'])
 @login_required
 def tasks_list():
@@ -1587,11 +1639,7 @@ def _safe_next_tasks_url(raw_value):
 def tasks_new():
     if not is_teacher():
         abort(403)
-    next_url = _safe_next_tasks_url(request.args.get('next')) or '/tasks'
-    return render_template('task_form.html',
-                           task=None,
-                           langs=LANGS,
-                           next_url=next_url)
+    return _render_task_form()
 
 
 @app.route('/tasks/<int:task_id>/edit', methods=['GET'])
@@ -1600,25 +1648,103 @@ def tasks_edit(task_id):
     if not is_teacher():
         abort(403)
     task = Task.query.get_or_404(task_id)
-    next_url = _safe_next_tasks_url(request.args.get('next')) or '/tasks'
-    return render_template('task_form.html',
-                           task=task,
-                           langs=LANGS,
-                           next_url=next_url)
+    return _render_task_form(task)
+
+
+@app.route('/tasks/<int:task_id>/import-tests', methods=['GET'])
+@login_required
+def tasks_import_tests(task_id):
+    if not is_teacher():
+        abort(403)
+    task = Task.query.get_or_404(task_id)
+    try:
+        config = import_environment_tests(task.id, task.lang, task.points)
+    except ValueError as error:
+        return _render_task_form(task, error=str(error))
+    return _render_task_form(task, imported_config=config)
+
+
+def _render_task_form(task=None, error=None, imported_config=None):
+    fields = ('id', 'name', 'lang', 'points', 'check_type', 'text', 'gpt_model',
+              'gpt_rate_limit', 'bypass_similarity_check', 'test_mode')
+    values = {key: getattr(task, key, None) for key in fields}
+    config = imported_config or (task.test_config if task else None) or {}
+    defaults = dict(comparison='tokens', trailing_whitespace='one_newline',
+                    absolute_tolerance='0.000001', relative_tolerance='0.000001',
+                    time_limit=2, output_limit=DEFAULT_OUTPUT_LIMIT, scoring='proportional')
+    values.update({f'test_{key}': config.get(key, value) for key, value in defaults.items()})
+    values['test_output_limit'] //= 1024
+    cases = [dict(case, output_limit=case['output_limit'] // 1024 if 'output_limit' in case else '')
+             for case in config.get('tests', [])]
+    groups = config.get('groups', [])
+    if imported_config:
+        values.update(test_mode='io', check_type='tests')
+    if error and request.method == 'POST':
+        values.update(request.form.to_dict())
+        values['bypass_similarity_check'] = 'bypass_similarity_check' in request.form
+        if 'test_mode' in request.form and request.form['test_mode'] == 'io':
+            inputs = request.form.getlist('test_input')
+            outputs = request.form.getlist('test_output')
+            visibility = request.form.getlist('test_visibility')
+            cases = [{'input': value,
+                      'output': outputs[i] if i < len(outputs) else '',
+                      'is_public': i < len(visibility) and visibility[i] == 'public'}
+                     for i, value in enumerate(inputs)]
+        draft = getattr(g, 'io_test_draft', None)
+        if draft:
+            values.update({f'test_{key}': value for key, value in draft.items()
+                           if key not in ('groups', 'tests')})
+            cases, groups = draft['tests'], draft['groups']
+    next_url = _safe_next_tasks_url(request.values.get('next')) or '/tasks'
+    return render_template('task_form.html', task=task, values=values, test_cases=cases,
+                           test_groups=groups, import_available=bool(task and task.id in PILOT_TASK_IDS),
+                           imported=imported_config is not None,
+                           langs=LANGS, next_url=next_url, form_error=error), 400 if error else 200
 
 
 def _fill_task(task):
+    # Validate the whole form before changing the persistent object.
+    # Scope larger bodies to authenticated teacher writes, before parsing form data.
+    request.max_content_length = MAX_REQUEST_BYTES
+    request.max_form_memory_size = MAX_REQUEST_BYTES
+    mode = request.form.get('test_mode', task.test_mode or 'environment')
+    if mode not in ('environment', 'io'):
+        raise ValueError('Выберите допустимый режим тестов.')
+    check_type = request.form.get('check_type') or 'tests'
+    if check_type not in ('tests', 'gpt'):
+        raise ValueError('Выберите допустимый тип проверки.')
+    if mode == 'io' and check_type == 'tests':
+        g.io_test_draft, file_error = draft_test_config_from_form(request.form, request.files)
+        if file_error:
+            raise ValueError(file_error)
+    try:
+        task_id = int(request.form['id']) if request.form.get('id', '').strip() else task.id
+        points = int(request.form['points']) if request.form.get('points') else None
+        rate_limit = int(request.form['gpt_rate_limit']) if request.form.get('gpt_rate_limit') else None
+    except ValueError:
+        raise ValueError('ID, баллы и лимит GPT должны быть целыми числами.') from None
+    if task.id is not None and task_id != task.id:
+        raise ValueError('ID существующей задачи нельзя изменить.')
+    config = task.test_config
+    if mode == 'io' and check_type == 'tests':
+        if request.form.get('lang') not in SUPPORTED_LANGUAGES:
+            raise ValueError('Тесты ввода/вывода поддерживают Python и C++.')
+        if points is None or points < 1:
+            raise ValueError('Для тестов ввода/вывода задайте положительное число баллов.')
+        config = validate_form_draft(g.io_test_draft, points)
     new_id = request.form.get('id')
     if new_id and new_id.strip():
-        task.id = int(new_id)
+        task.id = task_id
     task.name = request.form.get('name') or None
     task.lang = request.form.get('lang') or None
-    task.points = int(request.form['points']) if request.form.get('points') else None
-    task.check_type = 'gpt' if task.lang == 'image' else (request.form.get('check_type') or 'tests')
+    task.points = points
+    task.check_type = 'gpt' if task.lang == 'image' else check_type
     task.text = request.form.get('text') or None
     task.gpt_model = request.form.get('gpt_model') or None
-    task.gpt_rate_limit = int(request.form['gpt_rate_limit']) if request.form.get('gpt_rate_limit') else None
+    task.gpt_rate_limit = rate_limit
     task.bypass_similarity_check = 'bypass_similarity_check' in request.form
+    task.test_mode = mode
+    task.test_config = config
 
 
 @app.route('/tasks', methods=['POST'])
@@ -1627,7 +1753,12 @@ def tasks_create():
     if not is_teacher():
         abort(403)
     task = Task()
-    _fill_task(task)
+    try:
+        _fill_task(task)
+        if task.id is not None and db.session.get(Task, task.id):
+            raise ValueError('Задача с таким ID уже существует.')
+    except ValueError as error:
+        return _render_task_form(error=str(error))
     db.session.add(task)
     db.session.commit()
     flash(f'Задача #{task.id} создана.', 'success')
@@ -1641,7 +1772,10 @@ def tasks_update(task_id):
     if not is_teacher():
         abort(403)
     task = Task.query.get_or_404(task_id)
-    _fill_task(task)
+    try:
+        _fill_task(task)
+    except ValueError as error:
+        return _render_task_form(task, error=str(error))
     db.session.commit()
     flash(f'Задача #{task.id} обновлена.', 'success')
 

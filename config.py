@@ -73,6 +73,13 @@ GPT_MODEL = os.getenv('GPT_MODEL', 'gpt-5.6-luna')
 GPT_KEY = os.getenv('GPT_KEY')
 GPT_GATEWAY = os.getenv('GPT_GATEWAY', 'https://gpt-gateway.ai.medsenger.ru:4443/v1/responses')
 GPT_MAX_OUTPUT_TOKENS = max(16, int(os.getenv('GPT_MAX_OUTPUT_TOKENS', 8192)))
+AI_PROVIDER = os.getenv('AI_PROVIDER', 'gateway')
+AI_TIMEOUT = int(os.getenv('AI_TIMEOUT', 180))
+AI_SETTINGS_ENCRYPTION_KEY = os.getenv('AI_SETTINGS_ENCRYPTION_KEY', '')
+GPT_PROXY = os.getenv('GPT_PROXY', '')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+OPENAI_RESPONSES_URL = os.getenv('OPENAI_RESPONSES_URL', 'https://api.openai.com/v1/responses')
+OPENAI_PROXY = os.getenv('OPENAI_PROXY', '')
 MAX_IMAGE_SUBMISSION_BYTES = max(1, int(os.getenv('MAX_IMAGE_SUBMISSION_BYTES', 10 * 1024 * 1024)))
 
 # GPT Rate Limiting

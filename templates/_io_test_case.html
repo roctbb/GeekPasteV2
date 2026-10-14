@@ -1,0 +1,46 @@
+<div class="io-test-case border rounded p-3 mb-3">
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+        <strong class="test-number">Тест</strong>
+        <label class="ms-auto d-flex align-items-center gap-2">
+            <span class="small">Видимость</span>
+            <select name="test_visibility" class="form-select form-select-sm w-auto">
+                <option value="private" {{ 'selected' if not case.is_public else '' }}>Приватный</option>
+                <option value="public" {{ 'selected' if case.is_public else '' }}>Публичный</option>
+            </select>
+        </label>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-action="up" aria-label="Переместить тест выше">↑</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-action="down" aria-label="Переместить тест ниже">↓</button>
+        <button type="button" class="btn btn-sm btn-outline-danger" data-action="remove">Удалить</button>
+    </div>
+    <div class="row g-2 mb-2">
+        <label class="col-md-4 case-group">Группа
+            <select name="test_group" class="form-select form-select-sm" data-selected="{{ case.group or '' }}">
+                <option value="">Выберите группу</option>
+                {% for group in test_groups %}<option value="{{ group.id }}" {{ 'selected' if case.group == group.id else '' }}>{{ group.name }}</option>{% endfor %}
+            </select>
+        </label>
+        <label class="col-md-4">Время, сек.
+            <input name="test_case_time_limit" type="number" min="1" max="30" step="1" placeholder="Общий лимит" value="{{ case.time_limit if case.time_limit is defined else '' }}" class="form-control form-control-sm">
+        </label>
+        <label class="col-md-4">Вывод, КиБ
+            <input name="test_case_output_limit" type="number" min="1" max="8192" step="1" placeholder="Общий лимит" value="{{ case.output_limit if case.output_limit is defined else '' }}" class="form-control form-control-sm">
+        </label>
+    </div>
+    <div class="row g-2">
+        <label class="col-md-6">Ввод (stdin)
+            <textarea name="test_input" class="form-control form-control-sm font-monospace mt-1" rows="4" spellcheck="false">{{ '\n' ~ case.input }}</textarea>
+        </label>
+        <label class="col-md-6">Ожидаемый вывод (stdout)
+            <textarea name="test_output" class="form-control form-control-sm font-monospace mt-1" rows="4" spellcheck="false">{{ '\n' ~ case.output }}</textarea>
+        </label>
+    </div>
+    <div class="row g-2 mt-1">
+        <label class="col-md-6 small">Ввод из файла
+            <input type="file" data-file="input" name="test_input_file_{{ loop.index0 if loop is defined else 0 }}" class="form-control form-control-sm">
+        </label>
+        <label class="col-md-6 small">Эталон из файла
+            <input type="file" data-file="output" name="test_output_file_{{ loop.index0 if loop is defined else 0 }}" class="form-control form-control-sm">
+        </label>
+    </div>
+    <div class="form-text">Файл UTF-8 заменяет текст соответствующего поля при сохранении. Пустой файл допустим.</div>
+</div>

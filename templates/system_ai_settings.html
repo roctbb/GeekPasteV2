@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block content %}
+{% include "_system_tabs.html" %}
+<div class="page-head">
+    <div>
+        <h4 class="page-head-title">Настройки ИИ</h4>
+        <div class="page-head-meta">Общее подключение для проверки решений и внешнего API</div>
+    </div>
+</div>
+{% if error %}<div class="alert alert-danger" role="alert">{{ error }}</div>{% endif %}
+{% if settings %}
+{% if not settings.available %}
+<div class="alert alert-warning">Для сохранения настроек нужно обновить схему базы данных на сервере. Пока используются настройки окружения.</div>
+{% endif %}
+{% macro secret_input(name, label, placeholder) %}
+<div class="mb-3">
+    <label class="form-label" for="{{ name }}">{{ label }}</label>
+    <input type="password" class="form-control" id="{{ name }}" name="{{ name }}"
+           autocomplete="new-password" spellcheck="false" maxlength="4096" placeholder="{{ placeholder }}">
+    <div class="form-text">
+        {{ 'Задан' if settings.secrets[name].configured else 'Не задан' }} ·
+        {{ 'настройки системы' if settings.secrets[name].source == 'database' else 'окружение сервера' }}.
+        Сохранённое значение скрыто.
+    </div>
+    <label class="visually-hidden" for="{{ name }}_action">Действие: {{ label }}</label>
+    <select class="form-select form-select-sm mt-2" id="{{ name }}_action" name="{{ name }}_action">
+        <option value="keep">Сохранить текущее или заменить введённым</option>
+        <option value="clear">{{ 'Отключить прокси' if name.endswith('_proxy') else 'Удалить ключ' }}</option>
+        <option value="inherit">Использовать окружение сервера</option>
+    </select>
+</div>
+{% endmacro %}
+<form method="post" autocomplete="off">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="action" value="save">
+    <div class="card flat-card shadow-soft mb-3">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="provider">Подключение</label>
+                    <select class="form-select" id="provider" name="provider">
+                        <option value="gateway" {% if settings.fields.provider == 'gateway' %}selected{% endif %}>Собственный шлюз</option>
+                        <option value="openai" {% if settings.fields.provider == 'openai' %}selected{% endif %}>OpenAI API</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="model">Модель по умолчанию</label>
+                    <input class="form-control" id="model" name="model" value="{{ settings.fields.model }}" required maxlength="200">
+                    <div class="form-text">Модель, указанная в задаче, имеет приоритет.</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="max_output_tokens">Максимум токенов ответа</label>
+                    <input class="form-control" type="number" id="max_output_tokens" name="max_output_tokens"
+                           min="16" max="128000" value="{{ settings.fields.max_output_tokens }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="timeout">Таймаут запроса, секунд</label>
+                    <input class="form-control" type="number" id="timeout" name="timeout"
+                           min="1" max="600" value="{{ settings.fields.timeout }}" required>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row g-3 mb-3">
+        {% for provider, title in [('gateway', 'Собственный шлюз'), ('openai', 'OpenAI API')] %}
+        <div class="col-lg-6">
+            <div class="card flat-card shadow-soft h-100">
+                <div class="card-header"><strong>{{ title }}</strong></div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ provider }}_url">URL Responses API</label>
+                        <input type="url" class="form-control" id="{{ provider }}_url" name="{{ provider }}_url"
+                               value="{{ settings.fields[provider ~ '_url'] }}" maxlength="2048" required>
+                        <div class="form-text">Полный адрес, включая /v1/responses.</div>
+                    </div>
+                    {{ secret_input(provider ~ '_key', 'Ключ API', 'Введите новый ключ, чтобы заменить текущий') }}
+                    {{ secret_input(provider ~ '_proxy', 'Сетевой прокси (необязательно)', 'http://user:password@host:port или socks5h://host:port') }}
+                    <div class="form-text">Без сетевого прокси соединение идёт напрямую к указанному URL.</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <p class="text-muted small">Используется только выбранное подключение. Изменения применятся к новым запросам; текущие проверки продолжат работу со своими настройками.</p>
+    <button class="btn btn-primary" type="submit" {% if not settings.available %}disabled{% endif %}>Сохранить настройки</button>
+</form>
+{% endif %}
+<form method="post" class="mt-4" onsubmit="return confirm('Сбросить настройки ИИ и использовать значения окружения сервера?')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="action" value="reset">
+    <button class="btn btn-outline-secondary btn-sm" type="submit">Сбросить к настройкам окружения</button>
+</form>
+{% endblock %}
