@@ -58,6 +58,8 @@ def import_environment_tests(task_id, language, maximum_points):
         if hashlib.sha256(raw).hexdigest() != PYTHON_PRESETS[str(task_id)]['sha256']:
             raise ValueError('Повреждён исходный набор тестов.')
         config = json.loads(raw)
+        if 'time_limit_override' in metadata:
+            config['time_limit'] = metadata['time_limit_override']
     else:
         config = (_presets()[str(task_id)]['config'] if task_id in PILOT_TASK_IDS
                   else _additional_config(task_id))

@@ -97,6 +97,10 @@ def freeze(verify_only=False):
             counters['grading_scenarios'] += 1
         raw = json.dumps(config, ensure_ascii=False, separators=(',', ':')).encode()
         metadata = {key: value for key, value in metadata.items() if key != 'answers'}
+        if task_id == 2914:
+            # The production reference takes ~6.7s on the largest input.
+            # Keep the original frozen suite intact; grant a 12s runtime limit.
+            metadata['time_limit_override'] = 12
         metadata.update(language='python', count=n, sha256=hashlib.sha256(raw).hexdigest())
         index['tasks'][str(task_id)] = metadata
         counters['tests'] += n

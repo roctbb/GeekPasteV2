@@ -671,6 +671,7 @@
       "points": 5,
       "source": "mkoshp_finals",
       "source_key": "2019H",
+      "time_limit_override": 12,
       "language": "python",
       "count": 36,
       "sha256": "7636ea2a36eebf638a8f54762f344b2b34bdcc26aedd8a87c1425e645c72b5c9"

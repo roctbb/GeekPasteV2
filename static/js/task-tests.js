@@ -82,7 +82,8 @@
         const textarea = field.querySelector('textarea');
         const reference = field.querySelector('input[type="hidden"]');
         const status = field.querySelector('.field-load-status');
-        button.disabled = true;
+        const actions = field.querySelectorAll('[data-field-action]');
+        actions.forEach(action => { action.disabled = true; });
         try {
             let text = '';
             if (button.dataset.fieldAction === 'load') {
@@ -98,7 +99,7 @@
             textarea.focus();
         } catch (error) {
             status.textContent = error.message || 'Не удалось загрузить текст.';
-            button.disabled = false;
+            actions.forEach(action => { action.disabled = false; });
         }
     });
     add.addEventListener('click', () => {
