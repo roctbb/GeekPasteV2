@@ -9,10 +9,6 @@ from io_test_import import IMPORTABLE_TASK_IDS, REMAINING_PATH
 from tests.io_preset_helpers import preset, program_groups, perform_io_preset
 
 
-BUFFER_OVERFLOW_COMMENT = (
-    "// BUFFER_OVERFLOW: destination capacity is unknown; "
-    "writing past it is undefined behavior."
-)
 TRANSITIONS_COMMENT = """/*
 TRANSITIONS
 state;letter;semicolon;quote;end
@@ -44,9 +40,8 @@ void string_concat(char destination[], const char source[]) {
     while (destination[i] != '\\0') ++i;
     do { destination[i + j] = source[j]; } while (source[j++] != '\\0');
 }
-%s
 int main() { return 0; }
-""" % BUFFER_OVERFLOW_COMMENT
+"""
     if task_id == 2638:
         return TRANSITIONS_COMMENT + "\nint main() { return 0; }\n"
     if task_id == 2656:
@@ -380,20 +375,22 @@ int main() { return 0; }
         _maximum, points, _feedback = perform(2614, ReferenceRunner(2614), wrong_signature)
         self.assertEqual(points, 0)
 
-    def test_copy_concat_reject_library_calls_and_require_exact_overflow_comment(self):
+    def test_copy_concat_reject_library_calls(self):
         library_source = """
 #include <cstring>
 void string_copy(char destination[], const char source[]) { strcpy(destination, source); }
 void string_concat(char destination[], const char source[]) { strcat(destination, source); }
-%s
 int main() { return 0; }
-""" % BUFFER_OVERFLOW_COMMENT
+"""
         maximum, points, feedback = perform(2615, ReferenceRunner(2615), library_source)
         self.assertEqual((maximum, points), (10, 0), feedback)
 
-        without_comment = valid_source_for(2615).replace(BUFFER_OVERFLOW_COMMENT, "")
-        _maximum, points, _feedback = perform(2615, ReferenceRunner(2615), without_comment)
-        self.assertEqual(points, 5)
+    def test_copy_concat_awards_full_points_without_explanatory_comment(self):
+        source_code = valid_source_for(2615)
+        self.assertNotIn("//", source_code)
+        self.assertNotIn("/*", source_code)
+        maximum, points, feedback = perform(2615, ReferenceRunner(2615), source_code)
+        self.assertEqual((maximum, points), (10, 10), feedback)
 
     def test_copy_concat_extra_output_mutant_is_rejected(self):
         def debug_output(input_data, _time_limit):

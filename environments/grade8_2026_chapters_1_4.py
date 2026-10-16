@@ -324,19 +324,8 @@ def _copy_source_requirement(source_code):
     return _manual_string_function(source_code, "string_copy")
 
 
-def _overflow_explanation_present(source_code):
-    required = (
-        "// BUFFER_OVERFLOW: destination capacity is unknown; "
-        "writing past it is undefined behavior."
-    )
-    return any(line.strip() == required for line in str(source_code or "").splitlines())
-
-
 def _concat_source_requirement(source_code):
-    return (
-        _manual_string_function(source_code, "string_concat")
-        and _overflow_explanation_present(source_code)
-    )
+    return _manual_string_function(source_code, "string_concat")
 
 
 def _transition_table_present(source_code):
