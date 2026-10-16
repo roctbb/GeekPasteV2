@@ -1,7 +1,6 @@
 import unittest
 
-from environments import grade8_2026_chapters_1_4 as chapter
-from tests.io_preset_helpers import perform_io_preset
+from tests.io_preset_helpers import perform_io_preset, preset
 
 
 def reference(input_data, diagnostic=False, omit_diagonal=None):
@@ -24,9 +23,7 @@ def reference(input_data, diagnostic=False, omit_diagonal=None):
 
 class MagicSquareSplitTests(unittest.TestCase):
     def score(self, task_id, answer):
-        if task_id == 2611:
-            return perform_io_preset(task_id, lambda data, limit: answer(data))[1]
-        return chapter.TASKS[task_id][1](lambda data, limit: answer(data), "")[0]
+        return perform_io_preset(task_id, lambda data, limit: answer(data))[1]
 
     def test_verdict_only_gets_all_base_points_and_no_bonus(self):
         self.assertEqual(self.score(2611, reference), 5)
@@ -60,8 +57,11 @@ class MagicSquareSplitTests(unittest.TestCase):
             ([[1, 2, 0]] * 3, "NO: col 2 (sum 6, expected 3)"),
             ([[0]], "YES"),
         ]
+        cases = {tuple(map(int, case['input'].split())): case['output'].strip()
+                 for case in preset(2915)[1]['tests']}
         for matrix, answer in examples:
-            self.assertEqual(chapter._magic_answer(matrix).strip(), answer)
+            values = (len(matrix), *(value for row in matrix for value in row))
+            self.assertEqual(cases[values], answer)
 
     def test_debug_output_is_not_accepted(self):
         for task, diagnostic in ((2611, False), (2915, True)):

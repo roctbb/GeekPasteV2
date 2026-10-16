@@ -390,58 +390,6 @@ def _separate_two_key_comparator(source_code):
     )
 
 
-def _magic_answer(matrix):
-    expected = sum(matrix[0])
-    for index, row in enumerate(matrix, start=1):
-        value = sum(row)
-        if value != expected:
-            return "NO: row {} (sum {}, expected {})\n".format(
-                index, value, expected
-            )
-    size = len(matrix)
-    for column in range(size):
-        value = sum(matrix[row][column] for row in range(size))
-        if value != expected:
-            return "NO: col {} (sum {}, expected {})\n".format(
-                column + 1, value, expected
-            )
-    value = sum(matrix[index][index] for index in range(size))
-    if value != expected:
-        return "NO: diag 1 (sum {}, expected {})\n".format(value, expected)
-    value = sum(matrix[index][size - 1 - index] for index in range(size))
-    if value != expected:
-        return "NO: diag 2 (sum {}, expected {})\n".format(value, expected)
-    return "YES\n"
-
-
-def _semantic_mismatch_equal(actual, expected):
-    """Compare a NO diagnostic semantically where punctuation is unspecified."""
-
-    pattern = re.compile(
-        r"^\s*NO\s*:?\s*(row|col|diag)\s+(\d+)\s*"
-        r"(?:\(|[,;:]?\s*)sum\s*[:=]?\s*(-?\d+)\s*[,;]?\s*"
-        r"expected\s*[:=]?\s*(-?\d+)\s*\)?\s*$",
-        flags=re.IGNORECASE,
-    )
-    actual_match = pattern.match(str(actual).replace("\r", "").strip())
-    expected_match = pattern.match(str(expected).replace("\r", "").strip())
-    if actual_match is None or expected_match is None:
-        return False
-    actual_groups = actual_match.groups()
-    expected_groups = expected_match.groups()
-    return (
-        actual_groups[0].casefold() == expected_groups[0].casefold()
-        and actual_groups[1:] == expected_groups[1:]
-    )
-
-
-def _matrix_input(matrix):
-    return "{}\n{}\n".format(
-        len(matrix),
-        "\n".join(_numbers(row) for row in matrix),
-    )
-
-
 _NAND_LEVELS = ("Nand", "Invert", "And", "Or", "Xor")
 _NANDGAME_MISSIONS = {
     "Nand": "RELAY_NAND",
@@ -763,55 +711,6 @@ _add_harness(
     ]],
     program_comparator=strict_text_equal,
 )
-
-
-def _magic_answer(matrix):
-    expected = sum(matrix[0])
-    checks = [("row", i + 1, sum(row)) for i, row in enumerate(matrix)]
-    checks += [("col", j + 1, sum(row[j] for row in matrix))
-               for j in range(len(matrix))]
-    checks += [("diag", 1, sum(matrix[i][i] for i in range(len(matrix)))),
-               ("diag", 2, sum(matrix[i][-1 - i] for i in range(len(matrix))))]
-    for kind, number, total in checks:
-        if total != expected:
-            return f"NO: {kind} {number} (sum {total}, expected {expected})\n"
-    return "YES\n"
-
-
-def _magic_cases(diagnostic=False):
-    matrices = [
-        [[7]], [[0]],
-        [[2, 7, 6], [9, 5, 1], [4, 3, 8]],
-        [[2, 9, 6], [7, 5, 1], [4, 3, 8]],
-        [[1, 2], [0, 3]],
-        [[1, 2], [2, 1]],
-        [[1, 0, 0], [0, 1, 0], [0, 0, 1]],
-        [[0, 0, 1], [0, 1, 0], [1, 0, 0]],
-        # A later row/column mismatch must not be reported as number 1.
-        [[2, 7, 6], [9, 5, 1], [4, 3, 9]],
-        [[1, 2, 0], [1, 2, 0], [1, 2, 0]],
-        [[10000] * 100 for _ in range(100)],
-    ]
-    changed = [[10000] * 100 for _ in range(100)]
-    changed[-1][-1] = 9999
-    matrices.append(changed)
-    rng = random.Random(2611)
-    matrices.extend([[[rng.randrange(11) for _ in range(n)] for _ in range(n)]
-                     for n in (2, 3, 4, 7)])
-    cases = []
-    for matrix in matrices:
-        answer = _magic_answer(matrix)
-        if diagnostic:
-            comparator = _semantic_mismatch_equal if answer.startswith("NO") else tokens_equal
-        else:
-            answer = "NO\n" if answer.startswith("NO") else "YES\n"
-            comparator = tokens_equal
-        cases.append(_case(_matrix_input(matrix), answer, comparator=comparator))
-    return cases
-
-
-# Separate submissions: 5 points for the verdict, 5 optional points for diagnostics.
-_add_program(2915, 5, [_magic_cases(diagnostic=True)], comparator=tokens_equal)
 
 
 def _strlen_harness(text, key):
@@ -1212,7 +1111,7 @@ _add_program(
 
 EXPECTED_TASK_IDS = frozenset({
     2570, 2602, 2603, 2610, 2614, 2615, 2616, 2617,
-    2621, 2626, 2638, 2656, 2658, 2915,
+    2621, 2626, 2638, 2656, 2658,
 })
 
 if set(TASKS) != EXPECTED_TASK_IDS:

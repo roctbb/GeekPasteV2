@@ -129,7 +129,7 @@ def real_nand_export(*, include_xor=True):
     return result
 
 
-CHAPTER_IO_IDS = IMPORTABLE_TASK_IDS & set(range(2593, 2663))
+CHAPTER_IO_IDS = IMPORTABLE_TASK_IDS & (set(range(2593, 2663)) | {2915})
 
 
 def task_groups(task_id):
@@ -193,9 +193,9 @@ def perform(task_id, runner, source_code="int main() { return 0; }"):
 
 
 class RegistryTests(unittest.TestCase):
-    def test_registry_has_exactly_the_14_remaining_environment_tasks(self):
+    def test_registry_has_exactly_the_13_remaining_environment_tasks(self):
         self.assertEqual(set(chapter.TASKS), set(chapter.EXPECTED_TASK_IDS))
-        self.assertEqual(len(chapter.TASKS), 14)
+        self.assertEqual(len(chapter.TASKS), 13)
         self.assertFalse(set(chapter.TASKS) & CHAPTER_IO_IDS)
         self.assertNotIn(2622, chapter.TASKS)  # Секундомер is a GPT report task.
 

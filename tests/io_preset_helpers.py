@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from io_test_import import import_environment_tests, preset_metadata
-from io_tests import IOTestExecutor
+from io_tests import IOTestExecutor, outputs_equal
 
 
 def preset(task_id):
@@ -17,7 +17,8 @@ def program_groups(task_id):
     _, config = preset(task_id)
     metadata = preset_metadata(task_id)
     comparisons = {'tokens_ignore_cr': tokens_equal, 'exact': strict_text_equal,
-                   'exact_crlf': exact_text_equal, 'float_binary64': float_tokens_equal}
+                   'exact_crlf': exact_text_equal, 'float_binary64': float_tokens_equal,
+                   'magic_mismatch': lambda actual, expected: outputs_equal(actual, expected, 'magic_mismatch')}
     keys = [group['id'] for group in config['groups']] or [None]
     groups = {key: [] for key in keys}
     for index, row in enumerate(config['tests']):
