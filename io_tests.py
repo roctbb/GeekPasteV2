@@ -387,6 +387,8 @@ class IOTestExecutor:
                 results.append(False)
                 comments.append(f'{label}: ошибка выполнения или превышение лимита.')
                 if test['is_public']:
+                    comments.extend([_report_text('Ввод', test['input']),
+                                     _report_text('Ожидаемый вывод', test['output'])])
                     comments.append(_report_text('Ошибка', str(error)))
                 continue
             except ExecutionException:
@@ -401,10 +403,10 @@ class IOTestExecutor:
                 comments.append(f'{label}: пройден.')
             else:
                 comments.append(f'{label}: неверный ответ.')
-                if test['is_public']:
-                    comments.extend([_report_text('Ввод', test['input']),
-                                     _report_text('Ожидаемый вывод', test['output']),
-                                     _report_text('Вывод программы', actual)])
+            if test['is_public']:
+                comments.extend([_report_text('Ввод', test['input']),
+                                 _report_text('Ожидаемый вывод', test['output']),
+                                 _report_text('Вывод программы', actual)])
         self.all_passed = all(results)
         points, group_comments = score_results(config, results, task.points)
         return points, f'Пройдено тестов: {sum(results)} из {len(results)}.\n\n' + '\n\n'.join(group_comments + comments)

@@ -1,0 +1,26 @@
+{% from 'partials/io_test_table.html' import test_value %}
+<section class="io-test-report" aria-label="Результаты тестов">
+    <p class="fw-semibold mb-2">Пройдено тестов: {{ report.passed }} из {{ report.total }}.</p>
+    {% for note in report.notes %}<p class="small mb-2">{{ note }}</p>{% endfor %}
+    <div class="io-test-table-wrap" tabindex="0" role="region" aria-label="Таблица результатов тестов">
+        <table class="table io-test-table io-test-results mb-0">
+            <thead><tr><th scope="col">Тест</th><th scope="col">Результат</th><th scope="col">Ввод</th><th scope="col">Ожидаемый вывод</th><th scope="col">Вывод программы</th></tr></thead>
+            <tbody>
+            {% for row in report.rows %}
+                <tr>
+                    <th scope="row" class="io-test-number">{{ row.number }}{% if not row.public %}<span class="io-test-visibility">Приватный</span>{% endif %}</th>
+                    <td><span class="io-test-status io-test-status-{{ row.status }}"><span class="io-test-status-icon" aria-hidden="true">{{ '✓' if row.status == 'passed' else '✕' }}</span> {{ row.status_label }}</span></td>
+                    {% if row.public %}
+                        <td>{{ test_value(row.input) }}</td>
+                        <td>{{ test_value(row.expected) }}</td>
+                        <td>{% if row.error is not none %}<span class="small text-danger">Ошибка выполнения</span>{{ test_value(row.error) }}{% else %}{{ test_value(row.actual) }}{% endif %}</td>
+                    {% else %}
+                        <td colspan="3" class="text-muted small">Данные приватного теста скрыты.</td>
+                    {% endif %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if report.missing_data %}<p class="small text-muted mt-2 mb-0">В старых отчётах данные успешных тестов могут отсутствовать.</p>{% endif %}
+</section>

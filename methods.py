@@ -12,6 +12,7 @@ from config import *
 import requests
 import jwt
 from comment_markdown import render_comment_markdown
+from io_test_report import render_io_test_report
 from runner import TestExecutor, SolutionException, ExecutionException
 from io_tests import IOTestExecutor
 from submission_archive import extract_data_from_zipfile, rebuild_zip
@@ -243,6 +244,10 @@ def build_submission_status_payload(code):
 
     if check_type and check_type != 'tests':
         payload['check_comments_html'] = str(render_comment_markdown(check_comments))
+    elif check_type == 'tests' and getattr(code.task, 'test_mode', None) == 'io':
+        report_html = render_io_test_report(check_comments)
+        if report_html is not None:
+            payload['check_comments_html'] = report_html
 
     return payload
 

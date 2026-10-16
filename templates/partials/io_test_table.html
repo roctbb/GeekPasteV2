@@ -1,0 +1,3 @@
+{% macro test_value(value) -%}
+    {% if value is none %}<span class="text-muted" aria-label="Нет данных в отчёте">—</span>{% else %}<pre class="io-test-value" tabindex="0">{{ '\n' ~ (value or '(пусто)') }}</pre>{% endif %}
+{%- endmacro %}

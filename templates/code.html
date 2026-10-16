@@ -159,7 +159,7 @@
                         <div class="slot-reel" data-reel-index="3"><img class="slot-logo" alt=""></div>
                     </div>
                 </div>
-                {% if code.task.check_type == 'tests' %}
+                {% if 'check_comments_html' not in submission_status %}
                     <pre class="m-0 flat-pre" id="submission-status-comments-pre"><code class="p-2 py-3 txt" id="submission-status-comments-text">{{ code.check_comments or '' }}</code></pre>
                     <div class="p-3 txt submission-markdown d-none" id="submission-status-comments-html"></div>
                 {% else %}
@@ -476,7 +476,7 @@
                     statusIcon.className = 'fas ' + meta.icon + ' float-end header-icon';
                     statusPoints.textContent = 'Очков: ' + (payload.check_points || 0);
 
-                    if (socketConfig.checkType === 'tests') {
+                    if (typeof payload.check_comments_html !== 'string') {
                         commentsPre.classList.remove('d-none');
                         commentsHtml.classList.add('d-none');
                         commentsText.textContent = payload.check_comments || '';

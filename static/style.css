@@ -937,6 +937,68 @@ label.text-muted,
     white-space: break-spaces;
 }
 
+.io-test-table-wrap {
+    overflow-x: auto;
+    border: 1px solid #dce3ed;
+    border-radius: 0.65rem;
+    background: #fff;
+}
+
+.io-test-table {
+    width: 100%;
+    table-layout: fixed;
+    font-size: 0.875rem;
+}
+
+.io-test-examples { min-width: 480px; }
+.io-test-results { min-width: 800px; }
+.io-test-table > thead > tr > th {
+    background: #f1f5f9;
+    color: #475569;
+    font-weight: 600;
+    padding: 0.75rem;
+    border-bottom: 1px solid #dce3ed;
+}
+.io-test-table > thead > tr > th:first-child { width: 5.75rem; }
+.io-test-results > thead > tr > th:nth-child(2) { width: 9rem; }
+.io-test-table > tbody > tr > * {
+    padding: 0.75rem;
+    vertical-align: top;
+    border-bottom-color: #e2e8f0;
+}
+.io-test-table > tbody > tr:last-child > * { border-bottom: 0; }
+.io-test-visibility {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 400;
+    color: #64748b;
+    margin-top: 0.35rem;
+}
+.io-test-table pre.io-test-value {
+    max-height: 12rem;
+    overflow: auto;
+    margin: 0;
+    padding: 0.65rem;
+    border-radius: 0.4rem;
+    background: #f8fafc;
+    color: #1e293b;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    white-space: pre;
+    tab-size: 4;
+}
+.io-test-status {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.io-test-status-passed { background: #dcfce7; color: #166534; }
+.io-test-status-failed { background: #fee2e2; color: #991b1b; }
+.io-test-status-error { background: #fee2e2; color: #991b1b; }
+.io-test-status-icon { font-size: 1rem; line-height: 1; }
+
 .nav-tabs {
     border-bottom: 1px solid var(--border-soft);
 }
