@@ -4,6 +4,7 @@ from pathlib import Path
 import re
 
 from jinja2 import Environment, FileSystemLoader
+from score_policy import ATTEMPT_COMMENT
 
 
 _templates = Environment(loader=FileSystemLoader(Path(__file__).parent / 'templates'), autoescape=True)
@@ -19,13 +20,18 @@ _statuses = {
 
 def parse_io_test_report(value):
     text = str(value or '')
+    notes = []
+    attempt_prefix = ATTEMPT_COMMENT + '\n\n'
+    if text.startswith(attempt_prefix):
+        notes.append(ATTEMPT_COMMENT)
+        text = text[len(attempt_prefix):]
     match = _summary.match(text)
     if not match:
         return None
     passed, total = map(int, match.groups())
     if not 0 <= passed <= total <= 50 or total == 0:
         return None
-    rows, notes = [], []
+    rows = []
     current = pending = None
     # Escaped content inside a legacy <pre> is one token, even when it contains
     # fake test headings or HTML. Only the surrounding report is parsed.

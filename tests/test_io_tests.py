@@ -389,15 +389,15 @@ class IOAdvancedTests(unittest.TestCase):
 class IOAdditionalPresetTests(unittest.TestCase):
     def test_all_frozen_presets_keep_limits_groups_and_complete_inputs(self):
         self.assertEqual(hashlib.sha256((REMAINING_PATH / 'index.json').read_bytes()).hexdigest(),
-                         'c9bd764fee8cb61679cea10b62994c79930d870e2a699ca90f5398cf757a299d')
-        self.assertEqual(len(ADDITIONAL_TASK_IDS), 63)
-        self.assertEqual(sum(meta['test_count'] for meta in REMAINING_PRESETS.values()), 318)
+                         'e3b2883ab934b67d6e4d1648065b716df4cd949c7492156fcca56d63c7259b01')
+        self.assertEqual(len(ADDITIONAL_TASK_IDS), 64)
+        self.assertEqual(sum(meta['test_count'] for meta in REMAINING_PRESETS.values()), 334)
         for task_id in sorted(ADDITIONAL_TASK_IDS):
             meta = REMAINING_PRESETS[str(task_id)]
             with self.subTest(task_id=task_id):
                 config = import_environment_tests(task_id, meta['language'], meta['points'])
                 self.assertEqual(len(config['tests']), meta['test_count'])
-                self.assertTrue(all(not test['is_public'] for test in config['tests']))
+                self.assertTrue(all(test['is_public'] == (task_id == 2915) for test in config['tests']))
                 for test in config['tests']:
                     self.assertGreater(test['time_limit'], 0)
                     self.assertGreaterEqual(test['output_limit'], 102400)

@@ -886,6 +886,33 @@
         "stress"
       ],
       "source_comparator": "tokens_equal"
+    },
+    "2915": {
+      "language": "cpp",
+      "points": 5,
+      "test_count": 16,
+      "sha256": "917a0b8431b9fbc184bf618be7a51cce2c1f1e11835c70f87e757fa0fb012f05",
+      "kinds": [
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden",
+        "hidden"
+      ],
+      "source_comparator": "per-test: tokens_equal / _semantic_mismatch_equal",
+      "source_commit": "16c7500802085c0acab0dac790ac4fbd781687ec",
+      "source_sha256": "b71a10fca8488daa573ca1a165a9387517c308f3dd35ebebd3924df07f05b219"
     }
   }
 }

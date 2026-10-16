@@ -19,11 +19,18 @@ COMPATIBILITY_LABELS = {
     'splitlines': 'Точные строки — разделители строк Python',
     'word_lower': 'Одно слово — без учёта регистра',
     'rational_absolute': 'Число — точная дробь и абсолютный допуск 10⁻⁶',
+    'magic_mismatch': 'Первое расхождение — вид, номер и суммы',
 }
 TIME_AT_END = re.compile(r'(?<!\d)((?:[01]\d|2[0-3]):[0-5]\d)\s*$')
 INTEGER_AT_END = re.compile(r'(?<![+\-\d])([+-]?\d+)\s*$')
 DECIMAL_NUMBER = re.compile(r'[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?\Z')
 RATIONAL_REFERENCE = re.compile(r'([+-]?[0-9]{1,100})/([0-9]{1,100})\Z')
+MAGIC_MISMATCH = re.compile(
+    r'^\s*NO\s*:?\s*(row|col|diag)\s+(\d+)\s*'
+    r'(?:\(|[,;:]?\s*)sum\s*[:=]?\s*(-?\d+)\s*[,;]?\s*'
+    r'expected\s*[:=]?\s*(-?\d+)\s*\)?\s*$',
+    flags=re.IGNORECASE,
+)
 
 
 def normalized(text):
@@ -45,6 +52,13 @@ def _ascii_integers(tokens):
 
 def compatibility_equal(actual, expected, comparison):
     try:
+        if comparison == 'magic_mismatch':
+            # Keep the original checker contract, including textual comparison
+            # of numeric fields (leading zeroes and a plus sign are significant).
+            left = MAGIC_MISMATCH.match(str(actual).replace('\r', '').strip())
+            right = MAGIC_MISMATCH.match(str(expected).replace('\r', '').strip())
+            return bool(left and right and left[1].casefold() == right[1].casefold()
+                        and left.groups()[1:] == right.groups()[1:])
         if comparison == 'strip_suffix':
             return actual.strip().endswith(expected.strip())
         if comparison == 'lower_suffix':
