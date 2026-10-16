@@ -19,7 +19,7 @@ from urllib.parse import quote
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
 from recheck_request import codingprojects_recheck
-from io_tests import (public_tests, draft_test_config_from_form, validate_form_draft,
+from io_tests import (draft_test_config_from_form, validate_form_draft,
                       SUPPORTED_LANGUAGES, MAX_REQUEST_BYTES, DEFAULT_OUTPUT_LIMIT, COMPARISON_LABELS)
 from io_test_import import IMPORTABLE_TASK_IDS, RETIRED_TASK_IDS, import_environment_tests
 from io_test_fields import prepare_fields, resolve_field
@@ -965,7 +965,7 @@ def index():
         }
 
     return render_template('index.html', task=task, has_error=has_error, prefered_lang=prefered_lang,
-                           gpt_limit_info=gpt_limit_info, public_tests=public_tests(task))
+                           gpt_limit_info=gpt_limit_info)
 
 
 @app.route('/zip')

@@ -1,8 +1,6 @@
 {% extends 'base.html' %}
 
 {% block content %}
-    {% from 'partials/io_test_table.html' import test_value %}
-
     {% if not has_error %}
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="m-0">{{ task.name if task else 'Новая отправка кода' }}</h5>
@@ -18,22 +16,6 @@
                     (сброс через {{ (gpt_limit_info.time_left // 60) + 1 }} мин)
                 {% endif %}
             </div>
-        {% endif %}
-
-        {% if public_tests %}
-            <section class="card flat-card shadow-soft mb-3">
-                <div class="card-body">
-                    <h6>Публичные тесты</h6>
-                    <div class="io-test-table-wrap" tabindex="0" role="region" aria-label="Публичные тесты">
-                        <table class="table io-test-table io-test-examples mb-0">
-                            <thead><tr><th scope="col">Тест</th><th scope="col">Ввод</th><th scope="col">Ожидаемый вывод</th></tr></thead>
-                            <tbody>{% for case in public_tests %}
-                                <tr><th scope="row" class="io-test-number">{{ loop.index }}</th><td>{{ test_value(case.input) }}</td><td>{{ test_value(case.output) }}</td></tr>
-                            {% endfor %}</tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
         {% endif %}
 
         <div class="card flat-card shadow-soft">

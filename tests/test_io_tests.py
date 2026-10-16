@@ -212,13 +212,15 @@ class IOWebTests(IOWebBase):
         self.assertEqual(self.client.post(f'/tasks/{task.id}/delete').status_code, 302)
         self.assertEqual(Task.query.count(), 0)
 
-    def test_student_sees_only_public_examples_and_cannot_edit_tests(self):
+    def test_submission_form_hides_tests_and_student_cannot_edit_them(self):
         task = self.create()
         self.login('student')
         response = self.client.get(f'/?task_id={task.id}&course_id=1')
         self.assertEqual(response.status_code, 200)
-        self.assertIn('2 3', response.text)
-        self.assertIn('Публичные тесты', response.text)
+        self.assertNotIn('2 3', response.text)
+        self.assertNotIn('Публичные тесты', response.text)
+        self.assertNotIn('Ожидаемый вывод', response.text)
+        self.assertIn('Отправить решение', response.text)
         self.assertNotIn('SECRET', response.text)
         self.assertEqual(self.client.get(f'/tasks/{task.id}/edit').status_code, 403)
         self.assertEqual(self.client.get('/tasks/new').status_code, 403)
@@ -258,7 +260,7 @@ class IOWebTests(IOWebBase):
         self.assertEqual(legacy.test_mode, 'environment')
         self.assertIsNone(legacy.test_config)
 
-    def test_examples_are_escaped_and_whitespace_survives_form_rendering(self):
+    def test_editor_preserves_test_data_and_submission_form_omits_it(self):
         self.client.post('/tasks', data=self.form(test_input=['\n<script>alert(1)</script>\n'],
                                                 test_output=['  \n'], test_visibility=['public']))
         task = Task.query.one()
@@ -267,8 +269,7 @@ class IOWebTests(IOWebBase):
         self.assertNotIn('<script>alert(1)</script>', html)
         self.login('student')
         html = self.client.get(f'/?task_id={task.id}&course_id=1').text
-        self.assertIn('&lt;script&gt;', html)
-        self.assertNotIn('<script>alert(1)</script>', html)
+        self.assertNotIn('alert(1)', html)
 
     def test_large_valid_multipart_form_can_be_saved(self):
         response = self.client.post('/tasks', data=self.form(

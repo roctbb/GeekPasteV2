@@ -950,7 +950,6 @@ label.text-muted,
     font-size: 0.875rem;
 }
 
-.io-test-examples { min-width: 480px; }
 .io-test-results { min-width: 800px; }
 .io-test-table > thead > tr > th {
     background: #f1f5f9;
