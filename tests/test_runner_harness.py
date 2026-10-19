@@ -468,8 +468,9 @@ class ExecutionContainerHarnessTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 SolutionException,
                 "Compilation failed: expected ';'",
-            ):
+            ) as raised:
                 container.run_source("this is not C++")
+            self.assertEqual(raised.exception.error_type, 'compilation_error')
 
             source_path = bounded_run.call_args.args[0][5]
             self.assertFalse(
@@ -491,8 +492,9 @@ class ExecutionContainerHarnessTests(unittest.TestCase):
             with self.assertRaisesRegex(
                 SolutionException,
                 "Compilation timed out after 7 seconds",
-            ):
+            ) as raised:
                 container.run_source("int main() {}")
+            self.assertEqual(raised.exception.error_type, 'compilation_error')
 
             source_path = bounded_run.call_args.args[0][5]
             self.assertFalse(
@@ -666,8 +668,9 @@ class BoundedProcessTests(unittest.TestCase):
         with self.assertRaisesRegex(
             SolutionException,
             "timed out after 2 seconds",
-        ):
+        ) as raised:
             container._run_command("python3 script.py", "", 2)
+        self.assertEqual(raised.exception.error_type, 'time_limit_exceeded')
         self.assertTrue(container._unusable)
         subprocess_run.assert_called_once()
         self.assertEqual(

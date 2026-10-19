@@ -359,38 +359,8 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
         )
         try:
             if check_type == 'tests':
-                tests = check_config.get('tests', [])
-                max_points = len(tests) if tests else 1
-                passed = 0
-                details = []
-
-                if lang == 'brainfuck':
-                    from runner import BrainfuckExecutor, SolutionException, ExecutionException
-                    executor = BrainfuckExecutor(code)
-                    run_fn = executor.run
-                    container = None
-                else:
-                    from runner import ExecutionContainer, SolutionException, ExecutionException
-                    container = ExecutionContainer(lang, '', code)
-                    run_fn = container.run
-
-                try:
-                    for t in tests:
-                        try:
-                            per_test_time_limit = t.get('time_limit', check_config.get('time_limit', 5))
-                            output = run_fn(t.get('input', ''), time_limit=per_test_time_limit).strip()
-                            expected = str(t.get('expected', '')).strip()
-                            ok = output == expected
-                            if ok:
-                                passed += 1
-                            details.append({'input': t.get('input'), 'expected': expected, 'got': output, 'ok': ok})
-                        except (SolutionException, ExecutionException) as e:
-                            details.append({'input': t.get('input'), 'error': str(e), 'ok': False})
-                finally:
-                    if container:
-                        container.cleanup()
-                result.update({'status': 'success', 'points': passed, 'max_points': max_points,
-                                'comment': f'{passed} из {max_points} тестов пройдено', 'details': details})
+                from external_tests import check_external_tests
+                result.update(check_external_tests(code, lang, check_config))
 
             elif check_type == 'gpt':
                 from methods import get_payload, parse_gpt_answer

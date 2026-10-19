@@ -35,7 +35,9 @@ class ExecutionException(Exception):
 
 
 class SolutionException(Exception):
-    pass
+    def __init__(self, message, error_type="runtime_error"):
+        super().__init__(message)
+        self.error_type = error_type
 
 
 _ISOLATED_PROBE_CHILD = r"""
@@ -670,6 +672,17 @@ class ExecutionContainer:
 
             if self.language == "cpp":
                 self._compile_cpp_harness("/code/script.cpp", "/code/program")
+            elif self.language == "python":
+                try:
+                    self._run_command(
+                        "cd /code && python3 -m py_compile script.py",
+                        "",
+                        self._harness_compile_timeout,
+                    )
+                except SolutionException as error:
+                    raise SolutionException(
+                        f"Compilation failed: {error}", "compilation_error"
+                    ) from None
         except (SolutionException, ExecutionException):
             raise
         except Exception as e:
@@ -894,7 +907,7 @@ class ExecutionContainer:
             self._stop_after_timeout()
             raise SolutionException(
                 "Compilation timed out after "
-                f"{self._harness_compile_timeout} seconds."
+                f"{self._harness_compile_timeout} seconds.", "compilation_error"
             ) from None
         except OSError as error:
             raise ExecutionException(
@@ -904,7 +917,7 @@ class ExecutionContainer:
         if overflow:
             self._stop_after_timeout()
             raise SolutionException(
-                f"Compilation output limit exceeded ({EXECUTION_CAPTURE_LIMIT} bytes)."
+                f"Compilation output limit exceeded ({EXECUTION_CAPTURE_LIMIT} bytes).", "compilation_error"
             )
 
         error_text = stderr.decode(errors="replace").strip()
@@ -916,7 +929,7 @@ class ExecutionContainer:
         if return_code != 0:
             details = error_text or stdout.decode(errors="replace").strip()
             raise SolutionException(
-                f"Compilation failed: {details or 'unknown compiler error'}"
+                f"Compilation failed: {details or 'unknown compiler error'}", "compilation_error"
             )
 
     def _stop_after_timeout(self):
@@ -960,7 +973,7 @@ class ExecutionContainer:
             if overflow:
                 self._stop_after_timeout()
                 raise SolutionException(
-                    f"Output limit exceeded ({capture_limit} bytes)."
+                    f"Output limit exceeded ({capture_limit} bytes).", "output_limit_exceeded"
                 )
             if return_code != 0:
                 exception_type = (
@@ -976,7 +989,7 @@ class ExecutionContainer:
         except subprocess.TimeoutExpired:
             self._stop_after_timeout()
             raise SolutionException(
-                f"Test failed: Execution timed out after {time_limit} seconds."
+                f"Test failed: Execution timed out after {time_limit} seconds.", "time_limit_exceeded"
             ) from None
         except OSError as error:
             raise ExecutionException(
@@ -1044,7 +1057,7 @@ class BrainfuckExecutor:
             raise SolutionException('Unmatched [')
 
         def _timeout(signum, frame):
-            raise SolutionException(f'Execution timed out after {time_limit} seconds.')
+            raise SolutionException(f'Execution timed out after {time_limit} seconds.', 'time_limit_exceeded')
 
         signal.signal(signal.SIGALRM, _timeout)
         signal.alarm(time_limit)
