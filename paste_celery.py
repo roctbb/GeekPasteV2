@@ -12,6 +12,7 @@ from similarity_candidates import similarity_candidates_query
 from github_similarity import prepare_github_source, source_similarity
 from score_policy import finalize_submission_score
 from grading_prompts import get_rubric_payload
+from external_tests import check_external_tests
 from datetime import datetime
 
 celery = Celery('app', broker=CELERY_BROKER)
@@ -359,7 +360,6 @@ def external_check_task(self, code, lang, task_text, check_type, check_config, c
         )
         try:
             if check_type == 'tests':
-                from external_tests import check_external_tests
                 result.update(check_external_tests(code, lang, check_config))
 
             elif check_type == 'gpt':
