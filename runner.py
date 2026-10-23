@@ -21,6 +21,7 @@ PROBE_OUTPUT_LIMIT = 100 * 1024
 PROBE_PAYLOAD_LIMIT = 100 * 1024
 _PROBE_PROTOCOL_LIMIT = 256 * 1024
 EXECUTION_CAPTURE_LIMIT = 100 * 1024
+CPP_PROGRAM_LIMIT = 64 * 1024 * 1024
 ISOLATED_CONTROLLER_CAPTURE_LIMIT = 256 * 1024
 ALLOWED_CPP_HARNESS_OPTIONS = frozenset({
     "-O1",
@@ -415,13 +416,20 @@ class ExecutionContainer:
         int(os.getenv("CPP_HARNESS_COMPILE_TIMEOUT", "10")),
     )
 
-    def __init__(self, language, template_path, code, isolated=False, resource_limits=None):
+    def __init__(self, language, template_path, code, isolated=False, resource_limits=None,
+                 compiled_program=None):
         try:
             self.container_id = None
             self.path = None
             self._unusable = False
             self.language = language
             self.isolated = isolated
+            self.compiled_program = compiled_program
+            if compiled_program is not None and (
+                    language != 'cpp' or not isolated or not isinstance(compiled_program, bytes)
+                    or not compiled_program.startswith(b'\x7fELF')
+                    or len(compiled_program) > CPP_PROGRAM_LIMIT):
+                raise ExecutionException('Invalid compiled C++ program.')
             self.resource_limits = resource_limits or {}
             if self.resource_limits:
                 memory = self.resource_limits.get('memory_limit')
@@ -476,6 +484,23 @@ class ExecutionContainer:
     def get_path(self):
         return os.path.join(EXECUTIONS_ROOT, self.session_id)
 
+    @classmethod
+    def compile_cpp(cls, code):
+        """Compile once, without running student code or exposing any test input."""
+        with cls('cpp', '', code, isolated=True) as compiler:
+            try:
+                status, program, stderr, overflow = _run_process_bounded(
+                    ['docker', 'exec', compiler.container_id, 'cat', '/code/program'],
+                    b'', compiler._harness_docker_timeout, CPP_PROGRAM_LIMIT,
+                )
+            except (OSError, subprocess.SubprocessError) as error:
+                raise ExecutionException('Error exporting the compiled C++ program.') from error
+            if status != 0 or overflow or not program.startswith(b'\x7fELF'):
+                raise ExecutionException('Invalid or oversized compiled C++ program.')
+            # Immutable bytes stay outside the test containers. Each test gets
+            # its own copy, including when a previous execution corrupts files.
+            return program
+
     def clear_execution_folder(self):
         if self.path:
             shutil.rmtree(self.path, ignore_errors=True)
@@ -503,7 +528,12 @@ class ExecutionContainer:
             with open(os.path.join(self.path, 'script.py'), 'w') as file:
                 file.write(self.code)
 
-        if self.language == "cpp":
+        if getattr(self, 'compiled_program', None) is not None:
+            program_path = os.path.join(self.path, 'program')
+            with open(program_path, 'wb') as file:
+                file.write(self.compiled_program)
+            os.chmod(program_path, 0o555)
+        elif self.language == "cpp":
             with open(os.path.join(self.path, 'script.cpp'), 'w') as file:
                 file.write(self.code)
 
@@ -521,6 +551,9 @@ class ExecutionContainer:
         try:
             container_image = "python:3.11" if self.language == "python" else "gcc:latest"
             run_command = ["docker", "run", "-d", "--pull", "missing"]
+            precompiled = getattr(self, 'compiled_program', None) is not None
+            if precompiled:
+                run_command.extend(['--cap-drop', 'ALL', '--security-opt', 'no-new-privileges'])
             restricted = self.language == "cpp" or getattr(self, "isolated", False)
             if not restricted:
                 run_command.extend(["-v", f"{self._pip_cache_volume}:/root/.cache/pip"])
@@ -540,6 +573,8 @@ class ExecutionContainer:
                     run_command.extend(['--memory-swap', f"{limits['memory_limit']}m"])
             if self._docker_transfer_mode == "bind":
                 volume_binding = f"{self.path}:/code"
+                if precompiled:
+                    volume_binding += ':ro'
                 run_command.extend(["-v", volume_binding])
             elif restricted:
                 run_command.extend([
@@ -578,6 +613,13 @@ class ExecutionContainer:
                     )
             elif self._docker_transfer_mode != "bind":
                 raise ExecutionException(f"Unsupported DOCKER_TRANSFER_MODE: {self._docker_transfer_mode}")
+
+            if precompiled and self._docker_transfer_mode == 'cp':
+                subprocess.run(
+                    ['docker', 'exec', container_id, 'chmod', '0555', '/code'],
+                    check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    timeout=self._harness_docker_timeout,
+                )
 
         except Exception as error:
             if container_id:
@@ -670,7 +712,7 @@ class ExecutionContainer:
                     check=True
                 )
 
-            if self.language == "cpp":
+            if self.language == "cpp" and getattr(self, 'compiled_program', None) is None:
                 self._compile_cpp_harness("/code/script.cpp", "/code/program")
             elif self.language == "python":
                 try:
@@ -704,6 +746,8 @@ class ExecutionContainer:
             raise SolutionException("Execution container stopped after a timeout.")
         if self.language == "python":
             exec_command = "cd /code && python3 script.py"
+        elif getattr(self, 'compiled_program', None) is not None:
+            exec_command = "cd /tmp && /code/program"
         else:
             exec_command = "cd /code && ./program"
 
@@ -959,11 +1003,10 @@ class ExecutionContainer:
                 "docker",
                 "exec",
                 "-i",
-                self.container_id,
-                "bash",
-                "-c",
-                exec_command,
             ]
+            if getattr(self, 'compiled_program', None) is not None:
+                command.extend(['--user', '65534:65534'])
+            command.extend([self.container_id, 'bash', '-c', exec_command])
             return_code, stdout, stderr, overflow = _run_process_bounded(
                 command,
                 input_data.encode(),
@@ -1059,8 +1102,8 @@ class BrainfuckExecutor:
         def _timeout(signum, frame):
             raise SolutionException(f'Execution timed out after {time_limit} seconds.', 'time_limit_exceeded')
 
-        signal.signal(signal.SIGALRM, _timeout)
-        signal.alarm(time_limit)
+        previous_handler = signal.signal(signal.SIGALRM, _timeout)
+        previous_timer = signal.setitimer(signal.ITIMER_REAL, time_limit)
         try:
             while ip < len(self.code):
                 c = self.code[ip]
@@ -1088,7 +1131,9 @@ class BrainfuckExecutor:
                         ip = brackets[ip]
                 ip += 1
         finally:
-            signal.alarm(0)
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, previous_handler)
+            signal.setitimer(signal.ITIMER_REAL, *previous_timer)
 
         return ''.join(output)
 

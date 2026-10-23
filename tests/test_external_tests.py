@@ -11,6 +11,7 @@ TESTS = [
     {'input': 'SECRET_INPUT', 'expected': 'SECRET_EXPECTED', 'hidden': True},
     {'input': 'PUBLIC_AFTER_SECRET', 'expected': '5'},
 ]
+PROGRAM = b'\x7fELFcompiled'
 
 
 def sandbox(output):
@@ -30,6 +31,7 @@ def sandbox(output):
 def test_error_category_and_counts_include_hidden_cases_and_later_tests(error_type, message):
     containers = [sandbox('3'), sandbox(SolutionException(message, error_type)), sandbox('5')]
     with patch('external_tests.ExecutionContainer', side_effect=containers) as factory:
+        factory.compile_cpp.return_value = PROGRAM
         result = check_external_tests('code', 'cpp', {'tests': TESTS, 'time_limit': 2})
     assert result['verdict'] == result['error_type'] == error_type
     assert result['status'] == 'success'
@@ -41,7 +43,9 @@ def test_error_category_and_counts_include_hidden_cases_and_later_tests(error_ty
     assert result['details'][1]['error_type'] == error_type
     assert result['comment'] == '2 из 3 тестов пройдено'
     assert len(factory.call_args_list) == 3
-    assert all(call.kwargs == {'isolated': True} for call in factory.call_args_list)
+    factory.compile_cpp.assert_called_once_with('code')
+    assert all(call.kwargs == {'isolated': True, 'compiled_program': PROGRAM} for call in factory.call_args_list)
+    assert all(call.args == ('cpp', '', '') for call in factory.call_args_list)
     for container in containers:
         container.cleanup.assert_called_once()
 
@@ -60,14 +64,15 @@ def test_exact_counts_for_accepted_and_wrong_answers(outputs, verdict, passed):
 
 
 def test_compilation_failure_preserves_full_denominator_and_never_retries_tests():
-    with patch('external_tests.ExecutionContainer', side_effect=SolutionException(
-            "Compilation failed: expected ';'", 'compilation_error')) as factory:
+    with patch('external_tests.ExecutionContainer') as factory:
+        factory.compile_cpp.side_effect = SolutionException("Compilation failed: expected ';'", 'compilation_error')
         result = check_external_tests('broken C++', 'cpp', {'tests': TESTS})
     assert result['verdict'] == 'compilation_error'
     assert (result['points'], result['max_points']) == (0, 3)
     assert (result['tests_passed'], result['tests_total']) == (0, 3)
     assert result['status'] == 'success'
-    factory.assert_called_once()
+    factory.compile_cpp.assert_called_once_with('broken C++')
+    factory.assert_not_called()
 
 
 def test_python_syntax_is_a_compilation_error_before_program_execution(tmp_path):
@@ -114,3 +119,51 @@ def test_fresh_sandboxes_do_not_transfer_hidden_state_to_public_output():
 def test_invalid_test_config_is_rejected(tests):
     with pytest.raises(ExecutionException):
         check_external_tests('code', 'python', {'tests': tests})
+
+
+def test_cpp_compiles_once_even_for_many_tests():
+    with patch('external_tests.ExecutionContainer', side_effect=lambda *args, **kwargs: sandbox('3')) as factory:
+        factory.compile_cpp.return_value = PROGRAM
+        result = check_external_tests('C++ source', 'cpp', {'tests': [TESTS[0]] * 52})
+    assert result['tests_passed'] == result['tests_total'] == 52
+    factory.compile_cpp.assert_called_once_with('C++ source')
+    assert factory.call_count == 52
+
+
+def test_cpp_export_failure_is_technical_without_starting_tests():
+    with patch('external_tests.ExecutionContainer') as factory:
+        factory.compile_cpp.side_effect = ExecutionException('Export failed')
+        result = check_external_tests('code', 'cpp', {'tests': TESTS})
+    assert result['verdict'] == 'internal_error'
+    assert result['tests_total'] == 3
+    factory.assert_not_called()
+
+
+@pytest.mark.parametrize('config, test_limits, expected', [
+    ({'time_limit_ms': 3000}, [{}, {'time_limit': 0.2}, {'time_limit_ms': 150}], [3, 0.2, 0.15]),
+    ({'time_limit': 2}, [{}, {'time_limit_ms': 50}, {'time_limit': 4}], [2, 0.05, 4]),
+    ({'time_limit': 5, 'time_limit_ms': 500}, [{}, {}, {}], [0.5, 0.5, 0.5]),
+])
+def test_time_limits_support_milliseconds_and_per_test_overrides(config, test_limits, expected):
+    containers = [sandbox('3') for _ in TESTS]
+    tests = [{**test, **limits} for test, limits in zip(TESTS, test_limits)]
+    with patch('external_tests.ExecutionContainer', side_effect=containers):
+        check_external_tests('code', 'python', {**config, 'tests': tests})
+    assert [container.run.call_args.kwargs['time_limit'] for container in containers] == expected
+
+
+@pytest.mark.parametrize('value', [0, -1, True, None, '3000', float('nan'), float('inf'), 10 ** 1000])
+def test_invalid_time_limit_is_rejected_before_compilation(value):
+    with patch('external_tests.ExecutionContainer') as factory, pytest.raises(ExecutionException):
+        check_external_tests('code', 'cpp', {'tests': TESTS, 'time_limit_ms': value})
+    factory.compile_cpp.assert_not_called()
+
+
+def test_brainfuck_supports_subsecond_limits_and_restores_alarm_handler():
+    import signal
+    from runner import BrainfuckExecutor
+    previous = signal.getsignal(signal.SIGALRM)
+    with pytest.raises(SolutionException) as caught:
+        BrainfuckExecutor('+[]').run(time_limit=0.02)
+    assert caught.value.error_type == 'time_limit_exceeded'
+    assert signal.getsignal(signal.SIGALRM) is previous

@@ -118,7 +118,7 @@ services:
       FLASK_APP: paste_server.py
       ZIP_ARCHIVES_DIR: /data/zip_archives
       DOCKER_TRANSFER_MODE: cp
-    command: ["celery", "-A", "paste_celery.celery", "worker", "--loglevel=info", "--queues", "paste_queue"]
+    command: ["celery", "-A", "paste_celery.celery", "worker", "--loglevel=info", "--queues", "paste_queue", "--concurrency", "${CELERY_CHECK_CONCURRENCY:-2}"]
     depends_on:
       postgres:
         condition: service_healthy

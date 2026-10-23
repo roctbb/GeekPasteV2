@@ -15,13 +15,16 @@ class ApiGradingTests(unittest.TestCase):
             error = SolutionException('PRIVATE_DIAGNOSTIC', error_type)
             container = Mock()
             container.run.side_effect = error
-            factory_options = {'side_effect': error} if error_type == 'compilation_error' else {'return_value': container}
             with self.subTest(error_type=error_type), \
-                 patch('external_tests.ExecutionContainer', **factory_options), \
+                 patch('external_tests.ExecutionContainer', return_value=container) as factory, \
                  patch('paste_celery.requests.post', return_value=Mock(status_code=200)) as post, \
                  patch.object(paste_celery.external_check_task, 'retry') as retry, \
                  patch('paste_celery._make_callback_service_token', return_value='test'), \
                  patch('paste_celery._push_system_check_event'):
+                if error_type == 'compilation_error':
+                    factory.compile_cpp.side_effect = error
+                else:
+                    factory.compile_cpp.return_value = b'\x7fELFcompiled'
                 paste_celery.external_check_task.run(
                     code='broken', lang='cpp', task_text='', check_type='tests',
                     check_config={'tests': [{'input': str(i), 'expected': 'answer', 'hidden': i > 0} for i in range(3)]},
