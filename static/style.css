@@ -16,13 +16,27 @@
     --nav-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='351' height='292.5' viewBox='0 0 1080 900'%3E%3Cg fill-opacity='0.12'%3E%3Cpolygon fill='%23444' points='90 150 0 300 180 300'/%3E%3Cpolygon points='90 150 180 0 0 0'/%3E%3Cpolygon fill='%23AAA' points='270 150 360 0 180 0'/%3E%3Cpolygon fill='%23DDD' points='450 150 360 300 540 300'/%3E%3Cpolygon fill='%23999' points='450 150 540 0 360 0'/%3E%3Cpolygon points='630 150 540 300 720 300'/%3E%3Cpolygon fill='%23DDD' points='630 150 720 0 540 0'/%3E%3Cpolygon fill='%23444' points='810 150 720 300 900 300'/%3E%3Cpolygon fill='%23FFF' points='810 150 900 0 720 0'/%3E%3Cpolygon fill='%23DDD' points='990 150 900 300 1080 300'/%3E%3Cpolygon fill='%23444' points='990 150 1080 0 900 0'/%3E%3Cpolygon fill='%23DDD' points='90 450 0 600 180 600'/%3E%3Cpolygon points='90 450 180 300 0 300'/%3E%3Cpolygon fill='%23666' points='270 450 180 600 360 600'/%3E%3Cpolygon fill='%23AAA' points='270 450 360 300 180 300'/%3E%3Cpolygon fill='%23DDD' points='450 450 360 600 540 600'/%3E%3Cpolygon fill='%23999' points='450 450 540 300 360 300'/%3E%3Cpolygon fill='%23999' points='630 450 540 600 720 600'/%3E%3Cpolygon fill='%23FFF' points='630 450 720 300 540 300'/%3E%3Cpolygon points='810 450 720 600 900 600'/%3E%3Cpolygon fill='%23DDD' points='810 450 900 300 720 300'/%3E%3Cpolygon fill='%23AAA' points='990 450 900 600 1080 600'/%3E%3Cpolygon fill='%23444' points='990 450 1080 300 900 300'/%3E%3Cpolygon fill='%23222' points='90 750 0 900 180 900'/%3E%3Cpolygon points='270 750 180 900 360 900'/%3E%3Cpolygon fill='%23DDD' points='270 750 360 600 180 600'/%3E%3Cpolygon points='450 750 540 600 360 600'/%3E%3Cpolygon points='630 750 540 900 720 900'/%3E%3Cpolygon fill='%23444' points='630 750 720 600 540 600'/%3E%3Cpolygon fill='%23AAA' points='810 750 720 900 900 900'/%3E%3Cpolygon fill='%23666' points='810 750 900 600 720 600'/%3E%3Cpolygon fill='%23999' points='990 750 900 900 1080 900'/%3E%3Cpolygon fill='%23999' points='180 0 90 150 270 150'/%3E%3Cpolygon fill='%23444' points='360 0 270 150 450 150'/%3E%3Cpolygon fill='%23FFF' points='540 0 450 150 630 150'/%3E%3Cpolygon points='900 0 810 150 990 150'/%3E%3Cpolygon fill='%23222' points='0 300 -90 450 90 450'/%3E%3Cpolygon fill='%23FFF' points='0 300 90 150 -90 150'/%3E%3Cpolygon fill='%23FFF' points='180 300 90 450 270 450'/%3E%3Cpolygon fill='%23666' points='180 300 270 150 90 150'/%3E%3Cpolygon fill='%23222' points='360 300 270 450 450 450'/%3E%3Cpolygon fill='%23FFF' points='360 300 450 150 270 150'/%3E%3Cpolygon fill='%23444' points='540 300 450 450 630 450'/%3E%3Cpolygon fill='%23222' points='540 300 630 150 450 150'/%3E%3Cpolygon fill='%23AAA' points='720 300 630 450 810 450'/%3E%3Cpolygon fill='%23666' points='720 300 810 150 630 150'/%3E%3Cpolygon fill='%23FFF' points='900 300 810 450 990 450'/%3E%3Cpolygon fill='%23999' points='900 300 990 150 810 150'/%3E%3Cpolygon points='0 600 -90 750 90 750'/%3E%3Cpolygon fill='%23666' points='0 600 90 450 -90 450'/%3E%3Cpolygon fill='%23AAA' points='180 600 90 750 270 750'/%3E%3Cpolygon fill='%23444' points='180 600 270 450 90 450'/%3E%3Cpolygon fill='%23444' points='360 600 270 750 450 750'/%3E%3Cpolygon fill='%23999' points='360 600 450 450 270 450'/%3E%3Cpolygon fill='%23666' points='540 600 630 450 450 450'/%3E%3Cpolygon fill='%23222' points='720 600 630 750 810 750'/%3E%3Cpolygon fill='%23FFF' points='900 600 810 750 990 750'/%3E%3Cpolygon fill='%23222' points='900 600 990 450 810 450'/%3E%3Cpolygon fill='%23DDD' points='0 900 90 750 -90 750'/%3E%3Cpolygon fill='%23444' points='180 900 270 750 90 750'/%3E%3Cpolygon fill='%23FFF' points='360 900 450 750 270 750'/%3E%3Cpolygon fill='%23AAA' points='540 900 630 750 450 750'/%3E%3Cpolygon fill='%23FFF' points='720 900 810 750 630 750'/%3E%3Cpolygon fill='%23222' points='900 900 990 750 810 750'/%3E%3Cpolygon fill='%23222' points='1080 300 990 450 1170 450'/%3E%3Cpolygon fill='%23FFF' points='1080 300 1170 150 990 150'/%3E%3Cpolygon points='1080 600 990 750 1170 750'/%3E%3Cpolygon fill='%23666' points='1080 600 1170 450 990 450'/%3E%3Cpolygon fill='%23DDD' points='1080 900 1170 750 990 750'/%3E%3C/g%3E%3C/svg%3E");
 }
 
+html {
+    min-height: 100%;
+    background: var(--bg-main);
+    scrollbar-gutter: stable;
+}
+
 body.app-body {
     font-family: "Inter", "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
     color: var(--text-main);
     font-size: 16px;
     line-height: 1.58;
     background: var(--bg-main);
+    margin: 0;
+    /* Balance the actual scrollbar width, including custom browser scrollbars. */
+    padding-left: calc(100vw - 100%);
     min-height: 100vh;
+    min-height: 100dvh;
+}
+
+.main-container {
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -994,9 +1008,160 @@ label.text-muted,
     font-weight: 600;
 }
 .io-test-status-passed { background: #dcfce7; color: #166534; }
-.io-test-status-failed { background: #fee2e2; color: #991b1b; }
-.io-test-status-error { background: #fee2e2; color: #991b1b; }
+.io-test-status-failed,
+.io-test-status-error,
+.io-test-status-time_limit_exceeded,
+.io-test-status-runtime_error,
+.io-test-status-output_limit_exceeded,
+.io-test-status-compilation_error { background: #fee2e2; color: #991b1b; }
 .io-test-status-icon { font-size: 1rem; line-height: 1; }
+
+.submission-status-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    padding: 0.85rem 1rem;
+}
+.submission-score { font-weight: 600; white-space: nowrap; }
+.submission-progress { padding: 1.25rem 1rem; }
+.submission-progress[hidden], #submission-tests-progress[hidden] { display: none; }
+.submission-progress-steps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem 1.5rem;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem;
+    color: #64748b;
+    font-size: 0.85rem;
+}
+.submission-progress-steps li { display: flex; align-items: center; gap: 0.4rem; }
+.submission-step-dot { width: 0.65rem; height: 0.65rem; border: 2px solid #cbd5e1; border-radius: 50%; }
+.submission-progress-steps .is-complete { color: #166534; }
+.is-complete .submission-step-dot { background: #16a34a; border-color: #16a34a; }
+.submission-progress-steps .is-current { color: #4338ca; font-weight: 600; }
+.is-current .submission-step-dot { background: #6366f1; border-color: #6366f1; box-shadow: 0 0 0 3px #e0e7ff; }
+#submission-tests-progress { display: block; width: 100%; height: 0.5rem; margin-top: 0.85rem; accent-color: #6366f1; }
+.submission-source-card { display: block; }
+.submission-source-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    list-style: none;
+}
+.submission-source-heading::-webkit-details-marker { display: none; }
+.submission-source-heading:focus-visible { outline: 3px solid #6366f1; outline-offset: -3px; border-radius: inherit; }
+.submission-source-language { color: #64748b; font-size: 0.8rem; font-weight: 400; margin-left: 0.5rem; }
+.submission-source-toggle { display: flex; align-items: center; gap: 0.65rem; color: #64748b; font-size: 0.8rem; font-weight: 400; }
+.source-hide, .submission-source-card[open] .source-show { display: none; }
+.submission-source-card[open] .source-hide { display: inline; }
+.submission-source-card[open] .io-test-chevron { transform: rotate(225deg) translate(-2px, -2px); }
+.submission-source-card[open] .submission-source-heading { border-bottom: 1px solid #e2e8f0; }
+.io-test-report { display: block; }
+.io-test-report-heading {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.65rem 1rem;
+    padding: 1rem;
+    cursor: pointer;
+    list-style: none;
+    border-radius: inherit;
+}
+.io-test-report-heading::-webkit-details-marker { display: none; }
+.io-test-report-heading:hover { background: #f8fafc; }
+.io-test-report-heading:focus-visible,
+.io-test-filter:focus-visible {
+    outline: 3px solid #6366f1;
+    outline-offset: -3px;
+}
+.io-test-report-title { font-size: 1rem; font-weight: 600; }
+.io-test-report-counts { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.io-test-report-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-left: auto;
+    color: #64748b;
+    font-size: 0.8rem;
+}
+.io-test-chevron {
+    width: 0.5rem;
+    height: 0.5rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg) translateY(-2px);
+}
+.io-test-hide, .io-test-report[open] .io-test-show { display: none; }
+.io-test-report[open] .io-test-hide { display: inline; }
+.io-test-report[open] .io-test-chevron { transform: rotate(225deg) translate(-2px, -2px); }
+.io-test-report[open] > summary { border-bottom: 1px solid #e2e8f0; border-radius: 0; }
+.io-test-report-body { padding: 1rem; }
+.io-test-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.85rem;
+}
+.io-test-filters[hidden], .io-test-results tr[hidden] { display: none; }
+.io-test-filter {
+    border: 1px solid #dce3ed;
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    background: #fff;
+    color: #475569;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.io-test-filter:hover { background: #f1f5f9; }
+.io-test-filter[aria-pressed="true"] { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
+.io-test-private-note { color: #64748b; font-size: 0.8rem; margin-bottom: 0.85rem; }
+.io-test-private-note i { margin-right: 0.35rem; }
+.io-test-results-private { min-width: 0; }
+.io-test-results-private > thead > tr > th:nth-child(2) { width: auto; }
+.io-test-results-private > tbody > tr > * { padding: 0.5rem 0.75rem; vertical-align: middle; }
+@media (max-width: 575.98px) {
+    .io-test-report-heading { display: grid; grid-template-columns: 1fr auto; padding: 0.85rem; }
+    .io-test-report-counts { grid-row: 2; grid-column: 1 / -1; }
+    .io-test-report-toggle { grid-column: 2; grid-row: 1; }
+    .io-test-report .io-test-report-toggle .io-test-show,
+    .io-test-report .io-test-report-toggle .io-test-hide { display: none; }
+    .io-test-report-body { padding: 0.75rem; }
+    .io-test-results:not(.io-test-results-private) { min-width: 0; }
+    .io-test-results:not(.io-test-results-private) > thead {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+    }
+    .io-test-results:not(.io-test-results-private) > tbody { display: block; }
+    .io-test-results:not(.io-test-results-private) > tbody > tr:not([hidden]) {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.65rem;
+        padding: 0.85rem;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .io-test-results:not(.io-test-results-private) > tbody > tr:last-child { border-bottom: 0; }
+    .io-test-results:not(.io-test-results-private) > tbody > tr > * { padding: 0; border: 0; min-width: 0; }
+    .io-test-results:not(.io-test-results-private) .io-test-number::before { content: 'Тест '; }
+    .io-test-results:not(.io-test-results-private) td:nth-child(2) { text-align: right; }
+    .io-test-results td[data-label], .io-test-results .io-test-hidden-data { grid-column: 1 / -1; }
+    .io-test-results td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        color: #64748b;
+        font-size: 0.75rem;
+        margin-bottom: 0.3rem;
+    }
+}
 
 .nav-tabs {
     border-bottom: 1px solid var(--border-soft);

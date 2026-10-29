@@ -1,0 +1,2 @@
+<p class="io-test-summary fw-semibold mb-2">Пройдено тестов: {{ report.passed }} из {{ report.total }}.</p>
+{% for note in report.notes %}<p class="small mb-2">{{ note }}</p>{% endfor %}

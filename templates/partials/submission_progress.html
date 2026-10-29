@@ -1,0 +1,19 @@
+{% set progress = submission_status.get('check_progress', {'phase': 'unknown'}) %}
+{% set phases = [('queued', 'В очереди'), ('preparing', 'Подготовка')] + ([('compiling', 'Компиляция')] if code.lang == 'cpp' else []) + [('testing', 'Проверка'), ('finished', 'Готово')] %}
+{% set phase_ids = phases | map(attribute=0) | list %}
+{% set current_index = phase_ids.index(progress.phase) if progress.phase in phase_ids else -1 %}
+<section id="submission-progress" class="submission-progress" aria-label="Ход проверки" {% if initial_state != 'not checked' %}hidden{% endif %}>
+    <ol class="submission-progress-steps">
+        {% for phase, title in phases %}
+        <li data-check-phase="{{ phase }}" class="{{ 'is-current' if loop.index0 == current_index else ('is-complete' if loop.index0 < current_index else '') }}" {% if loop.index0 == current_index %}aria-current="step"{% endif %}><span class="submission-step-dot" aria-hidden="true"></span>{{ title }}</li>
+        {% endfor %}
+    </ol>
+    <p id="submission-progress-message" class="mb-0" role="status" aria-live="polite">
+        {% if progress.phase == 'queued' %}Решение ожидает своей очереди.
+        {% elif progress.phase == 'preparing' %}Подготавливаем среду для запуска решения.
+        {% elif progress.phase == 'compiling' %}Компилируем программу.
+        {% elif progress.phase == 'testing' %}{% if progress.total %}Завершено тестов: {{ progress.completed }} из {{ progress.total }}.{% else %}Выполняем тесты.{% endif %}
+        {% else %}Ожидаем обновления статуса. Результат появится здесь автоматически.{% endif %}
+    </p>
+    <progress id="submission-tests-progress" aria-label="Завершённые тесты" {% if progress.phase != 'testing' or not progress.total %}hidden{% endif %} value="{{ progress.completed | default(0) }}" max="{{ progress.total | default(1) }}"></progress>
+</section>

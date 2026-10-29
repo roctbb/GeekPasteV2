@@ -417,7 +417,7 @@ class ExecutionContainer:
     )
 
     def __init__(self, language, template_path, code, isolated=False, resource_limits=None,
-                 compiled_program=None):
+                 compiled_program=None, on_compile=None):
         try:
             self.container_id = None
             self.path = None
@@ -425,6 +425,7 @@ class ExecutionContainer:
             self.language = language
             self.isolated = isolated
             self.compiled_program = compiled_program
+            self.on_compile = on_compile
             if compiled_program is not None and (
                     language != 'cpp' or not isolated or not isinstance(compiled_program, bytes)
                     or not compiled_program.startswith(b'\x7fELF')
@@ -713,6 +714,8 @@ class ExecutionContainer:
                 )
 
             if self.language == "cpp" and getattr(self, 'compiled_program', None) is None:
+                if getattr(self, 'on_compile', None):
+                    self.on_compile()
                 self._compile_cpp_harness("/code/script.cpp", "/code/program")
             elif self.language == "python":
                 try:
@@ -1139,13 +1142,15 @@ class BrainfuckExecutor:
 
 
 class TestExecutor:
-    def __init__(self, code):
+    def __init__(self, code, progress=None):
         self.original_path = os.getcwd()
         self.code = code
         self.task = code.task
         self.container = None
+        self.progress = progress
         template_path = os.path.join(ENVIRONMENTS_ROOT, f"task_{code.task_id}")
-        self.container = ExecutionContainer(code.lang, template_path, code.code)
+        options = {'on_compile': lambda: progress('compiling')} if progress else {}
+        self.container = ExecutionContainer(code.lang, template_path, code.code, **options)
 
     def __enter__(self):
         return self
@@ -1189,6 +1194,8 @@ class TestExecutor:
 
         try:
             os.chdir(self.container.path)
+            if self.progress:
+                self.progress('testing')
             return perform_tests(TestRunner(self.container), self.code.code)
         except SolutionException as e:
             raise e

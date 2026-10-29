@@ -13,6 +13,7 @@ from github_similarity import prepare_github_source, source_similarity
 from score_policy import finalize_submission_score
 from grading_prompts import get_rubric_payload
 from external_tests import check_external_tests
+from submission_progress import start_submission_progress, clear_submission_progress
 from datetime import datetime
 
 celery = Celery('app', broker=CELERY_BROKER)
@@ -52,13 +53,13 @@ def _submission_room(code_id):
     return f"submission:{code_id}"
 
 
-def _emit_submission_status(code):
+def _emit_submission_status(code, progress=None):
     if not code:
         return
     try:
         socketio.emit(
             'submission_status_updated',
-            build_submission_status_payload(code),
+            build_submission_status_payload(code, progress=progress),
             room=_submission_room(code.id),
         )
     except Exception as e:
@@ -225,7 +226,10 @@ def check_task(self, id):
             return
 
         if task.check_type == 'tests':
-            check_task_with_tests(task, code)
+            progress = start_submission_progress(
+                code.id, lambda value: _emit_submission_status(code, progress=value)
+            )
+            check_task_with_tests(task, code, progress=progress)
 
         if task.check_type == 'gpt':
             try:
@@ -248,6 +252,7 @@ def _publish_checked_submission(code):
     finalize_submission_score(code)
     code.checked_at = datetime.now()
     db.session.commit()
+    clear_submission_progress(code.id)
     _emit_submission_status(code)
     _push_system_check_event('code_check', {
         'status': code.check_state or '',

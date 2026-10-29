@@ -12,7 +12,8 @@ from config import *
 import requests
 import jwt
 from comment_markdown import render_comment_markdown
-from io_test_report import render_io_test_report
+from io_test_report import render_io_test_report_parts
+from submission_progress import read_submission_progress
 from runner import TestExecutor, SolutionException, ExecutionException
 from io_tests import IOTestExecutor
 from submission_archive import extract_data_from_zipfile, rebuild_zip
@@ -223,7 +224,7 @@ def add_view(code):
     db.session.commit()
 
 
-def build_submission_status_payload(code):
+def build_submission_status_payload(code, progress=None):
     if not code:
         return {}
 
@@ -235,6 +236,7 @@ def build_submission_status_payload(code):
         'code_id': code.id,
         'check_state': check_state,
         'check_points': code.check_points or 0,
+        'max_points': getattr(code.task, 'points', None) if code.task else None,
         'check_comments': check_comments,
         'check_type': check_type,
         'checked_at': code.checked_at.isoformat() if code.checked_at else None,
@@ -242,12 +244,18 @@ def build_submission_status_payload(code):
         'is_success': check_state == 'done',
     }
 
+    if check_type == 'tests':
+        payload['check_progress'] = (
+            (progress if progress is not None else read_submission_progress(code.id))
+            if check_state == 'not checked' else {'phase': 'finished'}
+        )
+
     if check_type and check_type != 'tests':
         payload['check_comments_html'] = str(render_comment_markdown(check_comments))
     elif check_type == 'tests' and getattr(code.task, 'test_mode', None) == 'io':
-        report_html = render_io_test_report(check_comments)
-        if report_html is not None:
-            payload['check_comments_html'] = report_html
+        report_parts = render_io_test_report_parts(check_comments)
+        if report_parts is not None:
+            payload.update(report_parts)
 
     return payload
 
@@ -405,10 +413,11 @@ def send_similarity_summary_notification(main_code, similarities):
 
 
 @minimum_submission_score
-def check_task_with_tests(task, code):
+def check_task_with_tests(task, code, progress=None):
     try:
         executor_class = IOTestExecutor if getattr(task, 'test_mode', None) == 'io' else TestExecutor
-        with executor_class(code) as executor:
+        options = {'progress': progress} if progress is not None else {}
+        with executor_class(code, **options) as executor:
             points, comments = executor.perform()
             if points == 0 and normalize_test_points(task.id, 0) > 0:
                 comments = attempt_comment(comments)

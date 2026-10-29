@@ -23,6 +23,7 @@ from io_tests import (draft_test_config_from_form, validate_form_draft,
                       SUPPORTED_LANGUAGES, MAX_REQUEST_BYTES, DEFAULT_OUTPUT_LIMIT, COMPARISON_LABELS)
 from io_test_import import IMPORTABLE_TASK_IDS, RETIRED_TASK_IDS, import_environment_tests
 from io_test_fields import prepare_fields, resolve_field
+from submission_progress import clear_submission_progress
 
 SOCKET_SUBMISSION_ROOM_PREFIX = "submission:"
 SYSTEM_RECENT_CHECKS_KEY = "system:recent_checks"
@@ -523,6 +524,16 @@ def handle_socket_connect(auth=None):
     emit('submission_status_updated', build_submission_status_payload(code))
 
 
+@app.route('/submission/status', methods=['GET'])
+def submission_status_api():
+    code = get_code((request.args.get('id') or '').strip())
+    if not code:
+        return jsonify(error='not_found'), 404, {'Cache-Control': 'no-store'}
+    if not _can_access_code_realtime(code):
+        return jsonify(error='forbidden'), 403, {'Cache-Control': 'no-store'}
+    return jsonify(build_submission_status_payload(code)), 200, {'Cache-Control': 'no-store'}
+
+
 def _submission_to_diff_text(code):
     if not code:
         return ''
@@ -723,11 +734,13 @@ def _queue_mass_recheck(task_id):
     db.session.commit()
 
     for code_id in code_ids:
+        clear_submission_progress(code_id)
         socketio.emit('submission_status_updated', {
             'code_id': code_id,
             'check_state': 'not checked',
             'check_points': 0,
             'check_comments': '',
+            'check_progress': {'phase': 'queued'},
             'is_terminal': False,
             'is_success': False,
         }, room=_submission_room(code_id))
@@ -1331,6 +1344,7 @@ def recheck_task():
     code.check_comments = None
     code.checked_at = None
     db.session.commit()
+    clear_submission_progress(code.id)
     socketio.emit('submission_status_updated', build_submission_status_payload(code), room=_submission_room(code.id))
 
     # Запускаем проверку заново

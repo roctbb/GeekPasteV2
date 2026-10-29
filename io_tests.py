@@ -16,6 +16,12 @@ MAX_REQUEST_BYTES = 2 * MAX_TOTAL_BYTES + 2 * 1024 * 1024
 DEFAULT_OUTPUT_LIMIT = 100 * 1024
 MAX_OUTPUT_LIMIT = 8 * 1024 * 1024
 SUPPORTED_LANGUAGES = {'python', 'cpp'}
+ERROR_STATUSES = {
+    'time_limit_exceeded': 'превышено время',
+    'runtime_error': 'ошибка выполнения',
+    'output_limit_exceeded': 'превышен объём вывода',
+    'compilation_error': 'ошибка компиляции',
+}
 COMPARISON_LABELS = {
     'tokens': 'По словам и числам — без учёта разделяющих пробелов',
     'exact': 'Точное — с учётом пробелов и строк',
@@ -346,9 +352,14 @@ def _report_text(label, text):
 
 
 class IOTestExecutor:
-    def __init__(self, code):
+    def __init__(self, code, progress=None):
         self.code = code
         self.all_passed = False
+        self.progress = progress
+
+    def _progress(self, phase, completed, total):
+        if self.progress:
+            self.progress(phase, completed=completed, total=total)
 
     def __enter__(self):
         return self
@@ -368,6 +379,8 @@ class IOTestExecutor:
             raise SolutionException('Тесты ввода/вывода поддерживают Python и C++.')
 
         results, comments = [], []
+        total = len(config['tests'])
+        self._progress('preparing', 0, total)
         limits = {}
         if (config['memory_limit'], config['process_limit'], config['disable_swap']) != (512, 128, False):
             limits['resource_limits'] = {
@@ -379,17 +392,23 @@ class IOTestExecutor:
             try:
                 # New sandbox per case: no private files or background processes
                 # survive into a later public test. Expected outputs stay outside.
-                with ExecutionContainer(self.code.lang, None, self.code.code, isolated=True, **limits) as container:
+                progress_options = {}
+                if self.progress and number == 1:
+                    progress_options['on_compile'] = lambda: self._progress('compiling', 0, total)
+                with ExecutionContainer(self.code.lang, None, self.code.code, isolated=True, **limits, **progress_options) as container:
+                    self._progress('testing', number - 1, total)
                     actual = container.run(test['input'],
                                            time_limit=test.get('time_limit', config['time_limit']),
                                            capture_limit=test.get('output_limit', config['output_limit']))
             except SolutionException as error:
                 results.append(False)
-                comments.append(f'{label}: ошибка выполнения или превышение лимита.')
+                status = ERROR_STATUSES.get(error.error_type, 'ошибка проверки')
+                comments.append(f'{label}: {status}.')
                 if test['is_public']:
                     comments.extend([_report_text('Ввод', test['input']),
                                      _report_text('Ожидаемый вывод', test['output'])])
                     comments.append(_report_text('Ошибка', str(error)))
+                self._progress('testing', number, total)
                 continue
             except ExecutionException:
                 raise ExecutionException('Не удалось запустить проверку ввода/вывода. Повторите позже.') from None
@@ -407,6 +426,7 @@ class IOTestExecutor:
                 comments.extend([_report_text('Ввод', test['input']),
                                  _report_text('Ожидаемый вывод', test['output']),
                                  _report_text('Вывод программы', actual)])
+            self._progress('testing', number, total)
         self.all_passed = all(results)
         points, group_comments = score_results(config, results, task.points)
         return points, f'Пройдено тестов: {sum(results)} из {len(results)}.\n\n' + '\n\n'.join(group_comments + comments)

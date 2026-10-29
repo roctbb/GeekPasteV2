@@ -1,21 +1,35 @@
 {% from 'partials/io_test_table.html' import test_value %}
-<section class="io-test-report" aria-label="Результаты тестов">
-    <p class="fw-semibold mb-2">Пройдено тестов: {{ report.passed }} из {{ report.total }}.</p>
-    {% for note in report.notes %}<p class="small mb-2">{{ note }}</p>{% endfor %}
+<details class="io-test-report card flat-card shadow-soft" {% if report.passed < report.total %}open{% endif %}>
+    <summary class="io-test-report-heading">
+        <span class="io-test-report-title">Результаты тестов</span>
+        <span class="io-test-report-counts">
+            <span class="io-test-status io-test-status-passed"><span aria-hidden="true">✓</span> {{ report.passed }} из {{ report.total }} пройдено</span>
+            {% if report.passed < report.total %}<span class="io-test-status io-test-status-failed"><span aria-hidden="true">✕</span> {{ report.total - report.passed }} не пройдено</span>{% endif %}
+        </span>
+        <span class="io-test-report-toggle" aria-hidden="true"><span class="io-test-show">Показать тесты</span><span class="io-test-hide">Скрыть тесты</span><span class="io-test-chevron"></span></span>
+    </summary>
+    <div class="io-test-report-body">
+    {% if report.passed < report.total %}
+        <div class="io-test-filters" role="group" aria-label="Какие тесты показать" hidden>
+            <button type="button" class="io-test-filter" data-test-filter="failed" aria-pressed="true">Не пройдены ({{ report.total - report.passed }})</button>
+            <button type="button" class="io-test-filter" data-test-filter="all" aria-pressed="false">Все ({{ report.total }})</button>
+        </div>
+    {% endif %}
+    {% if report.has_private %}<p class="io-test-private-note"><i class="fas fa-lock" aria-hidden="true"></i> Данные приватных тестов скрыты. Доступны только результаты.</p>{% endif %}
     <div class="io-test-table-wrap" tabindex="0" role="region" aria-label="Таблица результатов тестов">
-        <table class="table io-test-table io-test-results mb-0">
-            <thead><tr><th scope="col">Тест</th><th scope="col">Результат</th><th scope="col">Ввод</th><th scope="col">Ожидаемый вывод</th><th scope="col">Вывод программы</th></tr></thead>
+        <table class="table io-test-table io-test-results {% if not report.has_public %}io-test-results-private{% endif %} mb-0">
+            <thead><tr><th scope="col">Тест</th><th scope="col">Результат</th>{% if report.has_public %}<th scope="col">Ввод</th><th scope="col">Ожидаемый вывод</th><th scope="col">Вывод программы</th>{% endif %}</tr></thead>
             <tbody>
             {% for row in report.rows %}
-                <tr>
-                    <th scope="row" class="io-test-number">{{ row.number }}{% if not row.public %}<span class="io-test-visibility">Приватный</span>{% endif %}</th>
+                <tr data-test-status="{{ row.status }}">
+                    <th scope="row" class="io-test-number">{{ row.number }}{% if report.has_public and not row.public %}<span class="io-test-visibility">Приватный</span>{% endif %}</th>
                     <td><span class="io-test-status io-test-status-{{ row.status }}"><span class="io-test-status-icon" aria-hidden="true">{{ '✓' if row.status == 'passed' else '✕' }}</span> {{ row.status_label }}</span></td>
                     {% if row.public %}
-                        <td>{{ test_value(row.input) }}</td>
-                        <td>{{ test_value(row.expected) }}</td>
-                        <td>{% if row.error is not none %}<span class="small text-danger">Ошибка выполнения</span>{{ test_value(row.error) }}{% else %}{{ test_value(row.actual) }}{% endif %}</td>
-                    {% else %}
-                        <td colspan="3" class="text-muted small">Данные приватного теста скрыты.</td>
+                        <td data-label="Ввод">{{ test_value(row.input) }}</td>
+                        <td data-label="Ожидаемый вывод">{{ test_value(row.expected) }}</td>
+                        <td data-label="Вывод программы">{% if row.error is not none %}{{ test_value(row.error_detail) }}{% else %}{{ test_value(row.actual) }}{% endif %}</td>
+                    {% elif report.has_public %}
+                        <td colspan="3" class="text-muted small io-test-hidden-data">Данные скрыты</td>
                     {% endif %}
                 </tr>
             {% endfor %}
@@ -23,4 +37,5 @@
         </table>
     </div>
     {% if report.missing_data %}<p class="small text-muted mt-2 mb-0">В старых отчётах данные успешных тестов могут отсутствовать.</p>{% endif %}
-</section>
+    </div>
+</details>
