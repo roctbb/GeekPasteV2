@@ -18,3 +18,4 @@ PySocks
 redis
 Pillow
 cryptography
+defusedxml>=0.7.1

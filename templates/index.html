@@ -31,6 +31,13 @@
                             <label for="file" class="text-muted mb-2">Архив с кодом</label>
                             <input class="form-control" type="file" name="file" accept=".zip" required>
                         </div>
+                    {% elif prefered_lang == 'xlsx' %}
+                        <input type="hidden" name="lang" value="xlsx"/>
+                        <div class="form-group me-2">
+                            <label for="file" class="text-muted mb-2">Отчёт Excel</label>
+                            <input class="form-control" id="file" type="file" name="file" accept=".xlsx" required>
+                            <div class="small text-muted mt-1">Прикрепите книгу Excel с таблицами и диаграммами.</div>
+                        </div>
                     {% elif task and prefered_lang == 'image' %}
                         <input type="hidden" name="lang" value="image"/>
                         <div class="form-group me-2">

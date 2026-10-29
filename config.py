@@ -10,7 +10,7 @@ def env_bool(name, default=False):
     return raw.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 LANGS = ['cpp', 'python', 'java', 'cs', 'html', 'css', 'js', 'json', 'xml', 'swift', 'php', 'sql']
-SPECIAL_SUBMISSION_LANGS = ['ipynb', 'zip', 'github', 'image']
+SPECIAL_SUBMISSION_LANGS = ['ipynb', 'zip', 'github', 'image', 'xlsx']
 
 # Файлы и папки, которые не несут полезного кода ученика и только шумят
 # в просмотре, сравнении решений и GPT-проверке архивов.
@@ -81,6 +81,7 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 OPENAI_RESPONSES_URL = os.getenv('OPENAI_RESPONSES_URL', 'https://api.openai.com/v1/responses')
 OPENAI_PROXY = os.getenv('OPENAI_PROXY', '')
 MAX_IMAGE_SUBMISSION_BYTES = max(1, int(os.getenv('MAX_IMAGE_SUBMISSION_BYTES', 10 * 1024 * 1024)))
+MAX_XLSX_SUBMISSION_BYTES = max(1, int(os.getenv('MAX_XLSX_SUBMISSION_BYTES', 5 * 1024 * 1024)))
 
 # GPT Rate Limiting
 DEFAULT_GPT_RATE_LIMIT = int(os.getenv('DEFAULT_GPT_RATE_LIMIT', 3))  # посылок в час

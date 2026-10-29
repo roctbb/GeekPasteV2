@@ -9,7 +9,11 @@
 {% endif %}
         <div class="code-toolbar">
             <div class="code-toolbar-main">
-                {% if code.lang != 'image' %}
+                {% if code.lang == 'xlsx' %}
+                    <a href="/xlsx?id={{ code.id }}" class="btn btn-flat btn-light btn-sm mt-0">
+                        <i class="fas fa-download"></i> Скачать отчёт Excel
+                    </a>
+                {% elif code.lang != 'image' %}
                     <button class="btn btn-flat btn-success btn-sm" id="copy-code" data-clipboard-target="#code"
                             data-bs-toggle="popover" data-bs-placement="right" data-bs-content="Скопировано">
                         Копировать код
@@ -86,7 +90,16 @@
             </div>
         </div>
 
-        {% if code.lang == 'image' %}
+        {% if code.lang == 'xlsx' %}
+            {% if xlsx_meta %}
+                <div class="p-3 border-top">
+                    <strong>{{ xlsx_meta.filename }}</strong>
+                    <div>Листы: {{ xlsx_meta.sheets | join(', ') }}. Диаграмм: {{ xlsx_meta.charts }}.</div>
+                </div>
+            {% else %}
+                <div class="alert alert-danger m-3">Не удалось прочитать отчёт Excel.</div>
+            {% endif %}
+        {% elif code.lang == 'image' %}
             {% if image_meta %}
                 <div class="p-3 text-center border-top">
                     <img src="/image?id={{ code.id }}"

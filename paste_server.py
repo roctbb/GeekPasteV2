@@ -15,6 +15,9 @@ from datetime import datetime, timedelta
 import jwt
 from config import USER_URL, TASK_URL, AUTH_URL, DEFAULT_GPT_RATE_LIMIT, LANGS, SPECIAL_SUBMISSION_LANGS, JWT_SECRET, SOLUTIONS_API_KEY, MAX_IMAGE_SUBMISSION_BYTES
 from image_submission import ImageSubmissionError, create_image_submission, parse_image_submission
+from spreadsheet_submission import (create_spreadsheet_submission, parse_spreadsheet_submission,
+                                    XLSX_MIME_TYPE)
+from config import MAX_XLSX_SUBMISSION_BYTES
 from urllib.parse import quote
 from sqlalchemy import or_
 from sqlalchemy.exc import SQLAlchemyError
@@ -138,6 +141,10 @@ def _task_submission_language_error(task, lang):
         return "Для этой задачи нужно прикрепить изображение решения."
     if lang == 'image' and task.lang != 'image':
         return "Изображение можно отправить только в задачу с типом сдачи «изображение»."
+    if task.lang == 'xlsx' and lang != 'xlsx':
+        return 'Для этой задачи прикрепите отчёт Excel в формате .xlsx.'
+    if lang == 'xlsx' and task.lang != 'xlsx':
+        return 'Excel-файл можно отправить только в задачу с типом сдачи xlsx.'
     return None
 
 
@@ -182,6 +189,17 @@ def submit():
                 flash(str(e), "danger")
                 return _return_to_submit_form(default_lang='image')
             lang = 'image'
+        elif (task and task.lang == 'xlsx') or file.filename.lower().endswith('.xlsx'):
+            if task and task.check_type != 'gpt':
+                flash('Отчёты Excel можно проверять только через GPT.', 'danger')
+                return _return_to_submit_form(default_lang='xlsx')
+            try:
+                content = file.read(MAX_XLSX_SUBMISSION_BYTES + 1)
+                code = create_spreadsheet_submission(file.filename, content, MAX_XLSX_SUBMISSION_BYTES)
+            except ValueError as e:
+                flash(str(e), 'danger')
+                return _return_to_submit_form(default_lang='xlsx')
+            lang = 'xlsx'
         elif file.filename.lower().endswith('.zip'):
             lang = "zip"
             content = file.read()
@@ -232,7 +250,7 @@ def submit():
         )
 
     if not code or not str(code).strip():
-        flash("Введите код.", "danger")
+        flash('Прикрепите отчёт Excel.' if task and task.lang == 'xlsx' else 'Введите код.', 'danger')
         return _return_to_submit_form()
 
     if not lang or lang not in LANGS + SPECIAL_SUBMISSION_LANGS:
@@ -539,6 +557,13 @@ def _submission_to_diff_text(code):
         return ''
 
     raw_code = code.code or ''
+
+    if code.lang == 'xlsx':
+        try:
+            spreadsheet = parse_spreadsheet_submission(raw_code, MAX_XLSX_SUBMISSION_BYTES)
+            return spreadsheet['filename'] + '\n' + spreadsheet['evidence']
+        except Exception:
+            return '[Не удалось прочитать отчёт Excel]'
 
     if code.lang == 'zip':
         try:
@@ -886,6 +911,7 @@ def index():
             attempts_diff = None
             github_meta = None
             image_meta = None
+            xlsx_meta = None
             if session.get('user_id') and is_teacher():
                 all_similarities = code.get_similar_codes_sorted()
                 similarities_total = len(all_similarities)
@@ -915,6 +941,15 @@ def index():
                     }
                 except Exception:
                     pass
+            elif code.lang == 'xlsx':
+                try:
+                    spreadsheet = parse_spreadsheet_submission(code.code, MAX_XLSX_SUBMISSION_BYTES)
+                    evidence = json.loads(spreadsheet['evidence'])
+                    xlsx_meta = {'filename': spreadsheet['filename'],
+                                 'sheets': [sheet['name'] for sheet in evidence['sheets']],
+                                 'charts': len(evidence['charts'])}
+                except Exception:
+                    xlsx_meta = None
             elif code.lang == 'image':
                 try:
                     parsed_image = parse_image_submission(
@@ -941,6 +976,7 @@ def index():
                 attempts_diff=attempts_diff,
                 github_meta=github_meta,
                 image_meta=image_meta,
+                xlsx_meta=xlsx_meta,
                 similarities_page=similarities_page,
                 similarities_has_prev=similarities_has_prev,
                 similarities_has_next=similarities_has_next,
@@ -1049,6 +1085,32 @@ def image_submission():
         download_name=image['filename'],
         max_age=3600,
     )
+
+
+@app.route('/xlsx')
+def spreadsheet_submission():
+    token = request.args.get('token')
+    if token:
+        try:
+            make_jwt_auth(token)
+            return redirect(url_for(request.endpoint, **{k: v for k, v in request.args.items() if k != 'token'}))
+        except Exception:
+            pass
+    code = get_code(request.args.get('id'))
+    if not code or code.lang != 'xlsx':
+        abort(404)
+    if not code.available_without_auth and not session.get('user_id'):
+        return redirect(AUTH_URL + quote(request.url, safe=''))
+    if code.task and not code.available_without_auth and not (is_teacher() or is_author(code)):
+        abort(403)
+    try:
+        spreadsheet = parse_spreadsheet_submission(code.code, MAX_XLSX_SUBMISSION_BYTES)
+    except Exception:
+        abort(404)
+    response = send_file(BytesIO(spreadsheet['data']), mimetype=XLSX_MIME_TYPE,
+                         as_attachment=True, download_name=spreadsheet['filename'])
+    response.headers['Cache-Control'] = 'private, no-store'
+    return response
 
 
 @app.route('/raw', methods=['GET'])
@@ -1810,7 +1872,7 @@ def _fill_task(task):
     task.name = request.form.get('name') or None
     task.lang = request.form.get('lang') or None
     task.points = points
-    task.check_type = 'gpt' if task.lang == 'image' else check_type
+    task.check_type = 'gpt' if task.lang in ('image', 'xlsx') else check_type
     task.text = request.form.get('text') or None
     task.gpt_model = request.form.get('gpt_model') or None
     task.gpt_rate_limit = rate_limit

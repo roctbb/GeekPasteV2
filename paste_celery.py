@@ -118,11 +118,11 @@ def save_similarities(id):
         if not code or not code.user_id or code.similarity_checked:
             return
 
-        if code.lang == 'image':
+        if code.lang in ('image', 'xlsx'):
             code.similarity_checked = True
             db.session.commit()
             _push_system_check_event('similarity_check', {
-                'status': 'skipped_image',
+                'status': 'skipped_image' if code.lang == 'image' else 'skipped_spreadsheet',
                 'code_id': code.id,
                 'task_id': code.task_id,
                 'user_id': code.user_id,
