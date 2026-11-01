@@ -4,6 +4,16 @@ import json
 
 COURSE_RUBRIC_PREFIX = '[assessment_mode: rubric]\n'
 
+TEXT_LINE_ENDINGS_POLICY = r'''В обычных учебных задачах считай переводы строк LF и CRLF
+эквивалентными и исходи из нормализованного текстового ввода. Не снижай баллы
+и не делай замечаний только из-за отсутствия явного удаления '\r', различий
+LF/CRLF или предположения о поведении текстового режима в другой ОС.
+Само перечисление LF/CRLF в ограничениях не требует отдельной обработки '\r'.
+Исключение — задача специально посвящена побайтовому разбору форматов
+окончаний строк: тогда проверяй явно заданные требования к ним.
+Это правило не отменяет требования учитывать пробелы и табуляции как
+разделители слов, если они указаны в условии.'''
+
 
 def get_course_rubric_payload(task_text, solution_text, max_points):
     """Opt-in for trusted task records, never for text in a student's submission."""
@@ -30,7 +40,8 @@ def get_course_rubric_payload(task_text, solution_text, max_points):
 критерию и краткое обоснование по представленному решению. Проверь сумму.
 \nУсловие и уточнения преподавателя:\n'''
     return [
-        {'role': 'system', 'content': prompt + task_text[len(COURSE_RUBRIC_PREFIX):]},
+        {'role': 'system', 'content': prompt + task_text[len(COURSE_RUBRIC_PREFIX):]
+         + '\n\n' + TEXT_LINE_ENDINGS_POLICY},
         {'role': 'user', 'content': json.dumps({'student_answer': solution_text}, ensure_ascii=False)},
     ]
 
@@ -83,7 +94,8 @@ def get_rubric_payload(task_text, solution_text, max_points, lang=None,
     }
     return [
         {'role': 'system', 'content': prompt + '\n\nДанные преподавателя:\n'
-         + json.dumps(teacher_context, ensure_ascii=False)},
+         + json.dumps(teacher_context, ensure_ascii=False)
+         + '\n\n' + TEXT_LINE_ENDINGS_POLICY},
         {'role': 'user', 'content': json.dumps(
             {'student_answer': solution_text}, ensure_ascii=False)},
     ]

@@ -8,6 +8,22 @@ class AIRequestError(RuntimeError):
     """Safe error text: never include upstream bodies, URLs or credentials."""
 
 
+class AIContextLimitError(AIRequestError):
+    """The provider rejected an input exceeding the model's context window."""
+
+
+def _raise_upstream_error(error):
+    # The gateway wraps provider errors in a string, direct Responses uses a dict.
+    # Recognize only stable error codes; never expose upstream text or credentials.
+    code = error.get('code') if isinstance(error, dict) else None
+    if code == 'context_length_exceeded' or (
+            isinstance(error, str) and 'context_length_exceeded' in error):
+        raise AIContextLimitError(
+            'Объём данных превышает контекст модели ИИ. Обратитесь к преподавателю.'
+        )
+    raise AIRequestError('Сервис ИИ вернул ошибку.')
+
+
 class _ConfiguredAuth(requests.auth.AuthBase):
     def __call__(self, request):
         # Prevent Requests from replacing the chosen Authorization with .netrc.
@@ -15,11 +31,15 @@ class _ConfiguredAuth(requests.auth.AuthBase):
 
 
 def _response_text(data, *, gateway):
-    if not isinstance(data, dict) or data.get('error'):
+    if isinstance(data, dict) and data.get('error'):
+        _raise_upstream_error(data['error'])
+    if not isinstance(data, dict):
         raise AIRequestError('Сервис ИИ вернул ошибку.')
     if gateway:
         data = data.get('result')
-    if not isinstance(data, dict) or data.get('error'):
+    if isinstance(data, dict) and data.get('error'):
+        _raise_upstream_error(data['error'])
+    if not isinstance(data, dict):
         raise AIRequestError('Сервис ИИ вернул некорректный ответ.')
     if data.get('status') not in (None, 'completed') or data.get('incomplete_details'):
         raise AIRequestError('Ответ ИИ не завершён. Проверьте лимит токенов и модель.')
@@ -84,6 +104,13 @@ def generate_text(input_messages, *, model=None):
     except Exception:
         raise AIRequestError('Не удалось отправить запрос к сервису ИИ.') from None
     if not 200 <= response.status_code < 300:
+        if response.status_code == 400:
+            try:
+                error = response.json().get('error')
+            except (ValueError, TypeError, AttributeError):
+                error = None
+            if error:
+                _raise_upstream_error(error)
         raise AIRequestError(f'Сервис ИИ вернул HTTP {response.status_code}. Проверьте настройки подключения.')
     try:
         data = response.json()

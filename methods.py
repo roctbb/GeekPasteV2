@@ -23,8 +23,11 @@ from score_policy import (normalize_gpt_points, normalize_test_points,
                           minimum_submission_score, attempt_comment)
 from image_submission import parse_image_submission
 from spreadsheet_submission import parse_spreadsheet_submission
-from grading_prompts import COURSE_RUBRIC_PREFIX, get_course_rubric_payload
+from grading_prompts import (COURSE_RUBRIC_PREFIX, TEXT_LINE_ENDINGS_POLICY,
+                             get_course_rubric_payload)
 from ai_client import generate_text
+from notebook_submission import (NotebookSubmissionError, NOTEBOOK_GRADING_NOTICE,
+                                 prepare_notebook_submission)
 
 
 def create_id():
@@ -527,6 +530,8 @@ def get_payload(task_text, solution_text, max_points, lang=None, check_ai=False,
         prompt = f"Твоя задача оценить JSON-экспорт прогресса nandgame по критериям задачи. Максимальный балл - {max_points}. На первой строке ответа напиши количество баллов числом. Далее - краткий комментарий по пройденным уровням на русском языке."
     else:
         prompt = f"Твоя задача оценить решение задачи по программированию. Оценивай только работоспособность, а не качество кода (если это отдельно не требуется в задаче). Максимальный балл - {max_points}. Если код не запускается или не компилируется, или завершается с ошибкой, ставь 0. Количество баллов кратно 5, если иного не указано в задаче. На первой строке ответа напиши количество баллов числом. Далее - свой подробный комментарий по критериям на русском языке."
+    if solution_kind in ('code', 'github_project'):
+        prompt += '\n\n' + TEXT_LINE_ENDINGS_POLICY
     if lang and lang != 'zip' and lang != 'ipynb':
         prompt += f" Код должен быть написан на языке {lang}."
 
@@ -585,6 +590,7 @@ def parse_gpt_answer(answer):
 @minimum_submission_score
 def check_task_with_gpt(task, code, *, retry_on_connection_error=False):
     image_submission = None
+    notebook_submission = None
     publication_points = 0
     if code.lang == 'zip':
         student_code = '\n\n'.join([f'Файл {part["name"]}\n\n{part["content"]}' for part in json.loads(code.code)])
@@ -625,7 +631,14 @@ def check_task_with_gpt(task, code, *, retry_on_connection_error=False):
                 return
             publication_points = 5
     elif code.lang == 'ipynb':
-        student_code = f'Файл solution.ipynb\n\n{code.code}'
+        try:
+            notebook_submission = prepare_notebook_submission(code.code)
+        except NotebookSubmissionError as exc:
+            code.check_points = 0
+            code.check_state = 'execution error'
+            code.check_comments = str(exc)
+            return
+        student_code = f'Файл solution.ipynb\n\n{notebook_submission["evidence"]}'
     elif code.lang == 'xlsx':
         try:
             spreadsheet = parse_spreadsheet_submission(code.code, MAX_XLSX_SUBMISSION_BYTES)
@@ -684,6 +697,16 @@ def check_task_with_gpt(task, code, *, retry_on_connection_error=False):
 
     # Convert chat messages to responses API input format
     input_messages = [{"role": msg["role"], "content": msg["content"]} for msg in context]
+    if notebook_submission:
+        input_messages[0]['content'] += '\n\n' + NOTEBOOK_GRADING_NOTICE
+        if notebook_submission['images']:
+            content = [{"type": "input_text", "text": input_messages[-1]['content']}]
+            for picture in notebook_submission['images']:
+                content.extend([
+                    {"type": "input_text", "text": picture['image_id'] + ': ' + picture['label']},
+                    {"type": "input_image", "image_url": picture['data_url'], "detail": "high"},
+                ])
+            input_messages[-1]['content'] = content
     if image_submission:
         input_messages[-1]['content'] = [
             {"type": "input_text", "text": input_messages[-1]['content']},

@@ -3,7 +3,7 @@ from unittest.mock import Mock, patch
 import pytest
 import requests
 
-from ai_client import AIRequestError, generate_text
+from ai_client import AIContextLimitError, AIRequestError, generate_text
 from ai_settings import AISettingsError
 
 
@@ -119,6 +119,19 @@ def test_missing_key_does_not_send_any_request():
         with pytest.raises(AISettingsError):
             generate_text(MESSAGES)
         post.assert_not_called()
+
+
+@pytest.mark.parametrize('provider,status,data', [
+    ('gateway', 200, {'error': "Error code: 400 - {'code': 'context_length_exceeded', 'secret': 'upstream-secret'}"}),
+    ('gateway', 200, {'result': {'error': {'code': 'context_length_exceeded', 'message': 'upstream-secret'}}}),
+    ('openai', 400, {'error': {'code': 'context_length_exceeded', 'message': 'upstream-secret'}}),
+])
+def test_context_limit_errors_are_identifiable_without_leaking_upstream_bodies(provider, status, data):
+    with patch('ai_client.load_ai_settings', return_value=SETTINGS | {'provider': provider}), \
+         patch('ai_client.requests.post', return_value=Mock(status_code=status, json=lambda: data)):
+        with pytest.raises(AIContextLimitError, match='контекст модели') as error:
+            generate_text(MESSAGES)
+    assert 'upstream-secret' not in str(error.value)
 
 
 @pytest.mark.parametrize('provider', ['gateway', 'openai'])
