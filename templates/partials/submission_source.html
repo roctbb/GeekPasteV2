@@ -1,5 +1,6 @@
+{% from 'macros/user.html' import user_link with context %}
 {% if code.task %}
-<details class="card flat-card shadow-soft submission-source-card mt-3" id="submission-source">
+<details class="card flat-card shadow-soft submission-source-card mt-3" id="submission-source" open>
     <summary class="submission-source-heading">
         <span>Отправленное решение <span class="submission-source-language">{{ 'C++' if code.lang == 'cpp' else code.lang }}</span></span>
         <span class="submission-source-toggle" aria-hidden="true"><span class="source-show">Показать</span><span class="source-hide">Скрыть</span><span class="io-test-chevron"></span></span>
@@ -44,9 +45,7 @@
 
                 {% if session['role'] == 'teacher' or session['role'] == 'admin' %}
                     {% if code.user_id %}
-                        <a href="{{ user_url }}{{ code.user_id }}" class="btn btn-flat btn-light btn-sm mt-0" target="_blank">
-                            <i class="fas fa-user"></i> Профиль
-                        </a>
+                        <span class="d-inline-flex align-items-center gap-1"><i class="fas fa-user" aria-hidden="true"></i> {{ user_link(code.user_id, 'btn btn-flat btn-light btn-sm mt-0') }}</span>
                     {% endif %}
                     {% if code.user_id == session['user_id'] %}
                         <form method="POST" action="/submission/toggle_public?id={{ code.id }}" style="display: inline;">
@@ -112,7 +111,7 @@
                 <div class="alert alert-danger m-3">Не удалось прочитать прикреплённое изображение.</div>
             {% endif %}
         {% elif code.lang == 'ipynb' %}
-            <div id="code"></div>
+            <div id="code" class="notebook-preview"></div>
         {% elif code.lang == 'zip' or code.lang == 'github' %}
             {% if code.lang == 'github' and github_meta %}
                 <div class="px-2 py-2 small text-muted border-top">
@@ -123,7 +122,7 @@
                     {% endif %}
                 </div>
             {% endif %}
-            {% for code_part in code.code %}
+            {% for code_part in source_parts %}
                 <div class="code-file-title"><strong>{{ code_part.name }}</strong></div>
                 <pre class="m-0 flat-pre"><code {% if loop.first %}id='code'{% endif %} class="p-2 py-3">{{ code_part.content }}</code></pre>
             {% endfor %}

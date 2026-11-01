@@ -7,6 +7,7 @@ from flask_migrate import Migrate
 from flask_socketio import SocketIO
 import jwt
 from comment_markdown import render_comment_markdown
+from user_profiles import remember_user_name
 import redis
 import os
 
@@ -45,8 +46,10 @@ def make_jwt_auth(token):
         data = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
         if time.time() - data['iat'] > 5:
             abort(403)
-        session['user_id'] = data['id']
-        session['role'] = data['role']
+        user_id, role = data['id'], data['role']
+        remember_user_name(user_id, data.get('name'))
+        session['user_id'] = user_id
+        session['role'] = role
     except Exception as e:
         print(e)
         abort(403)

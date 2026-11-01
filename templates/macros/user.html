@@ -1,0 +1,7 @@
+{% macro user_link(user_id, css_class='') -%}
+    {% if user_id is not none %}
+        <a href="{{ user_url }}{{ user_id }}"{% if css_class %} class="{{ css_class }}"{% endif %} target="_blank" rel="noopener" title="ID пользователя: {{ user_id }}">{{ (user_names | default({})).get(user_id, 'Пользователь #' ~ user_id) }}</a>
+    {% else %}
+        <span class="text-muted">Автор неизвестен</span>
+    {% endif %}
+{%- endmacro %}

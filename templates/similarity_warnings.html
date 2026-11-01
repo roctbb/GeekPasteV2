@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
+    {% from 'macros/user.html' import user_link with context %}
     <ul class="nav nav-tabs mb-3">
         <li class="nav-item">
             <a class="nav-link {% if warning_type == 'similarity' %}active{% endif %}" href="/warnings?type=similarity&page=1">
@@ -45,7 +46,7 @@
 
                                 <span><i class="fas fa-code"></i> <a href="/?id={{ code.id }}" target="_blank">#{{ code.id }}</a></span>
                                 {% if code.user_id %}
-                                    <span><i class="fas fa-user"></i> <a href="{{ user_url }}{{ code.user_id }}" target="_blank">{{ code.user_id }}</a></span>
+                                    <span><i class="fas fa-user"></i> {{ user_link(code.user_id) }}</span>
                                 {% endif %}
                             </div>
                             <div class="entity-task">
@@ -59,9 +60,9 @@
                                 <span><i class="fas fa-calendar-alt"></i> {{ code.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
                                 {% if warning_type == 'similarity' and code.similar_codes %}
                                     <span>
-                                        Похожие UID:
+                                        Похожие работы:
                                         {% for similar_code in code.similar_codes %}
-                                            <a href="{{ user_url }}{{ similar_code.user_id }}" target="_blank">{{ similar_code.user_id }}</a>{% if not loop.last %}, {% endif %}
+                                            {{ user_link(similar_code.user_id) }}{% if not loop.last %}, {% endif %}
                                         {% endfor %}
                                     </span>
                                 {% endif %}

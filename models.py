@@ -4,6 +4,13 @@ from sqlalchemy import event
 db = SQLAlchemy()
 
 
+class UserProfile(db.Model):
+    __tablename__ = 'user_profiles'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+
+
 class AISettings(db.Model):
     __tablename__ = 'ai_settings'
     __table_args__ = (db.CheckConstraint('id = 1', name='ai_settings_singleton'),)

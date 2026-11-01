@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
+    {% from 'macros/user.html' import user_link with context %}
     <div class="page-head">
         <div>
             <h5 class="page-head-title">Успешные сдачи задач</h5>
@@ -57,7 +58,7 @@
                                 {% endif %}
                                 <span><i class="fas fa-code"></i> <a href="/?id={{ code.id }}" target="_blank">#{{ code.id }}</a></span>
                                 {% if code.user_id %}
-                                    <span><i class="fas fa-user"></i> <a href="{{ user_url }}{{ code.user_id }}" target="_blank">{{ code.user_id }}</a></span>
+                                    <span><i class="fas fa-user"></i> {{ user_link(code.user_id) }}</span>
                                 {% endif %}
                             </div>
                             <div class="entity-task">

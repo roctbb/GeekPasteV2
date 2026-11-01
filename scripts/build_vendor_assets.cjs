@@ -77,6 +77,8 @@ function build() {
   copyFile("@highlightjs/cdn-assets/styles/github.min.css", "highlight/styles/github.min.css");
   copyFile("@highlightjs/cdn-assets/highlight.min.js", "highlight/highlight.min.js");
 
+  copyFile("marked/marked.min.js", "marked/marked.min.js");
+  copyFile("dompurify/dist/purify.min.js", "dompurify/purify.min.js");
   copyNotebookJs();
   copyRepoFile("scripts/vendor/socket.io.min.js", "socketio/socket.io.min.js");
 

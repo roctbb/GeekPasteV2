@@ -45,6 +45,11 @@ def database_at(revision, *, rate_limit_exists):
                                               server_default='environment'))
                 tasks.append_column(sa.Column("test_config", sa.JSON))
                 tasks.append_column(sa.Column("test_summary", sa.JSON))
+                sa.Table(
+                    'user_profiles', metadata,
+                    sa.Column('id', sa.Integer, primary_key=True),
+                    sa.Column('name', sa.String(255), nullable=False),
+                )
             versions = sa.Table(
                 "alembic_version", metadata,
                 sa.Column("version_num", sa.String(32), primary_key=True),
@@ -128,6 +133,23 @@ class SchemaMigrationTests(unittest.TestCase):
                 self.assertEqual(connection.execute(sa.text('SELECT * FROM tasks')).one(),
                                  (1, 'Existing task', 'custom', 12))
 
+    def test_user_profiles_upgrade_and_downgrade_preserve_tasks(self):
+        previous_head = 'c0e4f6a8b123'
+        with database_at(previous_head, rate_limit_exists=True) as engine:
+            upgrade(directory=str(MIGRATIONS))
+            with engine.begin() as connection:
+                connection.execute(sa.text(
+                    'INSERT INTO user_profiles (id, name) VALUES (:id, :name)'
+                ), {'id': 7, 'name': 'Анна Иванова'})
+                self.assertEqual(connection.execute(sa.text(
+                    'SELECT id, name FROM user_profiles'
+                )).one(), (7, 'Анна Иванова'))
+            downgrade(directory=str(MIGRATIONS), revision=previous_head)
+            self.assertNotIn('user_profiles', sa.inspect(engine).get_table_names())
+            with engine.connect() as connection:
+                self.assertEqual(connection.execute(sa.text('SELECT * FROM tasks')).one(),
+                                 (1, 'Existing task', 'custom', 12))
+
     def test_fresh_postgres_schema_has_no_application_data_updates(self):
         config = Config()
         config.set_main_option("script_location", str(MIGRATIONS))
@@ -143,7 +165,7 @@ class SchemaMigrationTests(unittest.TestCase):
                 revision.module.upgrade()
 
         sql = output.getvalue()
-        for table in ("tasks", "codes", "similarities"):
+        for table in ("tasks", "codes", "similarities", "user_profiles"):
             self.assertIn(f"CREATE TABLE {table}", sql)
         self.assertEqual(sql.count("ADD COLUMN gpt_rate_limit INTEGER"), 1)
         self.assertEqual(sql.count("ADD COLUMN test_config JSON"), 1)

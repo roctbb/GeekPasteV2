@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
+    {% from 'macros/user.html' import user_link with context %}
     {% if code.task %}
         {% set initial_state = code.check_state or 'not checked' %}
         <div class="card flat-card shadow-soft submission-status-card"
@@ -115,7 +116,13 @@
                 </div>
 
                 {% if attempts_diff %}
-                    <pre class="m-0 flat-pre diff-pre mt-3"><code class="p-2 py-3 txt nohighlight">{{ attempts_diff }}</code></pre>
+                    <details class="submission-diff mt-3" id="attempts-diff">
+                        <summary class="submission-source-heading">
+                            <span>Сравнение с попыткой #{{ compare_attempt.id }}</span>
+                            <span class="io-test-chevron" aria-hidden="true"></span>
+                        </summary>
+                        <pre class="m-0 flat-pre diff-pre"><code class="p-2 py-3 txt nohighlight">{{ attempts_diff }}</code></pre>
+                    </details>
                 {% endif %}
             </div>
         </div>
@@ -152,7 +159,7 @@
                     </a>
                     <small class="text-muted">
                         от {{ similarity.code.created_at.strftime("%d.%m.%Y %H:%M") }}
-                        (UID <a href="{{ user_url }}{{ similarity.code.user_id }}" target="_blank">{{ similarity.code.user_id }}</a>)
+                        · {{ user_link(similarity.code.user_id) }}
                     </small>
                 </li>
             {% endfor %}

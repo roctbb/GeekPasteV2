@@ -27,6 +27,7 @@ from io_tests import (draft_test_config_from_form, validate_form_draft,
 from io_test_import import IMPORTABLE_TASK_IDS, RETIRED_TASK_IDS, import_environment_tests
 from io_test_fields import prepare_fields, resolve_field
 from submission_progress import clear_submission_progress
+from user_profiles import load_user_names
 
 SOCKET_SUBMISSION_ROOM_PREFIX = "submission:"
 SYSTEM_RECENT_CHECKS_KEY = "system:recent_checks"
@@ -809,8 +810,13 @@ def warnings():
     has_prev = page > 1
     has_next = page * per_page < total
 
+    author_ids = {code.user_id for code in codes}
+    if warning_type == 'similarity':
+        author_ids.update(similar.user_id for code in codes for similar in code.similar_codes)
+
     return render_template('similarity_warnings.html',
                            codes=codes,
+                           user_names=load_user_names(author_ids),
                            user_url=USER_URL,
                            task_url=TASK_URL,
                            warning_type=warning_type,
@@ -912,6 +918,7 @@ def index():
             github_meta = None
             image_meta = None
             xlsx_meta = None
+            source_parts = []
             if session.get('user_id') and is_teacher():
                 all_similarities = code.get_similar_codes_sorted()
                 similarities_total = len(all_similarities)
@@ -928,12 +935,16 @@ def index():
                 compare_to_id = request.args.get('compare_to')
                 attempts, compare_attempt, attempts_diff = _build_attempts_context(code, compare_to_id)
 
+            user_names = load_user_names(
+                [code.user_id] + [item['code'].user_id for item in similarities]
+            ) if session.get('user_id') and is_teacher() else {}
+
             if code.lang == 'zip':
-                code.code = _zip_code_parts_for_view(code)
+                source_parts = _zip_code_parts_for_view(code)
             elif code.lang == 'github':
                 try:
                     github_payload = json.loads(code.code)
-                    code.code = github_payload.get('files', [])
+                    source_parts = github_payload.get('files', [])
                     github_meta = {
                         'repo_url': github_payload.get('repo_url'),
                         'resolved_repo': github_payload.get('resolved_repo'),
@@ -969,6 +980,7 @@ def index():
                 recheck_csrf=_recheck_csrf_token() if session.get('user_id') and is_author(code) and code.task and code.course_id else None,
                 submission_status=build_submission_status_payload(code),
                 similarities=similarities,
+                user_names=user_names,
                 user_url=USER_URL,
                 task_url=TASK_URL,
                 attempts=attempts,
@@ -977,6 +989,7 @@ def index():
                 github_meta=github_meta,
                 image_meta=image_meta,
                 xlsx_meta=xlsx_meta,
+                source_parts=source_parts,
                 similarities_page=similarities_page,
                 similarities_has_prev=similarities_has_prev,
                 similarities_has_next=similarities_has_next,
@@ -1175,6 +1188,7 @@ def solutions():
 
     return render_template('solutions.html',
                            codes=codes,
+                           user_names=load_user_names(code.user_id for code in codes),
                            page=page,
                            has_prev=has_prev,
                            has_next=has_next,

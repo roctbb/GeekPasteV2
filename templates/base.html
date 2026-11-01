@@ -26,7 +26,11 @@
     <script src="/static/vendor/highlight/highlight.min.js"></script>
     <link rel="stylesheet" href="/static/style.css">
     <script src="/static/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/vendor/notebookjs/notebook.min.js"></script>
+    {% if code is defined and code.lang == 'ipynb' %}
+        <script src="/static/vendor/marked/marked.min.js"></script>
+        <script src="/static/vendor/dompurify/purify.min.js"></script>
+        <script src="/static/vendor/notebookjs/notebook.min.js"></script>
+    {% endif %}
 
 
 </head>
