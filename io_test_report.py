@@ -100,14 +100,29 @@ def parse_io_test_report(value):
                 has_private=any(not row['public'] for row in rows))
 
 
-def render_io_test_report_parts(value):
+def render_io_test_report_parts(value, private_tests=None):
     report = parse_io_test_report(value)
     if report is None:
         return None
-    return {
+    # Private fixtures are supplied only by the authenticated teacher endpoint.
+    # Default rendering (including shared Socket.IO events) stays public-only.
+    private_by_number = {test['number']: test for test in private_tests or []}
+    for row in report['rows']:
+        test = private_by_number.get(row['number']) if not row['public'] else None
+        row['revealed'] = test is not None
+        if test is not None:
+            row.update(input=test['input'], expected=test['output'],
+                       input_url=test.get('input_url'), expected_url=test.get('output_url'),
+                       input_bytes=test.get('input_bytes'), expected_bytes=test.get('output_bytes'))
+    report['private_revealed'] = any(row['revealed'] for row in report['rows'])
+    report['has_data'] = report['has_public'] or report['private_revealed']
+    parts = {
         'check_comments_html': _templates.get_template('partials/io_test_summary.html').render(report=report),
         'test_results_html': _templates.get_template('partials/io_test_results.html').render(report=report),
     }
+    if private_tests is not None:
+        parts['private_tests_revealed'] = report['private_revealed']
+    return parts
 
 
 def render_io_test_report(value):

@@ -15,20 +15,20 @@
             <button type="button" class="io-test-filter" data-test-filter="all" aria-pressed="false">Все ({{ report.total }})</button>
         </div>
     {% endif %}
-    {% if report.has_private %}<p class="io-test-private-note"><i class="fas fa-lock" aria-hidden="true"></i> Данные приватных тестов скрыты. Доступны только результаты.</p>{% endif %}
+    {% if report.has_private %}<p class="io-test-private-note"><i class="fas fa-lock" aria-hidden="true"></i> {% if report.private_revealed %}Показаны данные текущих тестов задания. Вывод программы для скрытых тестов не сохранён.{% else %}Данные приватных тестов скрыты. Доступны только результаты.{% endif %}</p>{% endif %}
     <div class="io-test-table-wrap" tabindex="0" role="region" aria-label="Таблица результатов тестов">
-        <table class="table io-test-table io-test-results {% if not report.has_public %}io-test-results-private{% endif %} mb-0">
-            <thead><tr><th scope="col">Тест</th><th scope="col">Результат</th>{% if report.has_public %}<th scope="col">Ввод</th><th scope="col">Ожидаемый вывод</th><th scope="col">Вывод программы</th>{% endif %}</tr></thead>
+        <table class="table io-test-table io-test-results {% if not report.has_data %}io-test-results-private{% endif %} mb-0">
+            <thead><tr><th scope="col">Тест</th><th scope="col">Результат</th>{% if report.has_data %}<th scope="col">Ввод</th><th scope="col">Ожидаемый вывод</th><th scope="col">Вывод программы</th>{% endif %}</tr></thead>
             <tbody>
             {% for row in report.rows %}
-                <tr data-test-status="{{ row.status }}">
-                    <th scope="row" class="io-test-number">{{ row.number }}{% if report.has_public and not row.public %}<span class="io-test-visibility">Приватный</span>{% endif %}</th>
+                <tr data-test-status="{{ row.status }}" data-test-private="{{ 'false' if row.public else 'true' }}">
+                    <th scope="row" class="io-test-number">{{ row.number }}{% if report.has_data and not row.public %}<span class="io-test-visibility">Приватный</span>{% endif %}</th>
                     <td><span class="io-test-status io-test-status-{{ row.status }}"><span class="io-test-status-icon" aria-hidden="true">{{ '✓' if row.status == 'passed' else '✕' }}</span> {{ row.status_label }}</span></td>
-                    {% if row.public %}
-                        <td data-label="Ввод">{{ test_value(row.input) }}</td>
-                        <td data-label="Ожидаемый вывод">{{ test_value(row.expected) }}</td>
-                        <td data-label="Вывод программы">{% if row.error is not none %}{{ test_value(row.error_detail) }}{% else %}{{ test_value(row.actual) }}{% endif %}</td>
-                    {% elif report.has_public %}
+                    {% if row.public or row.revealed %}
+                        <td data-label="Ввод">{{ test_value(row.input, row.input_url, row.input_bytes) }}</td>
+                        <td data-label="Ожидаемый вывод">{{ test_value(row.expected, row.expected_url, row.expected_bytes) }}</td>
+                        <td data-label="Вывод программы">{% if row.revealed %}<span class="text-muted small">Не сохранён</span>{% elif row.error is not none %}{{ test_value(row.error_detail) }}{% else %}{{ test_value(row.actual) }}{% endif %}</td>
+                    {% elif report.has_data %}
                         <td colspan="3" class="text-muted small io-test-hidden-data">Данные скрыты</td>
                     {% endif %}
                 </tr>

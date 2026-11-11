@@ -1016,6 +1016,16 @@ label.text-muted,
 .io-test-status-compilation_error { background: #fee2e2; color: #991b1b; }
 .io-test-status-icon { font-size: 1rem; line-height: 1; }
 
+.submission-title {
+    margin: 0;
+    font-size: clamp(1.35rem, 3vw, 1.85rem);
+    font-weight: 700;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.submission-hidden-test-preview { margin: 0.4rem 0 0; }
+
 .submission-status-heading {
     display: flex;
     align-items: center;

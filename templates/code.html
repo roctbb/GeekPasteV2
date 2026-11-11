@@ -1,6 +1,12 @@
 {% extends 'base.html' %}
+{% set submission_title = code.task.name if code.task and code.task.name else 'Сдача #' ~ code.id %}
+{% block title %}{{ submission_title }} — GeekPaste{% endblock %}
 {% block content %}
     {% from 'macros/user.html' import user_link with context %}
+    <header class="submission-heading mb-3">
+        <h1 class="submission-title" id="submission-title">{{ submission_title }}</h1>
+        {% if code.task and code.task.name %}<p class="text-muted small mt-1 mb-0">Сдача #{{ code.id }}</p>{% endif %}
+    </header>
     {% if code.task %}
         {% set initial_state = code.check_state or 'not checked' %}
         <div class="card flat-card shadow-soft submission-status-card"
@@ -62,7 +68,9 @@
             </div>
         </div>
 
-        <div id="submission-test-results" class="mt-3" {% if not submission_status.get('test_results_html') %}hidden{% endif %}>{{ submission_status.get('test_results_html', '') | safe }}</div>
+        <div id="submission-test-results" class="mt-3"
+             {% if session.get('user_id') and session.get('role') in ['teacher', 'admin'] and code.task.check_type == 'tests' and code.task.test_mode == 'io' %}data-hidden-tests-url="/submission/hidden-tests?id={{ code.id | urlencode }}"{% endif %}
+             {% if not submission_status.get('test_results_html') %}hidden{% endif %}>{{ submission_status.get('test_results_html', '') | safe }}</div>
 
         <div id="kahoot-success-overlay" class="kahoot-success-overlay" aria-hidden="true">
             <div class="kahoot-success-backdrop"></div>
@@ -168,7 +176,7 @@
 
     {% if code.task %}
         <script src="/static/vendor/socketio/socket.io.min.js"></script>
-        <script src="{{ url_for('static', filename='js/io-test-results.js') }}" defer></script>
+        <script src="{{ url_for('static', filename='js/io-test-results.js', v='private-tests-1') }}" defer></script>
         <script src="{{ url_for('static', filename='js/submission-progress.js') }}" defer></script>
     {% endif %}
     <script>

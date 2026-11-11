@@ -25,7 +25,8 @@ from recheck_request import codingprojects_recheck
 from io_tests import (draft_test_config_from_form, validate_form_draft,
                       SUPPORTED_LANGUAGES, MAX_REQUEST_BYTES, DEFAULT_OUTPUT_LIMIT, COMPARISON_LABELS)
 from io_test_import import IMPORTABLE_TASK_IDS, RETIRED_TASK_IDS, import_environment_tests
-from io_test_fields import prepare_fields, resolve_field
+from io_test_fields import prepare_fields, resolve_field, private_test_previews
+from io_test_report import render_io_test_report_parts
 from submission_progress import clear_submission_progress
 from user_profiles import load_user_names
 
@@ -551,6 +552,25 @@ def submission_status_api():
     if not _can_access_code_realtime(code):
         return jsonify(error='forbidden'), 403, {'Cache-Control': 'no-store'}
     return jsonify(build_submission_status_payload(code)), 200, {'Cache-Control': 'no-store'}
+
+
+@app.route('/submission/hidden-tests', methods=['GET'])
+def submission_hidden_tests():
+    if not session.get('user_id') or not is_teacher():
+        abort(403)
+    code = get_code((request.args.get('id') or '').strip())
+    if not code or not code.task or code.task.check_type != 'tests' or code.task.test_mode != 'io':
+        abort(404)
+    try:
+        tests = private_test_previews(code.task)
+    except ValueError:
+        abort(409)
+    parts = render_io_test_report_parts(code.check_comments, private_tests=tests)
+    if parts is None or not parts['private_tests_revealed']:
+        abort(409)
+    response = jsonify(test_results_html=parts['test_results_html'])
+    response.headers['Cache-Control'] = 'private, no-store'
+    return response
 
 
 def _submission_to_diff_text(code):

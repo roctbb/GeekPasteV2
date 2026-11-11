@@ -1,3 +1,4 @@
-{% macro test_value(value) -%}
+{% macro test_value(value, download_url=none, download_bytes=none) -%}
     {% if value is none %}<span class="text-muted" aria-label="Нет данных в отчёте">—</span>{% else %}<pre class="io-test-value" tabindex="0">{{ '\n' ~ (value or '(пусто)') }}</pre>{% endif %}
+    {% if download_url %}<p class="small text-muted submission-hidden-test-preview">Показано начало. <a href="{{ download_url }}">Скачать полностью ({{ download_bytes | filesizeformat }})</a></p>{% endif %}
 {%- endmacro %}
