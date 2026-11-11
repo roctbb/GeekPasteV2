@@ -387,15 +387,31 @@ class IOTestExecutor:
                 'memory_limit': config['memory_limit'], 'process_limit': config['process_limit'],
                 'disable_swap': config['disable_swap'],
             }
+        program, compilation_error = None, None
+        if self.code.lang == 'cpp':
+            self._progress('compiling', 0, total)
+            try:
+                # The compiler needs its own 512 MiB sandbox, independent of
+                # the task's runtime memory limit. Reuse only immutable bytes.
+                program = ExecutionContainer.compile_cpp(self.code.code)
+            except SolutionException as error:
+                compilation_error = error
+            except ExecutionException:
+                raise ExecutionException('Не удалось запустить проверку ввода/вывода. Повторите позже.') from None
         for number, test in enumerate(config['tests'], 1):
             label = f'Тест {number} ({"публичный" if test["is_public"] else "приватный"})'
             try:
+                if compilation_error is not None:
+                    raise compilation_error
                 # New sandbox per case: no private files or background processes
                 # survive into a later public test. Expected outputs stay outside.
                 progress_options = {}
-                if self.progress and number == 1:
+                if program is not None:
+                    progress_options['compiled_program'] = program
+                elif self.progress and number == 1:
                     progress_options['on_compile'] = lambda: self._progress('compiling', 0, total)
-                with ExecutionContainer(self.code.lang, None, self.code.code, isolated=True, **limits, **progress_options) as container:
+                source = '' if program is not None else self.code.code
+                with ExecutionContainer(self.code.lang, None, source, isolated=True, **limits, **progress_options) as container:
                     self._progress('testing', number - 1, total)
                     actual = container.run(test['input'],
                                            time_limit=test.get('time_limit', config['time_limit']),

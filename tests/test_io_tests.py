@@ -1,8 +1,10 @@
 import copy
 import hashlib
 from io import BytesIO
+import json
 import os
 from pathlib import Path
+import subprocess
 from types import SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
@@ -16,7 +18,7 @@ from io_test_import import (PILOT_TASK_IDS, PRESETS_PATH, ADDITIONAL_TASK_IDS,
                             REMAINING_PATH, REMAINING_PRESETS, import_environment_tests)
 import paste_server as server
 from models import Task, db
-from runner import ExecutionException, SolutionException
+from runner import ExecutionContainer, ExecutionException, SolutionException
 
 
 CONFIG = {
@@ -134,6 +136,53 @@ class IOCheckerTests(unittest.TestCase):
         code = make_code()
         code.task.test_config = {'tests': []}
         with self.assertRaises(ExecutionException):
+            io_checks.IOTestExecutor(code).perform()
+        factory.assert_not_called()
+
+    @patch('io_tests.ExecutionContainer')
+    def test_cpp_compiles_once_and_preserves_runtime_limits_and_progress(self, factory):
+        code = make_code(config={**CONFIG, 'memory_limit': 128, 'disable_swap': True})
+        code.lang, code.code = 'cpp', '#include <bits/stdc++.h>\nint main() {}'
+        program = b'\x7fELFcompiled'
+        events = []
+        factory.compile_cpp.return_value = program
+        factory.return_value.__enter__.return_value.run.side_effect = ['5', 'SECRET_OUTPUT']
+        report = lambda phase, **counts: events.append((phase, counts))
+
+        executor = io_checks.IOTestExecutor(code, progress=report)
+        self.assertEqual(executor.perform()[0], 10)
+        self.assertTrue(executor.all_passed)
+        factory.compile_cpp.assert_called_once_with(code.code)
+        self.assertEqual(factory.call_count, 2)
+        for call in factory.call_args_list:
+            self.assertEqual(call.args, ('cpp', None, ''))
+            self.assertEqual(call.kwargs, {
+                'isolated': True, 'compiled_program': program,
+                'resource_limits': {'memory_limit': 128, 'process_limit': 128, 'disable_swap': True},
+            })
+        self.assertEqual([phase for phase, _ in events],
+                         ['preparing', 'compiling', 'testing', 'testing', 'testing', 'testing'])
+
+    @patch('io_tests.ExecutionContainer')
+    def test_cpp_compile_failure_is_reported_without_running_or_recompiling(self, factory):
+        code = make_code()
+        code.lang = 'cpp'
+        factory.compile_cpp.side_effect = SolutionException('invalid C++', 'compilation_error')
+        points, report = io_checks.IOTestExecutor(code).perform()
+        self.assertEqual(points, 0)
+        self.assertIn('Пройдено тестов: 0 из 2.', report)
+        self.assertIn('ошибка компиляции', report)
+        self.assertEqual(report.count('invalid C++'), 1)
+        self.assertNotIn('SECRET', report)
+        factory.compile_cpp.assert_called_once_with(code.code)
+        factory.assert_not_called()
+
+    @patch('io_tests.ExecutionContainer')
+    def test_cpp_compiler_infrastructure_failure_stops_before_tests(self, factory):
+        code = make_code()
+        code.lang = 'cpp'
+        factory.compile_cpp.side_effect = ExecutionException('SECRET infrastructure details')
+        with self.assertRaisesRegex(ExecutionException, 'Не удалось запустить проверку ввода/вывода'):
             io_checks.IOTestExecutor(code).perform()
         factory.assert_not_called()
 
@@ -534,6 +583,37 @@ class IOAdvancedWebTests(IOWebBase):
 
 @unittest.skipUnless(os.getenv('RUN_IO_DOCKER_INTEGRATION') == '1', 'requires Docker')
 class IODockerTests(unittest.TestCase):
+    def test_cpp_compilation_has_separate_memory_budget(self):
+        code = make_code(config={**CONFIG, 'memory_limit': 128, 'tests': [
+            {'input': '2 3\n', 'output': '5', 'is_public': True},
+            {'input': '8 9\n', 'output': '17', 'is_public': False},
+        ]})
+        code.lang = 'cpp'
+        code.code = '#include <bits/stdc++.h>\nint main(){int a,b;std::cin>>a>>b;std::cout<<a+b;}'
+        memory_limits, compilations, container_ids = [], [], []
+
+        class TrackedContainer(ExecutionContainer):
+            def prepare(self):
+                container_id = super().prepare()
+                container_ids.append(container_id)
+                inspection = subprocess.check_output(['docker', 'inspect', container_id])
+                memory_limits.append(json.loads(inspection)[0]['HostConfig']['Memory'])
+                return container_id
+
+            def _compile_cpp_harness(self, *args, **kwargs):
+                compilations.append(True)
+                return super()._compile_cpp_harness(*args, **kwargs)
+
+        with patch('io_tests.ExecutionContainer', TrackedContainer):
+            executor = io_checks.IOTestExecutor(code)
+            points, report = executor.perform()
+        self.assertEqual(points, 10, report)
+        self.assertTrue(executor.all_passed)
+        self.assertEqual(len(compilations), 1)
+        self.assertEqual(memory_limits, [512 * 1024**2, 128 * 1024**2, 128 * 1024**2])
+        for container_id in container_ids:
+            self.assertNotEqual(subprocess.run(['docker', 'inspect', container_id], capture_output=True).returncode, 0)
+
     def test_python_and_cpp_stdin_stdout(self):
         for lang, source in [('python', 'a, b = map(int, input().split()); print(a + b)'),
                              ('cpp', '#include <iostream>\nint main(){int a,b;std::cin>>a>>b;std::cout<<a+b;}')]:
