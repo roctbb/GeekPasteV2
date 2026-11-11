@@ -89,8 +89,8 @@ class IOCheckerTests(unittest.TestCase):
         for call in factory.call_args_list:
             self.assertEqual(call.args, ('python', None, code.code))
             self.assertEqual(call.kwargs, {'isolated': True})
-        first.run.assert_called_once_with('2 3\n', time_limit=2, capture_limit=102400)
-        second.run.assert_called_once_with('SECRET_INPUT', time_limit=2, capture_limit=102400)
+        first.run.assert_called_once_with('2 3\n', time_limit=2, capture_limit=8 * 1024 * 1024)
+        second.run.assert_called_once_with('SECRET_INPUT', time_limit=2, capture_limit=8 * 1024 * 1024)
         first.__exit__.assert_called_once()
         second.__exit__.assert_called_once()
 
@@ -583,6 +583,18 @@ class IOAdvancedWebTests(IOWebBase):
 
 @unittest.skipUnless(os.getenv('RUN_IO_DOCKER_INTEGRATION') == '1', 'requires Docker')
 class IODockerTests(unittest.TestCase):
+    def test_large_output_default_and_explicit_limit(self):
+        config = {**CONFIG, 'tests': [{'input': '', 'output': 'x' * 200000, 'is_public': False}]}
+        code = make_code(config=config)
+        code.lang = 'cpp'
+        code.code = '#include <iostream>\nint main(){std::cout << std::string(200000, \'x\');}'
+        points, report = io_checks.IOTestExecutor(code).perform()
+        self.assertEqual(points, 10, report)
+        code.task.test_config['tests'][0]['output_limit'] = 1024
+        points, report = io_checks.IOTestExecutor(code).perform()
+        self.assertEqual(points, 0)
+        self.assertIn('превышен объём вывода', report)
+
     def test_cpp_compilation_has_separate_memory_budget(self):
         code = make_code(config={**CONFIG, 'memory_limit': 128, 'tests': [
             {'input': '2 3\n', 'output': '5', 'is_public': True},

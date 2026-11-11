@@ -20,7 +20,8 @@ EXECUTIONS_ROOT = os.path.join(APPLICATION_ROOT, "executions")
 PROBE_OUTPUT_LIMIT = 100 * 1024
 PROBE_PAYLOAD_LIMIT = 100 * 1024
 _PROBE_PROTOCOL_LIMIT = 256 * 1024
-EXECUTION_CAPTURE_LIMIT = 100 * 1024
+EXECUTION_CAPTURE_LIMIT = 8 * 1024 * 1024
+COMPILATION_CAPTURE_LIMIT = 100 * 1024
 CPP_PROGRAM_LIMIT = 64 * 1024 * 1024
 ISOLATED_CONTROLLER_CAPTURE_LIMIT = 256 * 1024
 ALLOWED_CPP_HARNESS_OPTIONS = frozenset({
@@ -948,7 +949,7 @@ class ExecutionContainer:
                 command,
                 b"",
                 self._harness_compile_timeout,
-                EXECUTION_CAPTURE_LIMIT,
+                COMPILATION_CAPTURE_LIMIT,
             )
         except subprocess.TimeoutExpired:
             self._stop_after_timeout()
@@ -964,7 +965,7 @@ class ExecutionContainer:
         if overflow:
             self._stop_after_timeout()
             raise SolutionException(
-                f"Compilation output limit exceeded ({EXECUTION_CAPTURE_LIMIT} bytes).", "compilation_error"
+                f"Compilation output limit exceeded ({COMPILATION_CAPTURE_LIMIT} bytes).", "compilation_error"
             )
 
         error_text = stderr.decode(errors="replace").strip()

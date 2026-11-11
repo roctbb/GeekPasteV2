@@ -51,7 +51,7 @@ class TestRunnerTests(unittest.TestCase):
         runner = RunnerFacade(container)
 
         self.assertEqual(runner("input\n", 3), "program output")
-        self.assertEqual(container.calls, [("run", "input\n", 3, 102400)])
+        self.assertEqual(container.calls, [("run", "input\n", 3, 8 * 1024 * 1024)])
 
     def test_facade_allows_a_trusted_per_case_output_limit(self):
         container = FakeContainer()

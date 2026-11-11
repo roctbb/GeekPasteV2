@@ -31,7 +31,7 @@ def test_precompiled_sandbox_skips_compiler_and_restricts_binary(tmp_path, monke
             container._run_command = Mock(return_value='ok')
             assert container.run('input', 0.5) == 'ok'
             container._run_command.assert_called_once_with(
-                'cd /tmp && /code/program', 'input', 0.5, capture_limit=102400)
+                'cd /tmp && /code/program', 'input', 0.5, capture_limit=8 * 1024 * 1024)
         compile_cpp.assert_not_called()
 
     command = commands[0]

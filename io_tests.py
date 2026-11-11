@@ -4,7 +4,7 @@ from html import escape
 import math
 import re
 
-from runner import ExecutionContainer, ExecutionException, SolutionException
+from runner import ExecutionContainer, ExecutionException, SolutionException, EXECUTION_CAPTURE_LIMIT
 from io_test_comparisons import COMPATIBILITY_LABELS, compatibility_equal, rational_parts
 
 
@@ -13,7 +13,7 @@ MAX_TEXT_BYTES = 32 * 1024 * 1024
 MAX_TOTAL_BYTES = 256 * 1024 * 1024
 # An edit can contain both the saved text and replacement files.
 MAX_REQUEST_BYTES = 2 * MAX_TOTAL_BYTES + 2 * 1024 * 1024
-DEFAULT_OUTPUT_LIMIT = 100 * 1024
+DEFAULT_OUTPUT_LIMIT = EXECUTION_CAPTURE_LIMIT
 MAX_OUTPUT_LIMIT = 8 * 1024 * 1024
 SUPPORTED_LANGUAGES = {'python', 'cpp'}
 ERROR_STATUSES = {
@@ -210,7 +210,7 @@ def draft_test_config_from_form(form, files=None, resolve_field=None):
         'absolute_tolerance': form.get('test_absolute_tolerance', '0.000001'),
         'relative_tolerance': form.get('test_relative_tolerance', '0.000001'),
         'time_limit': form.get('test_time_limit', '2'),
-        'output_limit': form.get('test_output_limit', '100'),
+        'output_limit': form.get('test_output_limit', str(DEFAULT_OUTPUT_LIMIT // 1024)),
         'memory_limit': form.get('test_memory_limit', '512'),
         'process_limit': form.get('test_process_limit', '128'),
         'disable_swap': form.get('test_disable_swap') == 'on',
